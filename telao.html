@@ -8,8 +8,45 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-body {background:black;color:#00ffcc;text-align:center;font-family:Arial}
-#n {font-size:160px}
+body {
+  background:black;
+  color:#00ffcc;
+  text-align:center;
+  font-family:Arial;
+}
+
+#n { font-size:140px; margin-top:10px; }
+#c { font-size:25px; margin-bottom:15px; }
+
+.linha {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin-bottom:6px;
+}
+
+.letra {
+  width:40px;
+  font-weight:bold;
+  margin-right:10px;
+}
+
+.num {
+  width:32px;
+  height:32px;
+  margin:2px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #00ffcc;
+  border-radius:5px;
+}
+
+.selected {
+  background:#00ffcc;
+  color:#000;
+  font-weight:bold;
+}
 </style>
 </head>
 
@@ -17,6 +54,8 @@ body {background:black;color:#00ffcc;text-align:center;font-family:Arial}
 
 <div id="n">--</div>
 <div id="c"></div>
+
+<div id="painel"></div>
 
 <script>
 const firebaseConfig = {
@@ -29,21 +68,57 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+let letras = ["B","I","N","G","O"];
+
+function getLetra(n){
+  return letras[Math.floor((n-1)/15)];
+}
+
+function criarPainel(sorteados){
+  painel.innerHTML="";
+
+  letras.forEach((l,i)=>{
+    let linha=document.createElement("div");
+    linha.className="linha";
+
+    let letra=document.createElement("div");
+    letra.className="letra";
+    letra.innerText=l;
+    linha.appendChild(letra);
+
+    for(let n=i*15+1;n<=i*15+15;n++){
+      let d=document.createElement("div");
+      d.className="num";
+      d.innerText=n;
+
+      if(sorteados.includes(n)){
+        d.classList.add("selected");
+      }
+
+      linha.appendChild(d);
+    }
+
+    painel.appendChild(linha);
+  });
+}
+
 db.ref("bingo").on("value", (snap)=>{
   let d = snap.val();
   if(!d) return;
 
-  let s = d.sorteados || [];
+  let sorteados = d.sorteados || [];
+  letras = d.letras || letras;
 
-  if(!s.length){
+  if(sorteados.length){
+    let u = sorteados[sorteados.length-1];
+    n.innerText = getLetra(u)+" "+u;
+    c.innerText = sorteados.length+" de 75";
+  } else {
     n.innerText="--";
-    return;
+    c.innerText="";
   }
 
-  let u = s[s.length-1];
-
-  n.innerText = u;
-  c.innerText = s.length+" de 75";
+  criarPainel(sorteados);
 });
 </script>
 
