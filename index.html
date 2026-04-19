@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Bingo PROFISSIONAL</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<style>
+body { font-family: Arial; text-align:center; padding:20px; }
+#tituloBingo { font-size:50px; letter-spacing:8px; }
+#painel { display:flex; flex-direction:column; align-items:center; }
+
+.grid { display:grid; grid-template-columns:repeat(15,40px); gap:5px; }
+.linha { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.letra-col { width:30px; font-weight:bold; }
+
+.num { border:1px solid #ccc; padding:8px; cursor:pointer; border-radius:6px; }
+.selected { background:orange; color:#fff; }
+
+#ultimo { font-size:100px; }
+#contador { font-size:20px; }
+
+#ganhador { font-size:50px; color:#ff9800; font-weight:bold; }
+
+ul { list-style:none; padding:0; }
+
+#listaArmadas {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:8px;
+}
+
+#listaArmadas li {
+  background:#ff9800;
+  color:#fff;
+  padding:6px 10px;
+  border-radius:6px;
+}
+
+#consultaBox { position:fixed; top:10px; right:10px; }
+#consultaConteudo {
+  display:none;
+  margin-top:5px;
+  background:#fff;
+  border:1px solid #ccc;
+  padding:8px;
+  border-radius:6px;
+}
+</style>
+</head>
+
+<body>
+
+<h1 id="tituloBingo">BINGO</h1>
+
+<input type="file" id="fileInput"><br><br>
+
+<input id="nomeBingoInput" placeholder="Letras (ex: BINGO)">
+<button onclick="alterarLetras()">Trocar Letras</button><br><br>
+
+<button onclick="abrirTelao()">🎥 Telão</button>
+<button onclick="sortear()">🎲 Sortear</button>
+
+<input id="inputNumero" type="number">
+<button onclick="inserirManual()">Adicionar</button>
+
+<button onclick="resetar()">🔄 Resetar</button>
+
+<br><br>
+<button id="btnSom" onclick="toggleSom()">🔇 Som OFF</button>
+<button onclick="repetirAudio()">🔁 Repetir última</button>
+
+<div id="ultimo">--</div>
+<div id="contador">0 de 75</div>
+
+<h2 id="ganhador"></h2>
+
+<div id="consultaBox">
+<button onclick="toggleConsulta()">🔍</button>
+<div id="consultaConteudo">
+<input id="inputCartela" placeholder="Cartela">
+<div id="resultadoConsulta"></div>
+</div>
+</div>
+
+<div id="blocoGanhadores" style="display:none;">
+<h3>🏆 Prêmios</h3>
+<ul id="listaGanhadores"></ul>
+</div>
+
+<div id="blocoArmadas" style="display:none;">
+<h3>🔥 Cartelas Armadas (<span id="qtdArmadas">0</span>)</h3>
+<ul id="listaArmadas"></ul>
+</div>
+
+<div id="painel"></div>
+
+<script>
+let sorteados=[];
+let letras=["B","I","N","G","O"];
+let cartelas={};
+
+let premios=[];
+let premioAtual=1;
+
+let somAtivo=false;
+let ultimaPedraFalada=null;
+
+/* 🔊 áudio */
+function falar(texto){
+ if(!somAtivo) return;
+ let msg=new SpeechSynthesisUtterance(texto);
+ msg.lang="pt-BR";
+ speechSynthesis.cancel();
+ speechSynthesis.speak(msg);
+}
+
+function falarPedra(n){
+ ultimaPedraFalada=n;
+ falar(getLetra(n)+" "+n);
+}
+
+function repetirAudio(){
+ if(ultimaPedraFalada) falarPedra(ultimaPedraFalada);
+}
+
+function toggleSom(){
+ somAtivo = !somAtivo;
+
+ let btn = document.getElementById("btnSom");
+
+ if(somAtivo){
+   btn.innerText = "🔊 Som ON";
+ } else {
+   btn.innerText = "🔇 Som OFF";
+ }
+}
+
+function getLetra(n){ return letras[Math.floor((n-1)/15)]; }
+
+/* letras */
+function alterarLetras(){
+ let val=nomeBingoInput.value.toUpperCase();
+ if(val.length!==5) return alert("Use 5 letras");
+ letras=val.split("");
+ tituloBingo.innerText=val;
+ criarPainel();
+ salvar();
+}
+
+/* consulta */
+function toggleConsulta(){
+ consultaConteudo.style.display =
+   consultaConteudo.style.display==="none"?"block":"none";
+}
+
+inputCartela.addEventListener("keypress",e=>{
+ if(e.key==="Enter"){
+  let c=cartelas[inputCartela.value.trim()];
+  if(!c){
+    resultadoConsulta.innerText="Cartela não encontrada";
+    return;
+  }
+  let faltam=c.filter(n=>!sorteados.includes(n));
+  let sairam=c.filter(n=>sorteados.includes(n));
+  resultadoConsulta.innerHTML="<b>Faltam:</b> "+faltam.join(", ")+"<br><b>Saíram:</b> "+sairam.join(", ");
+ }
+});
+
+/* excel */
+fileInput.onchange=e=>{
+ let r=new FileReader();
+ r.onload=ev=>{
+  let wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+  let j=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+  cartelas={};
+  j.forEach((l,i)=>{
+    if(i===0)return;
+    let nome=l[0]||("Cartela "+i);
+    let nums=l.slice(1,26).map(n=>parseInt(n)).filter(n=>!isNaN(n));
+    if(nums.length===25) cartelas[nome]=nums;
+  });
+  alert("Cartelas: "+Object.keys(cartelas).length);
+ };
+ r.readAsArrayBuffer(e.target.files[0]);
+};
+
+/* jogo */
+function sortear(){
+ let disp=[];
+ for(let i=1;i<=75;i++){
+   if(!sorteados.includes(i)) disp.push(i);
+ }
+
+ if(disp.length===0){
+   ultimo.innerText="FIM";
+   contador.innerText="";
+   return;
+ }
+
+ adicionarNumero(disp[Math.floor(Math.random()*disp.length)]);
+}
+
+function inserirManual(){
+ let n=parseInt(inputNumero.value);
+ if(n) adicionarNumero(n);
+}
+
+function adicionarNumero(n){
+ if(!n || n<1 || n>75) return;
+ if(sorteados.includes(n)) return;
+
+ sorteados.push(n);
+
+ ultimo.innerText=getLetra(n)+" "+n;
+ contador.innerText=sorteados.length+" de 75";
+
+ falarPedra(n);
+
+ atualizarPainel();
+ verificarGanhador(n);
+ salvar();
+}
+
+/* múltiplos prêmios */
+function verificarGanhador(ultimaPedra){
+ let novos=[];
+
+ for(let nome in cartelas){
+  let nums=cartelas[nome];
+  let acertos=nums.filter(n=>sorteados.includes(n)).length;
+
+  let jaGanhou=premios.some(p=>p.ganhadores.includes(nome));
+
+  if(acertos===25 && !jaGanhou){
+    novos.push(nome);
+  }
+ }
+
+ if(novos.length){
+  premios.push({
+    numero:premioAtual,
+    pedra:ultimaPedra,
+    ganhadores:novos
+  });
+  premioAtual++;
+ }
+
+ atualizarListas();
+}
+
+/* 🔥 recalculo definitivo */
+function calcularArmadas(){
+ let armadas=[];
+ for(let nome in cartelas){
+   let nums=cartelas[nome];
+   let acertos=nums.filter(n=>sorteados.includes(n)).length;
+
+   let jaGanhou=premios.some(p=>p.ganhadores.includes(nome));
+
+   if(acertos===24 && !jaGanhou){
+     armadas.push(nome);
+   }
+ }
+ return armadas;
+}
+
+function atualizarListas(){
+ let armadas = calcularArmadas();
+
+ listaGanhadores.innerHTML="";
+
+ if(premios.length){
+  blocoGanhadores.style.display="block";
+  ganhador.innerText="🎉 PARABÉNS!!!";
+
+  premios.forEach(p=>{
+    let titulo=document.createElement("li");
+    titulo.style.fontWeight="bold";
+    titulo.style.marginTop="10px";
+
+    let letra=getLetra(p.pedra);
+    titulo.innerText=p.numero+"º PRÊMIO (Pedra: "+letra+" "+p.pedra+")";
+    listaGanhadores.appendChild(titulo);
+
+    p.ganhadores.forEach(nome=>{
+      let li=document.createElement("li");
+      li.innerText="- "+nome;
+      listaGanhadores.appendChild(li);
+    });
+  });
+
+ } else {
+  blocoGanhadores.style.display="none";
+  ganhador.innerText="";
+ }
+
+ listaArmadas.innerHTML="";
+ if(armadas.length){
+  blocoArmadas.style.display="block";
+  armadas.forEach(a=>{
+    let li=document.createElement("li");
+    li.innerText=a;
+    listaArmadas.appendChild(li);
+  });
+ } else {
+  blocoArmadas.style.display="none";
+ }
+
+ qtdArmadas.innerText=armadas.length;
+}
+
+/* painel */
+function criarPainel(){
+ painel.innerHTML="";
+ letras.forEach((l,i)=>{
+  let linha=document.createElement("div");
+  linha.className="linha";
+
+  let letra=document.createElement("div");
+  letra.className="letra-col";
+  letra.innerText=l;
+  linha.appendChild(letra);
+
+  let g=document.createElement("div");
+  g.className="grid";
+
+  for(let n=i*15+1;n<=i*15+15;n++){
+    let d=document.createElement("div");
+    d.className="num";
+    d.innerText=n;
+    if(sorteados.includes(n)) d.classList.add("selected");
+    d.onclick=()=>adicionarNumero(n);
+    g.appendChild(d);
+  }
+
+  linha.appendChild(g);
+  painel.appendChild(linha);
+ });
+}
+
+function atualizarPainel(){ criarPainel(); }
+
+/* salvar central */
+function salvar(){
+ let armadas = calcularArmadas();
+
+ localStorage.setItem("bingo_sync", JSON.stringify({
+   sorteados,
+   letras,
+   premios,
+   armadas
+ }));
+}
+
+/* TELÃO FINAL */
+function abrirTelao(){
+ let t=window.open("","TELAO");
+
+ t.document.write(`
+ <body style="background:black;color:#00ffcc;text-align:center;font-family:Arial">
+
+ <div id="n" style="font-size:160px;margin-top:20px">--</div>
+ <div id="c" style="font-size:30px;margin-bottom:10px"></div>
+
+ <div id="ganhador" style="font-size:60px;color:#ff9800;margin:10px"></div>
+ <div id="premios" style="font-size:22px;margin-bottom:15px"></div>
+
+ <div id="armadasTitulo" style="font-size:26px;margin-top:10px;color:#ff5722"></div>
+ <div id="armadas" style="font-size:20px;margin-bottom:15px;color:#fff"></div>
+
+ <div id="painel"></div>
+
+ <script>
+ function atualizar(){
+   let raw=localStorage.getItem("bingo_sync");
+   if(!raw) return;
+
+   let d;
+   try{ d=JSON.parse(raw); }catch{return;}
+
+   let letras = d.letras || ["B","I","N","G","O"];
+
+   function getLetra(n){
+     return letras[Math.floor((n-1)/15)];
+   }
+
+   if(!d.sorteados || d.sorteados.length===0) return;
+
+   let u=d.sorteados[d.sorteados.length-1];
+
+   document.getElementById("n").innerText =
+     getLetra(u)+" "+u;
+
+   document.getElementById("c").innerText =
+     d.sorteados.length+" de 75";
+
+   if(d.premios && d.premios.length){
+     document.getElementById("ganhador").innerText="🎉 PARABÉNS!!!";
+
+     let html="";
+     d.premios.forEach(p=>{
+       let letra=getLetra(p.pedra);
+       html += "<div><b>"+p.numero+"º PRÊMIO ("+letra+" "+p.pedra+")</b></div>";
+       p.ganhadores.forEach(g=>{
+         html += "<div>- "+g+"</div>";
+       });
+     });
+
+     document.getElementById("premios").innerHTML=html;
+
+   } else {
+     document.getElementById("ganhador").innerText="";
+     document.getElementById("premios").innerHTML="";
+   }
+
+   let armadas = d.armadas || [];
+
+   if(armadas.length > 0){
+     document.getElementById("armadasTitulo").innerText =
+       "🔥 CARTELAS ARMADAS ("+armadas.length+")";
+
+     document.getElementById("armadas").innerText =
+       armadas.join("   |   ");
+   } else {
+     document.getElementById("armadasTitulo").innerText="";
+     document.getElementById("armadas").innerText="";
+   }
+
+   let painel=document.getElementById("painel");
+   painel.innerHTML="";
+
+   letras.forEach((l,i)=>{
+     let linha=document.createElement("div");
+     linha.style.display="flex";
+     linha.style.justifyContent="center";
+     linha.style.alignItems="center";
+     linha.style.marginBottom="6px";
+
+     let letra=document.createElement("div");
+     letra.style.width="40px";
+     letra.style.fontWeight="bold";
+     letra.style.marginRight="10px";
+     letra.innerText=l;
+     linha.appendChild(letra);
+
+     for(let n=i*15+1;n<=i*15+15;n++){
+       let dnum=document.createElement("div");
+       dnum.innerText=n;
+
+       dnum.style.width="32px";
+       dnum.style.height="32px";
+       dnum.style.margin="2px";
+       dnum.style.display="flex";
+       dnum.style.alignItems="center";
+       dnum.style.justifyContent="center";
+       dnum.style.border="1px solid #00ffcc";
+       dnum.style.borderRadius="5px";
+
+       if(d.sorteados.includes(n)){
+         dnum.style.background="#00ffcc";
+         dnum.style.color="#000";
+         dnum.style.fontWeight="bold";
+       }
+
+       linha.appendChild(dnum);
+     }
+
+     painel.appendChild(linha);
+   });
+ }
+
+ setInterval(atualizar,300);
+ <\/script>
+ `);
+}
+
+/* atalhos */
+document.addEventListener("keydown", function(e){
+ let tag=document.activeElement.tagName;
+ if(tag==="INPUT" || tag==="TEXTAREA") return;
+
+ let tecla=e.key.toLowerCase();
+
+ if(e.code==="Space"){ e.preventDefault(); sortear(); }
+ if(tecla==="x") repetirAudio();
+ if(tecla==="s") toggleSom();
+ if(tecla==="r"){ if(confirm("Deseja resetar o jogo?")) resetar(); }
+});
+
+function resetar(){
+ sorteados=[];
+ premios=[];
+ premioAtual=1;
+ ultimaPedraFalada=null;
+
+ criarPainel();
+ ultimo.innerText="--";
+ contador.innerText="0 de 75";
+ ganhador.innerText="";
+ resultadoConsulta.innerText="";
+ blocoGanhadores.style.display="none";
+ blocoArmadas.style.display="none";
+
+ salvar();
+}
+
+criarPainel();
+</script>
+
+</body>
+</html>
