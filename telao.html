@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Bingo Ao Vivo</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+body {background:black;color:#00ffcc;text-align:center;font-family:Arial}
+#n {font-size:160px}
+</style>
+</head>
+
+<body>
+
+<div id="n">--</div>
+<div id="c"></div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "COLE_AQUI",
+  authDomain: "COLE_AQUI",
+  databaseURL: "COLE_AQUI",
+  projectId: "COLE_AQUI"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+db.ref("bingo").on("value", (snap)=>{
+  let d = snap.val();
+  if(!d) return;
+
+  let s = d.sorteados || [];
+
+  if(!s.length){
+    n.innerText="--";
+    return;
+  }
+
+  let u = s[s.length-1];
+
+  n.innerText = u;
+  c.innerText = s.length+" de 75";
+});
+</script>
+
+</body>
+</html>
