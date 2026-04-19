@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 <meta charset="UTF-8">
 <title>Bingo PROFISSIONAL</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -97,6 +105,15 @@ ul { list-style:none; padding:0; }
 <div id="painel"></div>
 
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBYpJLTbts47UQge9xwGJlggnuFO1n381o",
+  authDomain: "bingo-facuc.firebaseapp.com",
+  databaseURL: "https://bingo-facuc-default-rtdb.firebaseio.com",
+  projectId: "bingo-facuc",
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 let sorteados=[];
 let letras=["B","I","N","G","O"];
 let cartelas={};
@@ -344,14 +361,14 @@ function atualizarPainel(){ criarPainel(); }
 
 /* salvar central */
 function salvar(){
- let armadas = calcularArmadas();
+  let armadas = calcularArmadas();
 
- localStorage.setItem("bingo_sync", JSON.stringify({
-   sorteados,
-   letras,
-   premios,
-   armadas
- }));
+  db.ref("bingo").set({
+    sorteados,
+    letras,
+    premios,
+    armadas
+  });
 }
 
 /* TELÃO FINAL */
@@ -508,6 +525,24 @@ function resetar(){
 
 criarPainel();
 </script>
+
+db.ref("bingo").on("value", (snap)=>{
+  let d = snap.val();
+  if(!d) return;
+
+  sorteados = d.sorteados || [];
+  letras = d.letras || letras;
+  premios = d.premios || [];
+
+  atualizarPainel();
+  atualizarListas();
+
+  if(sorteados.length){
+    let u = sorteados[sorteados.length-1];
+    ultimo.innerText = getLetra(u)+" "+u;
+    contador.innerText = sorteados.length+" de 75";
+  }
+});
 
 </body>
 </html>
