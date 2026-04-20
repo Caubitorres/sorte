@@ -45,7 +45,8 @@ body{
 .linha{
   display:flex;
   justify-content:center;
-  margin:4px 0;
+  align-items:center;
+  gap:6px;
 }
 
 /* 🔥 BINGO sem fundo (visual mais limpo) */
@@ -60,14 +61,13 @@ body{
   color:#00ffcc;
   background:transparent;
   border:none;
-  margin-right:6px;
   letter-spacing:1px;
 }
 
 .num{
   width:35px;
   height:35px;
-  margin:2px;
+  margin:2px 0;
   border:1px solid #00ffcc;
   display:flex;
   align-items:center;
@@ -212,7 +212,7 @@ db.ref("bingo").on("value", snap=>{
   }
 
   if(listaArmadas.length){
-    elArmadas.innerHTML = "🔥 Armadas: " + listaArmadas.join(" | ");
+    elArmadas.innerHTML = "🔥 Cartelas Armadas: " + listaArmadas.join(" | ");
   } else {
     elArmadas.innerHTML="";
   }
