@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Bingo Ao Vivo</title>
+<title>Telão Bingo</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -15,9 +15,11 @@ body {
   font-family:Arial;
 }
 
+/* topo */
 #n { font-size:140px; margin-top:10px; }
-#c { font-size:25px; margin-bottom:15px; }
+#c { font-size:25px; margin-bottom:10px; }
 
+/* painel */
 .linha {
   display:flex;
   justify-content:center;
@@ -47,6 +49,28 @@ body {
   color:#000;
   font-weight:bold;
 }
+
+/* ganhadores */
+#ganhador {
+  font-size:50px;
+  color:#ff9800;
+  margin-top:10px;
+}
+
+#premios {
+  font-size:22px;
+  margin-bottom:10px;
+}
+
+/* armadas */
+#armadasTitulo {
+  font-size:26px;
+  color:#ff5722;
+}
+
+#armadas {
+  font-size:20px;
+}
 </style>
 </head>
 
@@ -55,277 +79,109 @@ body {
 <div id="n">--</div>
 <div id="c"></div>
 
+<div id="ganhador"></div>
+<div id="premios"></div>
+
+<div id="armadasTitulo"></div>
+<div id="armadas"></div>
+
 <div id="painel"></div>
 
 <script>
 const firebaseConfig = {
-  apiKey: "AIzaSyBYpJLTbts47UQge9xwGJlggnuFO1n381o",
-  authDomain: "bingo-facuc.firebaseapp.com",
-  databaseURL: "https://bingo-facuc-default-rtdb.firebaseio.com/",
-  projectId: "bingo-facuc",
+  apiKey: "COLE_AQUI",
+  authDomain: "COLE_AQUI",
+  databaseURL: "COLE_AQUI",
+  projectId: "COLE_AQUI"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let sorteados=[];
-let letras=["B","I","N","G","O"];
-let cartelas={};
+let letras = ["B","I","N","G","O"];
 
-let premios=[];
-let premioAtual=1;
-
-let somAtivo=false;
-let ultimaPedraFalada=null;
-
-/* 🔊 áudio */
-function falar(texto){
- if(!somAtivo) return;
- let msg=new SpeechSynthesisUtterance(texto);
- msg.lang="pt-BR";
- speechSynthesis.cancel();
- speechSynthesis.speak(msg);
+function getLetra(n){
+  return letras[Math.floor((n-1)/15)];
 }
 
-function falarPedra(n){
- ultimaPedraFalada=n;
- falar(getLetra(n)+" "+n);
-}
+function criarPainel(sorteados){
+  let painel = document.getElementById("painel");
+  painel.innerHTML="";
 
-function repetirAudio(){
- if(ultimaPedraFalada) falarPedra(ultimaPedraFalada);
-}
+  letras.forEach((l,i)=>{
+    let linha=document.createElement("div");
+    linha.className="linha";
 
-function toggleSom(){
- somAtivo = !somAtivo;
- btnSom.innerText = somAtivo ? "🔊 Som ON" : "🔇 Som OFF";
-}
+    let letra=document.createElement("div");
+    letra.className="letra";
+    letra.innerText=l;
+    linha.appendChild(letra);
 
-function getLetra(n){ return letras[Math.floor((n-1)/15)]; }
+    for(let n=i*15+1;n<=i*15+15;n++){
+      let d=document.createElement("div");
+      d.className="num";
+      d.innerText=n;
 
-/* letras */
-function alterarLetras(){
- let val=nomeBingoInput.value.toUpperCase();
- if(val.length!==5) return alert("Use 5 letras");
- letras=val.split("");
- tituloBingo.innerText=val;
- criarPainel();
- salvar();
-}
+      if(sorteados.includes(n)){
+        d.classList.add("selected");
+      }
 
-/* consulta */
-function toggleConsulta(){
- consultaConteudo.style.display =
-   consultaConteudo.style.display==="none"?"block":"none";
-}
+      linha.appendChild(d);
+    }
 
-/* jogo */
-function sortear(){
- let disp=[];
- for(let i=1;i<=75;i++){
-   if(!sorteados.includes(i)) disp.push(i);
- }
-
- if(disp.length===0){
-   ultimo.innerText="FIM";
-   contador.innerText="";
-   return;
- }
-
- adicionarNumero(disp[Math.floor(Math.random()*disp.length)]);
-}
-
-function inserirManual(){
- let n=parseInt(inputNumero.value);
- if(n) adicionarNumero(n);
-}
-
-function adicionarNumero(n){
- if(!n || n<1 || n>75) return;
- if(sorteados.includes(n)) return;
-
- sorteados.push(n);
-
- ultimo.innerText=getLetra(n)+" "+n;
- contador.innerText=sorteados.length+" de 75";
-
- falarPedra(n);
-
- atualizarPainel();
- verificarGanhador(n); // 🔥 VOLTOU
-
- salvar();
-}
-
-/* múltiplos prêmios */
-function verificarGanhador(ultimaPedra){
- let novos=[];
-
- for(let nome in cartelas){
-  let nums=cartelas[nome];
-  let acertos=nums.filter(n=>sorteados.includes(n)).length;
-
-  let jaGanhou=premios.some(p=>p.ganhadores.includes(nome));
-
-  if(acertos===25 && !jaGanhou){
-    novos.push(nome);
-  }
- }
-
- if(novos.length){
-  premios.push({
-    numero:premioAtual,
-    pedra:ultimaPedra,
-    ganhadores:novos
+    painel.appendChild(linha);
   });
-  premioAtual++;
- }
-
- atualizarListas();
 }
 
-/* 🔥 armadas */
-function calcularArmadas(){
- let armadas=[];
- for(let nome in cartelas){
-   let nums=cartelas[nome];
-   let acertos=nums.filter(n=>sorteados.includes(n)).length;
-
-   let jaGanhou=premios.some(p=>p.ganhadores.includes(nome));
-
-   if(acertos===24 && !jaGanhou){
-     armadas.push(nome);
-   }
- }
- return armadas;
-}
-
-function atualizarListas(){
- let armadas = calcularArmadas();
-
- listaGanhadores.innerHTML="";
-
- if(premios.length){
-  blocoGanhadores.style.display="block";
-  ganhador.innerText="🎉 PARABÉNS!!!";
-
-  premios.forEach(p=>{
-    let titulo=document.createElement("li");
-    titulo.style.fontWeight="bold";
-    titulo.style.marginTop="10px";
-
-    let letra=getLetra(p.pedra);
-    titulo.innerText=p.numero+"º PRÊMIO (Pedra: "+letra+" "+p.pedra+")";
-    listaGanhadores.appendChild(titulo);
-
-    p.ganhadores.forEach(nome=>{
-      let li=document.createElement("li");
-      li.innerText="- "+nome;
-      listaGanhadores.appendChild(li);
-    });
-  });
-
- } else {
-  blocoGanhadores.style.display="none";
-  ganhador.innerText="";
- }
-
- listaArmadas.innerHTML="";
- if(armadas.length){
-  blocoArmadas.style.display="block";
-  armadas.forEach(a=>{
-    let li=document.createElement("li");
-    li.innerText=a;
-    listaArmadas.appendChild(li);
-  });
- } else {
-  blocoArmadas.style.display="none";
- }
-
- qtdArmadas.innerText=armadas.length;
-}
-
-/* painel */
-function criarPainel(){
- painel.innerHTML="";
- letras.forEach((l,i)=>{
-  let linha=document.createElement("div");
-  linha.className="linha";
-
-  let letra=document.createElement("div");
-  letra.className="letra-col";
-  letra.innerText=l;
-  linha.appendChild(letra);
-
-  let g=document.createElement("div");
-  g.className="grid";
-
-  for(let n=i*15+1;n<=i*15+15;n++){
-    let d=document.createElement("div");
-    d.className="num";
-    d.innerText=n;
-    if(sorteados.includes(n)) d.classList.add("selected");
-    d.onclick=()=>adicionarNumero(n);
-    g.appendChild(d);
-  }
-
-  linha.appendChild(g);
-  painel.appendChild(linha);
- });
-}
-
-function atualizarPainel(){ criarPainel(); }
-
-/* 🔥 SALVAR COMPLETO */
-function salvar(){
- let armadas = calcularArmadas();
-
- db.ref("bingo").set({
-   sorteados,
-   letras,
-   premios,
-   armadas
- });
-}
-
-/* 🔥 RECEBER */
 db.ref("bingo").on("value", (snap)=>{
- let d = snap.val();
- if(!d) return;
+  let d = snap.val();
+  if(!d) return;
 
- sorteados = d.sorteados || [];
- letras = d.letras || letras;
- premios = d.premios || [];
+  let sorteados = d.sorteados || [];
+  letras = d.letras || letras;
+  let premios = d.premios || [];
+  let armadas = d.armadas || [];
 
- atualizarPainel();
- atualizarListas();
+  /* número */
+  if(sorteados.length){
+    let u = sorteados[sorteados.length-1];
+    n.innerText = getLetra(u)+" "+u;
+    c.innerText = sorteados.length+" de 75";
+  } else {
+    n.innerText="--";
+    c.innerText="";
+  }
 
- if(sorteados.length){
-   let u = sorteados[sorteados.length-1];
-   ultimo.innerText = getLetra(u)+" "+u;
-   contador.innerText = sorteados.length+" de 75";
- }
+  /* ganhadores */
+  if(premios.length){
+    ganhador.innerText="🎉 PARABÉNS!!!";
+
+    let html="";
+    premios.forEach(p=>{
+      let letra=getLetra(p.pedra);
+      html += "<div><b>"+p.numero+"º PRÊMIO ("+letra+" "+p.pedra+")</b></div>";
+      p.ganhadores.forEach(g=>{
+        html += "<div>- "+g+"</div>";
+      });
+    });
+
+    premiosDiv.innerHTML = html;
+  } else {
+    ganhador.innerText="";
+    premiosDiv.innerHTML="";
+  }
+
+  /* armadas */
+  if(armadas.length){
+    armadasTitulo.innerText="🔥 CARTELAS ARMADAS ("+armadas.length+")";
+    armadasDiv.innerText = armadas.join(" | ");
+  } else {
+    armadasTitulo.innerText="";
+    armadasDiv.innerText="";
+  }
+
+  criarPainel(sorteados);
 });
-
-function resetar(){
- sorteados=[];
- premios=[];
- premioAtual=1;
- ultimaPedraFalada=null;
-
- criarPainel();
- ultimo.innerText="--";
- contador.innerText="0 de 75";
- ganhador.innerText="";
- resultadoConsulta.innerText="";
- blocoGanhadores.style.display="none";
- blocoArmadas.style.display="none";
-
- salvar();
-}
-
-criarPainel();
-</script>
 </script>
 
 </body>
