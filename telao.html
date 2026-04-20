@@ -15,11 +15,9 @@ body {
   font-family:Arial;
 }
 
-/* topo */
 #n { font-size:140px; margin-top:10px; }
 #c { font-size:25px; margin-bottom:10px; }
 
-/* painel */
 .linha {
   display:flex;
   justify-content:center;
@@ -50,19 +48,15 @@ body {
   font-weight:bold;
 }
 
-/* ganhadores */
 #ganhador {
   font-size:50px;
   color:#ff9800;
-  margin-top:10px;
 }
 
 #premios {
   font-size:22px;
-  margin-bottom:10px;
 }
 
-/* armadas */
 #armadasTitulo {
   font-size:26px;
   color:#ff5722;
@@ -89,10 +83,10 @@ body {
 
 <script>
 const firebaseConfig = {
-  apiKey: "COLE_AQUI",
-  authDomain: "COLE_AQUI",
-  databaseURL: "COLE_AQUI",
-  projectId: "COLE_AQUI"
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_PROJETO.firebaseapp.com",
+  databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com/",
+  projectId: "SEU_PROJETO"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -105,7 +99,7 @@ function getLetra(n){
 }
 
 function criarPainel(sorteados){
-  let painel = document.getElementById("painel");
+  const painel = document.getElementById("painel");
   painel.innerHTML="";
 
   letras.forEach((l,i)=>{
@@ -142,19 +136,25 @@ db.ref("bingo").on("value", (snap)=>{
   let premios = d.premios || [];
   let armadas = d.armadas || [];
 
-  /* número */
+  const nEl = document.getElementById("n");
+  const cEl = document.getElementById("c");
+  const ganhadorEl = document.getElementById("ganhador");
+  const premiosEl = document.getElementById("premios");
+  const armadasTituloEl = document.getElementById("armadasTitulo");
+  const armadasEl = document.getElementById("armadas");
+
   if(sorteados.length){
     let u = sorteados[sorteados.length-1];
-    n.innerText = getLetra(u)+" "+u;
-    c.innerText = sorteados.length+" de 75";
+    nEl.innerText = getLetra(u)+" "+u;
+    cEl.innerText = sorteados.length+" de 75";
   } else {
-    n.innerText="--";
-    c.innerText="";
+    nEl.innerText="--";
+    cEl.innerText="";
   }
 
   /* ganhadores */
   if(premios.length){
-    ganhador.innerText="🎉 PARABÉNS!!!";
+    ganhadorEl.innerText="🎉 PARABÉNS!!!";
 
     let html="";
     premios.forEach(p=>{
@@ -165,19 +165,19 @@ db.ref("bingo").on("value", (snap)=>{
       });
     });
 
-    premiosDiv.innerHTML = html;
+    premiosEl.innerHTML = html;
   } else {
-    ganhador.innerText="";
-    premiosDiv.innerHTML="";
+    ganhadorEl.innerText="";
+    premiosEl.innerHTML="";
   }
 
   /* armadas */
   if(armadas.length){
-    armadasTitulo.innerText="🔥 CARTELAS ARMADAS ("+armadas.length+")";
-    armadasDiv.innerText = armadas.join(" | ");
+    armadasTituloEl.innerText="🔥 CARTELAS ARMADAS ("+armadas.length+")";
+    armadasEl.innerText = armadas.join(" | ");
   } else {
-    armadasTitulo.innerText="";
-    armadasDiv.innerText="";
+    armadasTituloEl.innerText="";
+    armadasEl.innerText="";
   }
 
   criarPainel(sorteados);
