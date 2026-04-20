@@ -393,11 +393,12 @@ function salvar(){
  let armadas = calcularArmadas();
 
  db.ref("bingo").set({
-   sorteados,
-   letras,
-   premios,
-   armadas
- });
+  sorteados,
+  letras,
+  premios,
+  armadas,
+  cartelas
+});
 }
 
 db.ref("bingo").on("value", (snap)=>{
