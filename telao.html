@@ -15,55 +15,28 @@ body {
   font-family:Arial;
 }
 
-#n { font-size:140px; margin-top:10px; }
-#c { font-size:25px; margin-bottom:10px; }
+#n { font-size:120px; }
+#c { font-size:20px; }
 
 .linha {
   display:flex;
   justify-content:center;
-  align-items:center;
-  margin-bottom:6px;
-}
-
-.letra {
-  width:40px;
-  font-weight:bold;
-  margin-right:10px;
+  margin-bottom:5px;
 }
 
 .num {
-  width:32px;
-  height:32px;
+  width:30px;
+  height:30px;
   margin:2px;
+  border:1px solid #00ffcc;
   display:flex;
   align-items:center;
   justify-content:center;
-  border:1px solid #00ffcc;
-  border-radius:5px;
 }
 
-.selected {
+.sel {
   background:#00ffcc;
   color:#000;
-  font-weight:bold;
-}
-
-#ganhador {
-  font-size:50px;
-  color:#ff9800;
-}
-
-#premios {
-  font-size:22px;
-}
-
-#armadasTitulo {
-  font-size:26px;
-  color:#ff5722;
-}
-
-#armadas {
-  font-size:20px;
 }
 </style>
 </head>
@@ -73,20 +46,14 @@ body {
 <div id="n">--</div>
 <div id="c"></div>
 
-<div id="ganhador"></div>
-<div id="premios"></div>
-
-<div id="armadasTitulo"></div>
-<div id="armadas"></div>
-
 <div id="painel"></div>
 
 <script>
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com/",
-  projectId: "SEU_PROJETO"
+  apiKey: "AIzaSyBYpJLTbts47UQge9xwGJlggnuFO1n381o",
+  authDomain: "bingo-facuc.firebaseapp.com",
+  databaseURL: "https://bingo-facuc-default-rtdb.firebaseio.com/",
+  projectId: "bingo-facuc"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -94,93 +61,46 @@ const db = firebase.database();
 
 let letras = ["B","I","N","G","O"];
 
-function getLetra(n){
+function letra(n){
   return letras[Math.floor((n-1)/15)];
 }
 
-function criarPainel(sorteados){
-  const painel = document.getElementById("painel");
-  painel.innerHTML="";
+function desenhar(s){
+  let p = document.getElementById("painel");
+  p.innerHTML="";
 
   letras.forEach((l,i)=>{
     let linha=document.createElement("div");
     linha.className="linha";
-
-    let letra=document.createElement("div");
-    letra.className="letra";
-    letra.innerText=l;
-    linha.appendChild(letra);
 
     for(let n=i*15+1;n<=i*15+15;n++){
       let d=document.createElement("div");
       d.className="num";
       d.innerText=n;
 
-      if(sorteados.includes(n)){
-        d.classList.add("selected");
-      }
+      if(s.includes(n)) d.classList.add("sel");
 
       linha.appendChild(d);
     }
 
-    painel.appendChild(linha);
+    p.appendChild(linha);
   });
 }
 
-db.ref("bingo").on("value", (snap)=>{
+db.ref("bingo").on("value", snap=>{
   let d = snap.val();
   if(!d) return;
 
-  let sorteados = d.sorteados || [];
+  let s = d.sorteados || [];
   letras = d.letras || letras;
-  let premios = d.premios || [];
-  let armadas = d.armadas || [];
 
-  const nEl = document.getElementById("n");
-  const cEl = document.getElementById("c");
-  const ganhadorEl = document.getElementById("ganhador");
-  const premiosEl = document.getElementById("premios");
-  const armadasTituloEl = document.getElementById("armadasTitulo");
-  const armadasEl = document.getElementById("armadas");
-
-  if(sorteados.length){
-    let u = sorteados[sorteados.length-1];
-    nEl.innerText = getLetra(u)+" "+u;
-    cEl.innerText = sorteados.length+" de 75";
-  } else {
-    nEl.innerText="--";
-    cEl.innerText="";
+  if(s.length){
+    let u = s[s.length-1];
+    n.innerText = letra(u)+" "+u;
+    c.innerText = s.length+" de 75";
   }
 
-  /* ganhadores */
-  if(premios.length){
-    ganhadorEl.innerText="🎉 PARABÉNS!!!";
-
-    let html="";
-    premios.forEach(p=>{
-      let letra=getLetra(p.pedra);
-      html += "<div><b>"+p.numero+"º PRÊMIO ("+letra+" "+p.pedra+")</b></div>";
-      p.ganhadores.forEach(g=>{
-        html += "<div>- "+g+"</div>";
-      });
-    });
-
-    premiosEl.innerHTML = html;
-  } else {
-    ganhadorEl.innerText="";
-    premiosEl.innerHTML="";
-  }
-
-  /* armadas */
-  if(armadas.length){
-    armadasTituloEl.innerText="🔥 CARTELAS ARMADAS ("+armadas.length+")";
-    armadasEl.innerText = armadas.join(" | ");
-  } else {
-    armadasTituloEl.innerText="";
-    armadasEl.innerText="";
-  }
-
-  criarPainel(sorteados);
+  desenhar(s);
 });
 </script>
 
