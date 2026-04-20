@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Telão Bingo</title>
+<title>SUPER TELÃO BINGO</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -11,86 +11,100 @@
 body{
   background:#000;
   color:#00ffcc;
-  text-align:center;
   font-family:Arial;
   display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  min-height:100vh;
 }
 
-#fullscreenBtn{
-  position:fixed;
-  top:10px;
-  right:10px;
-  background:#00ffcc;
-  color:#000;
-  border:none;
-  padding:10px 15px;
-  font-weight:bold;
-  border-radius:6px;
-  cursor:pointer;
-  z-index:999;
+/* principal */
+#principal{
+  width:70%;
+  text-align:center;
 }
 
-#n{
-  font-size:10vw;
-  font-weight:bold;
-  margin-top:8vh;
-}
-
+#n{font-size:100px;}
 #c{font-size:20px;}
 
 .linha{
   display:flex;
   justify-content:center;
-  align-items:center;
-  gap:6px;
 }
 
-/* 🔥 BINGO sem fundo (visual mais limpo) */
 .letra{
-  width:45px;
-  height:35px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  width:30px;
   font-weight:bold;
-  font-size:22px;
-  color:#00ffcc;
-  background:transparent;
-  border:none;
-  letter-spacing:1px;
 }
 
 .num{
-  width:35px;
-  height:35px;
-  margin:2px 0;
+  width:30px;
+  height:30px;
+  margin:2px;
   border:1px solid #00ffcc;
   display:flex;
   align-items:center;
   justify-content:center;
-  border-radius:6px;
-  font-weight:bold;
 }
 
 .sel{
   background:#00ffcc;
   color:#000;
-  font-weight:bold;
 }
 
+/* ganhador */
 #ganhador{
+  font-size:50px;
   color:#ff9800;
-  font-size:40px;
-  margin-top:10px;
+  font-weight:bold;
+  margin:10px 0;
+  animation: piscar 1s infinite;
 }
 
+@keyframes piscar{
+  0%{opacity:1;}
+  50%{opacity:0.3;}
+  100%{opacity:1;}
+}
+
+/* lateral */
+#lateral{
+  width:30%;
+  background:#111;
+  padding:15px;
+  text-align:center;
+}
+
+#inputCartela{
+  padding:12px;
+  font-size:22px;
+  width:230px;
+  text-align:center;
+  margin-bottom:10px;
+}
+
+/* cartela */
+.linhaCartela{
+  display:flex;
+  justify-content:center;
+}
+
+.numCartela{
+  width:40px;
+  height:40px;
+  margin:3px;
+  border:1px solid #555;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:6px;
+}
+
+.selCartela{
+  background:orange;
+  color:#000;
+}
+
+/* textos */
 #premios{
   font-size:18px;
-  margin-top:10px;
 }
 
 #armadas{
@@ -102,17 +116,22 @@ body{
 
 <body>
 
-<button id="fullscreenBtn" onclick="toggleFullscreen()">⛶ Tela Cheia</button>
+<div id="principal">
+  <div id="n">--</div>
+  <div id="c"></div>
 
-<div id="n">--</div>
-<div id="c"></div>
+  <div id="ganhador"></div>
+  <div id="premios"></div>
+  <div id="armadas"></div>
 
-<div id="ganhador"></div>
-<div id="premios"></div>
+  <div id="painel"></div>
+</div>
 
-<div id="armadas"></div>
-
-<div id="painel"></div>
+<div id="lateral">
+  <h2>Cartela</h2>
+  <input id="inputCartela" placeholder="Nº da cartela">
+  <div id="cartelaVisual"></div>
+</div>
 
 <script>
 const firebaseConfig = {
@@ -125,28 +144,17 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let elNumero = document.getElementById("n");
-let elContador = document.getElementById("c");
-let elGanhador = document.getElementById("ganhador");
-let elPremios = document.getElementById("premios");
-let elArmadas = document.getElementById("armadas");
-
-let letras = ["B","I","N","G","O"];
+let letras=["B","I","N","G","O"];
+let cartelas={};
+let sorteados=[];
 
 function getLetra(n){
   return letras[Math.floor((n-1)/15)];
 }
 
-function toggleFullscreen(){
-  if (!document.fullscreenElement){
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-}
-
+/* painel */
 function desenharPainel(s){
-  let painel = document.getElementById("painel");
+  let painel=document.getElementById("painel");
   painel.innerHTML="";
 
   letras.forEach((l,i)=>{
@@ -163,9 +171,7 @@ function desenharPainel(s){
       d.className="num";
       d.innerText=n;
 
-      if(s.includes(n)){
-        d.classList.add("sel");
-      }
+      if(s.includes(n)) d.classList.add("sel");
 
       linha.appendChild(d);
     }
@@ -174,50 +180,120 @@ function desenharPainel(s){
   });
 }
 
+/* cartela lateral */
+function atualizarCartela(){
+  let id=inputCartela.value.trim();
+  let div=document.getElementById("cartelaVisual");
+
+  if(!id){ div.innerHTML=""; return; }
+
+  let chave=null;
+
+  for(let k in cartelas){
+    if(String(k).replace(/^0+/,"")===id){
+      chave=k; break;
+    }
+  }
+
+  if(!chave){
+    div.innerHTML="Cartela não encontrada";
+    return;
+  }
+
+  let nums=cartelas[chave];
+  let html="";
+
+  html += "<div class='linhaCartela'>";
+  letras.forEach(l=>{
+    html += `<div class='numCartela' style="font-weight:bold;background:#222">${l}</div>`;
+  });
+  html += "</div>";
+
+  for(let i=0;i<5;i++){
+    html+="<div class='linhaCartela'>";
+    for(let j=0;j<5;j++){
+      let n = nums[j*5 + i];
+      let sel = sorteados.includes(n) ? "selCartela" : "";
+      html+=`<div class='numCartela ${sel}'>${n}</div>`;
+    }
+    html+="</div>";
+  }
+
+  div.innerHTML=html;
+}
+
+inputCartela.addEventListener("input", atualizarCartela);
+
+/* firebase */
 db.ref("bingo").on("value", snap=>{
-  let d = snap.val();
+  let d=snap.val();
   if(!d) return;
 
-  let s = d.sorteados || [];
-  letras = d.letras || letras;
+  sorteados=d.sorteados||[];
+  letras=d.letras||letras;
+  cartelas=d.cartelas||cartelas;
 
-  let listaPremios = d.premios || [];
-  let listaArmadas = d.armadas || [];
+  let listaPremios=d.premios||[];
+  let listaArmadas=d.armadas||[];
 
-  if(s.length){
-    let u = s[s.length-1];
-    elNumero.innerText = getLetra(u)+" "+u;
-    elContador.innerText = s.length+" de 75";
-  } else {
-    elNumero.innerText="--";
-    elContador.innerText="";
+  /* número */
+  if(sorteados.length){
+    let u=sorteados[sorteados.length-1];
+    n.innerText=getLetra(u)+" "+u;
+    c.innerText=sorteados.length+" de 75";
   }
 
+  /* ganhador */
   if(listaPremios.length){
-    elGanhador.innerText="🎉 PARABÉNS!!!";
+    ganhador.innerHTML="🏆 GANHADOR(A)";
+  } else {
+    ganhador.innerHTML="";
+  }
 
+  /* prêmios */
+  if(listaPremios.length){
     let txt="";
     listaPremios.forEach(p=>{
-      txt += "<div style='margin:6px 0'>";
-      txt += "<b style='font-size:22px'>" + p.numero + "º prêmio</b> ";
-      txt += "(" + getLetra(p.pedra) + " " + p.pedra + ") - ";
-      txt += p.ganhadores.join(", ");
-      txt += "</div>";
+      txt+=`<div>${p.numero}º prêmio (${getLetra(p.pedra)} ${p.pedra}) - ${p.ganhadores.join(", ")}</div>`;
     });
-
-    elPremios.innerHTML = txt;
+    premios.innerHTML=txt;
   } else {
-    elGanhador.innerText="";
-    elPremios.innerHTML="";
+    premios.innerHTML="";
   }
 
+  /* 🔥 cartelas armadas em linha */
   if(listaArmadas.length){
-    elArmadas.innerHTML = "🔥 Cartelas Armadas: " + listaArmadas.join(" | ");
+    armadas.innerHTML = `
+      <div style="font-size:22px;color:#ff5722;font-weight:bold">
+        🔥 CARTELAS ARMADAS (${listaArmadas.length})
+      </div>
+
+      <div style="
+        margin-top:8px;
+        display:flex;
+        flex-wrap:wrap;
+        justify-content:center;
+        gap:8px;
+      ">
+        ${listaArmadas.map(n => `
+          <div style="
+            background:#ff5722;
+            color:#fff;
+            padding:6px 10px;
+            border-radius:6px;
+            font-weight:bold;
+          ">
+            ${n}
+          </div>
+        `).join("")}
+      </div>
+    `;
   } else {
-    elArmadas.innerHTML="";
+    armadas.innerHTML="";
   }
 
-  desenharPainel(s);
+  desenharPainel(sorteados);
+  atualizarCartela();
 });
 </script>
 
