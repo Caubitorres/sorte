@@ -4,6 +4,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
 <meta charset="UTF-8">
 <title>Bingo PROFISSIONAL</title>
@@ -11,7 +12,7 @@
 
 <style>
 body { font-family: Arial; text-align:center; padding:20px; }
-#tituloBingo { font-size:50px; letter-spacing:8px; }
+#tituloBingo { font-size:28px; letter-spacing:6px; }
 #painel { display:flex; flex-direction:column; align-items:center; }
 
 .grid { display:grid; grid-template-columns:repeat(15,40px); gap:5px; }
@@ -20,6 +21,12 @@ body { font-family: Arial; text-align:center; padding:20px; }
 
 .num { border:1px solid #ccc; padding:8px; cursor:pointer; border-radius:6px; }
 .selected { background:orange; color:#fff; }
+
+#inputNumero{
+  width:80px;
+  font-size:20px;
+  text-align:center;
+}
 
 #ultimo { font-size:100px; }
 #contador { font-size:20px; }
@@ -51,12 +58,35 @@ ul { list-style:none; padding:0; }
   padding:8px;
   border-radius:6px;
 }
+
+#loginBox{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  color:#00ffcc;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
 </style>
 </head>
 
 <body>
 
+<div id="loginBox">
+  <h2>Acesso ao Bingo</h2>
+  <input id="email" placeholder="Email"><br><br>
+  <input id="senha" type="password" placeholder="Senha"><br><br>
+  <button onclick="login()">Entrar</button>
+</div>
+
 <h1 id="tituloBingo">BINGO</h1>
+<button onclick="sair()">🚪 Sair</button>
 
 <input type="file" id="fileInput"><br><br>
 
@@ -65,7 +95,7 @@ ul { list-style:none; padding:0; }
 
 <button onclick="sortear()">🎲 Sortear</button>
 
-<input id="inputNumero" type="number">
+<input id="inputNumero" type="text" inputmode="numeric">
 <button onclick="inserirManual()">Adicionar</button>
 
 <button onclick="resetar()">🔄 Resetar</button>
@@ -110,6 +140,30 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+function login(){
+  let email = document.getElementById("email").value;
+  let senha = document.getElementById("senha").value;
+
+  firebase.auth().signInWithEmailAndPassword(email, senha)
+  .then(()=>{
+    document.getElementById("loginBox").style.display="none";
+  })
+  .catch(()=>{
+    alert("Email ou senha inválidos");
+  });
+}
+
+firebase.auth().onAuthStateChanged(user=>{
+  if(user){
+    document.getElementById("loginBox").style.display="none";
+  }
+});
+
+function sair(){
+  firebase.auth().signOut();
+  document.getElementById("loginBox").style.display="flex";
+}
+
 let primeiraCarga = true;
 
 let sorteados=[];
@@ -120,7 +174,6 @@ let premioAtual=1;
 let somAtivo=false;
 let ultimaPedraFalada=null;
 
-/* áudio */
 function falar(texto){
  if(!somAtivo) return;
  let msg=new SpeechSynthesisUtterance(texto);
@@ -145,7 +198,6 @@ function toggleSom(){
 
 function getLetra(n){ return letras[Math.floor((n-1)/15)]; }
 
-/* letras */
 function alterarLetras(){
  let val=nomeBingoInput.value.toUpperCase();
  if(val.length!==5) return alert("Use 5 letras");
@@ -155,13 +207,43 @@ function alterarLetras(){
  salvar();
 }
 
-/* consulta */
 function toggleConsulta(){
  consultaConteudo.style.display =
  consultaConteudo.style.display==="none"?"block":"none";
 }
 
-/* excel */
+inputCartela.addEventListener("input", ()=>{
+  let busca = inputCartela.value.trim();
+
+  if(!busca){
+    resultadoConsulta.innerText="";
+    return;
+  }
+
+  let nomeEncontrado = null;
+
+  for(let nome in cartelas){
+    if(String(nome) === String(busca)){
+      nomeEncontrado = nome;
+      break;
+    }
+  }
+
+  if(!nomeEncontrado){
+    resultadoConsulta.innerText="Cartela não encontrada";
+    return;
+  }
+
+  let nums = cartelas[nomeEncontrado];
+  let acertos = nums.filter(n=>sorteados.includes(n));
+  let faltam = nums.filter(n=>!sorteados.includes(n));
+
+  resultadoConsulta.innerHTML =
+    "Chamadas: "+(acertos.length ? acertos.join(", ") : "Nenhuma")+"<br>" +
+    "Faltam: "+(faltam.length ? faltam.join(", ") : "Nenhuma")+"<br><br>" +
+    "";
+});
+
 fileInput.onchange=e=>{
  let r=new FileReader();
  r.onload=ev=>{
@@ -179,7 +261,6 @@ fileInput.onchange=e=>{
  r.readAsArrayBuffer(e.target.files[0]);
 };
 
-/* jogo */
 function sortear(){
  let disp=[];
  for(let i=1;i<=75;i++){
@@ -210,7 +291,6 @@ function adicionarNumero(n){
  salvar();
 }
 
-/* ganhadores */
 function verificarGanhador(ultimaPedra){
  let novos=[];
  for(let nome in cartelas){
@@ -230,7 +310,6 @@ function verificarGanhador(ultimaPedra){
  atualizarListas();
 }
 
-/* armadas */
 function calcularArmadas(){
  let armadas=[];
  for(let nome in cartelas){
@@ -280,7 +359,6 @@ function atualizarListas(){
  qtdArmadas.innerText=armadas.length;
 }
 
-/* painel */
 function criarPainel(){
  painel.innerHTML="";
  letras.forEach((l,i)=>{
@@ -311,7 +389,6 @@ function criarPainel(){
 
 function atualizarPainel(){ criarPainel(); }
 
-/* salvar */
 function salvar(){
  let armadas = calcularArmadas();
 
@@ -323,7 +400,6 @@ function salvar(){
  });
 }
 
-/* receber */
 db.ref("bingo").on("value", (snap)=>{
  let d = snap.val();
  if(!d) return;
@@ -347,7 +423,6 @@ db.ref("bingo").on("value", (snap)=>{
  }
 });
 
-/* reset */
 function resetar(){
  sorteados=[];
  premios=[];
@@ -365,7 +440,6 @@ function resetar(){
  salvar();
 }
 
-/* iniciar zerado */
 window.onload = function(){
   resetar();
 };
