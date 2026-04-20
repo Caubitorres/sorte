@@ -63,7 +63,6 @@ ul { list-style:none; padding:0; }
 <input id="nomeBingoInput" placeholder="Letras (ex: BINGO)">
 <button onclick="alterarLetras()">Trocar Letras</button><br><br>
 
-<button onclick="abrirTelao()">🎥 Telão</button>
 <button onclick="sortear()">🎲 Sortear</button>
 
 <input id="inputNumero" type="number">
@@ -111,6 +110,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+let primeiraCarga = true;
+
 let sorteados=[];
 let letras=["B","I","N","G","O"];
 let cartelas={};
@@ -119,7 +120,7 @@ let premioAtual=1;
 let somAtivo=false;
 let ultimaPedraFalada=null;
 
-/* 🔊 áudio */
+/* áudio */
 function falar(texto){
  if(!somAtivo) return;
  let msg=new SpeechSynthesisUtterance(texto);
@@ -138,8 +139,8 @@ function repetirAudio(){
 }
 
 function toggleSom(){
- somAtivo = !somAtivo;
- btnSom.innerText = somAtivo ? "🔊 Som ON" : "🔇 Som OFF";
+ somAtivo=!somAtivo;
+ btnSom.innerText=somAtivo?"🔊 Som ON":"🔇 Som OFF";
 }
 
 function getLetra(n){ return letras[Math.floor((n-1)/15)]; }
@@ -157,8 +158,26 @@ function alterarLetras(){
 /* consulta */
 function toggleConsulta(){
  consultaConteudo.style.display =
-   consultaConteudo.style.display==="none"?"block":"none";
+ consultaConteudo.style.display==="none"?"block":"none";
 }
+
+/* excel */
+fileInput.onchange=e=>{
+ let r=new FileReader();
+ r.onload=ev=>{
+  let wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+  let j=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1});
+  cartelas={};
+  j.forEach((l,i)=>{
+    if(i===0)return;
+    let nome=l[0]||("Cartela "+i);
+    let nums=l.slice(1,26).map(n=>parseInt(n)).filter(n=>!isNaN(n));
+    if(nums.length===25) cartelas[nome]=nums;
+  });
+  alert("Cartelas: "+Object.keys(cartelas).length);
+ };
+ r.readAsArrayBuffer(e.target.files[0]);
+};
 
 /* jogo */
 function sortear(){
@@ -166,7 +185,7 @@ function sortear(){
  for(let i=1;i<=75;i++){
    if(!sorteados.includes(i)) disp.push(i);
  }
- if(disp.length===0) return;
+ if(!disp.length) return;
  adicionarNumero(disp[Math.floor(Math.random()*disp.length)]);
 }
 
@@ -187,7 +206,78 @@ function adicionarNumero(n){
  falarPedra(n);
 
  atualizarPainel();
+ verificarGanhador(n);
  salvar();
+}
+
+/* ganhadores */
+function verificarGanhador(ultimaPedra){
+ let novos=[];
+ for(let nome in cartelas){
+  let nums=cartelas[nome];
+  let acertos=nums.filter(n=>sorteados.includes(n)).length;
+  let jaGanhou=premios.some(p=>p.ganhadores.includes(nome));
+  if(acertos===25 && !jaGanhou) novos.push(nome);
+ }
+ if(novos.length){
+  premios.push({
+    numero:premioAtual,
+    pedra:ultimaPedra,
+    ganhadores:novos
+  });
+  premioAtual++;
+ }
+ atualizarListas();
+}
+
+/* armadas */
+function calcularArmadas(){
+ let armadas=[];
+ for(let nome in cartelas){
+   let nums=cartelas[nome];
+   let acertos=nums.filter(n=>sorteados.includes(n)).length;
+   let jaGanhou=premios.some(p=>p.ganhadores.includes(nome));
+   if(acertos===24 && !jaGanhou) armadas.push(nome);
+ }
+ return armadas;
+}
+
+function atualizarListas(){
+ let armadas = calcularArmadas();
+
+ listaGanhadores.innerHTML="";
+ if(premios.length){
+  blocoGanhadores.style.display="block";
+  ganhador.innerText="🎉 PARABÉNS!!!";
+  premios.forEach(p=>{
+    let titulo=document.createElement("li");
+    titulo.style.fontWeight="bold";
+    titulo.innerText=p.numero+"º PRÊMIO ("+getLetra(p.pedra)+" "+p.pedra+")";
+    listaGanhadores.appendChild(titulo);
+    p.ganhadores.forEach(nome=>{
+      let li=document.createElement("li");
+      li.innerText="- "+nome;
+      listaGanhadores.appendChild(li);
+    });
+  });
+ } else {
+  blocoGanhadores.style.display="none";
+  ganhador.innerText="";
+ }
+
+ listaArmadas.innerHTML="";
+ if(armadas.length){
+  blocoArmadas.style.display="block";
+  armadas.forEach(a=>{
+    let li=document.createElement("li");
+    li.innerText=a;
+    listaArmadas.appendChild(li);
+  });
+ } else {
+  blocoArmadas.style.display="none";
+ }
+
+ qtdArmadas.innerText=armadas.length;
 }
 
 /* painel */
@@ -223,22 +313,32 @@ function atualizarPainel(){ criarPainel(); }
 
 /* salvar */
 function salvar(){
+ let armadas = calcularArmadas();
+
  db.ref("bingo").set({
    sorteados,
    letras,
-   premios
+   premios,
+   armadas
  });
 }
 
-/* 🔥 RECEBER ATUALIZAÇÃO */
+/* receber */
 db.ref("bingo").on("value", (snap)=>{
  let d = snap.val();
  if(!d) return;
 
+ if(primeiraCarga){
+   primeiraCarga=false;
+   return;
+ }
+
  sorteados = d.sorteados || [];
  letras = d.letras || letras;
+ premios = d.premios || [];
 
  atualizarPainel();
+ atualizarListas();
 
  if(sorteados.length){
    let u = sorteados[sorteados.length-1];
@@ -247,15 +347,28 @@ db.ref("bingo").on("value", (snap)=>{
  }
 });
 
+/* reset */
 function resetar(){
  sorteados=[];
+ premios=[];
+ premioAtual=1;
+ ultimaPedraFalada=null;
+
  criarPainel();
  ultimo.innerText="--";
  contador.innerText="0 de 75";
+ ganhador.innerText="";
+ resultadoConsulta.innerText="";
+ blocoGanhadores.style.display="none";
+ blocoArmadas.style.display="none";
+
  salvar();
 }
 
-criarPainel();
+/* iniciar zerado */
+window.onload = function(){
+  resetar();
+};
 </script>
 
 </body>
