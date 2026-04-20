@@ -8,23 +8,28 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-body {
-  background:black;
+body{
+  background:#000;
   color:#00ffcc;
   text-align:center;
   font-family:Arial;
 }
 
-#n { font-size:120px; }
-#c { font-size:20px; }
+#n{font-size:120px;}
+#c{font-size:20px;}
 
-.linha {
+.linha{
   display:flex;
   justify-content:center;
-  margin-bottom:5px;
+  margin:4px 0;
 }
 
-.num {
+.letra{
+  width:30px;
+  font-weight:bold;
+}
+
+.num{
   width:30px;
   height:30px;
   margin:2px;
@@ -32,11 +37,22 @@ body {
   display:flex;
   align-items:center;
   justify-content:center;
+  border-radius:4px;
 }
 
-.sel {
+.sel{
   background:#00ffcc;
   color:#000;
+  font-weight:bold;
+}
+
+#ganhador{
+  color:#ff9800;
+  font-size:40px;
+}
+
+#premios, #armadas{
+  font-size:18px;
 }
 </style>
 </head>
@@ -45,6 +61,11 @@ body {
 
 <div id="n">--</div>
 <div id="c"></div>
+
+<div id="ganhador"></div>
+<div id="premios"></div>
+
+<div id="armadas"></div>
 
 <div id="painel"></div>
 
@@ -61,29 +82,36 @@ const db = firebase.database();
 
 let letras = ["B","I","N","G","O"];
 
-function letra(n){
+function getLetra(n){
   return letras[Math.floor((n-1)/15)];
 }
 
-function desenhar(s){
-  let p = document.getElementById("painel");
-  p.innerHTML="";
+function desenharPainel(s){
+  let painel = document.getElementById("painel");
+  painel.innerHTML="";
 
   letras.forEach((l,i)=>{
     let linha=document.createElement("div");
     linha.className="linha";
+
+    let letra=document.createElement("div");
+    letra.className="letra";
+    letra.innerText=l;
+    linha.appendChild(letra);
 
     for(let n=i*15+1;n<=i*15+15;n++){
       let d=document.createElement("div");
       d.className="num";
       d.innerText=n;
 
-      if(s.includes(n)) d.classList.add("sel");
+      if(s.includes(n)){
+        d.classList.add("sel");
+      }
 
       linha.appendChild(d);
     }
 
-    p.appendChild(linha);
+    painel.appendChild(linha);
   });
 }
 
@@ -93,14 +121,43 @@ db.ref("bingo").on("value", snap=>{
 
   let s = d.sorteados || [];
   letras = d.letras || letras;
+  let premios = d.premios || [];
+  let armadas = d.armadas || [];
 
+  // número
   if(s.length){
     let u = s[s.length-1];
-    n.innerText = letra(u)+" "+u;
+    n.innerText = getLetra(u)+" "+u;
     c.innerText = s.length+" de 75";
+  } else {
+    n.innerText="--";
+    c.innerText="";
   }
 
-  desenhar(s);
+  // ganhadores
+  if(premios.length){
+    ganhador.innerText="🎉 PARABÉNS!!!";
+
+    let txt="";
+    premios.forEach(p=>{
+      txt += p.numero+"º ("+getLetra(p.pedra)+" "+p.pedra+") - ";
+      txt += p.ganhadores.join(", ")+"<br>";
+    });
+
+    premios.innerHTML = txt;
+  } else {
+    ganhador.innerText="";
+    premios.innerHTML="";
+  }
+
+  // armadas
+  if(armadas.length){
+    armadas.innerHTML = "🔥 Armadas: "+armadas.join(" | ");
+  } else {
+    armadas.innerHTML="";
+  }
+
+  desenharPainel(s);
 });
 </script>
 
