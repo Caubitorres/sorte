@@ -8,141 +8,237 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
+html, body{
+  width:100%;
+  height:100%;
+}
+
 body{
   background:#000;
   color:#00ffcc;
   font-family:Arial;
+  margin:0;
+  padding:clamp(5px,2vw,15px);
   display:flex;
-}
-
-/* principal */
-#principal{
-  width:70%;
-  text-align:center;
-}
-
-#n{font-size:100px;}
-#c{font-size:20px;}
-
-.linha{
-  display:flex;
-  justify-content:center;
-}
-
-.letra{
-  width:30px;
-  font-weight:bold;
-}
-
-.num{
-  width:30px;
-  height:30px;
-  margin:2px;
-  border:1px solid #00ffcc;
-  display:flex;
+  flex-direction:column;
   align-items:center;
-  justify-content:center;
 }
 
-.sel{
-  background:#00ffcc;
-  color:#000;
+.container{
+  width:100%;
+  max-width:1100px;
 }
 
-/* ganhador */
+#topo{
+  text-align:center;
+  width:100%;
+}
+
+#n{
+  font-size:clamp(80px, 12vw, 200px);
+  font-weight:bold;
+  text-shadow:0 0 20px #00ffcc;
+}
+
+#c{
+  font-size:clamp(14px,2vw,22px);
+}
+
 #ganhador{
-  font-size:50px;
+  font-size:clamp(24px,5vw,45px);
   color:#ff9800;
   font-weight:bold;
-  margin:10px 0;
-  animation: piscar 1s infinite;
 }
 
-@keyframes piscar{
-  0%{opacity:1;}
-  50%{opacity:0.3;}
-  100%{opacity:1;}
+#premios, #armadas{
+  width:100%;
+  max-width:1100px;
+  margin:auto;
+  word-break:break-word;
 }
 
-/* lateral */
-#lateral{
-  width:30%;
-  background:#111;
-  padding:15px;
+#armadas{
+  margin-top:20px;
+}
+
+#conteudo{
+  display:flex;
+  justify-content:space-evenly;
+  align-items:flex-start;
+  gap:40px;
+  margin-top:10px;
+  width:100%;
+  max-width:1100px;
+}
+
+@media (max-width:900px){
+  #conteudo{
+    flex-direction:column;
+    align-items:center;
+  }
+}
+
+.titulos{
+  display:flex;
+  justify-content:space-evenly;
+  width:100%;
+  max-width:1100px;
+}
+
+.tituloBox{
+  width:50%;
   text-align:center;
+}
+
+.tituloBox h2{
+  margin:0;
+  white-space:nowrap;
+  overflow:hidden;
+}
+
+.linha-verde, .linha-laranja{
+  height:2px;
+  background:#00ffcc;
+}
+
+/* 🔥 LINHAS TRAVADAS PERFEITAS */
+.linha-real{
+  height:2px;
+  background:#00ffcc;
+  margin:4px auto 6px auto;
+  width:calc(5 * clamp(30px,4vw,60px) + 20px);
+}
+
+.linha-cartela-fixa{
+  height:2px;
+  background:#00ffcc;
+  margin:6px auto;
+  width:220px;
+}
+
+#painel{
+  padding:10px;
+  border:2px solid #00ffcc;
+  border-radius:8px;
+}
+
+#lateral{
+  width:220px;
+  background:#111;
+  padding:10px;
+  text-align:center;
+  border-radius:8px;
+  border:2px solid orange;
 }
 
 #inputCartela{
-  padding:12px;
-  font-size:22px;
-  width:230px;
+  width:100%;
+  padding:6px;
+  font-size:18px;
   text-align:center;
-  margin-bottom:10px;
 }
 
-/* cartela */
+.botaoSom{
+  position:absolute;
+  top:10px;
+  right:10px;
+  padding:5px 10px;
+  cursor:pointer;
+}
+
 .linhaCartela{
   display:flex;
   justify-content:center;
 }
 
 .numCartela{
-  width:40px;
-  height:40px;
-  margin:3px;
+  width:clamp(25px,6vw,30px);
+  height:clamp(25px,6vw,30px);
+  margin:1px;
   border:1px solid #555;
   display:flex;
   align-items:center;
   justify-content:center;
-  border-radius:6px;
 }
 
 .selCartela{
   background:orange;
   color:#000;
 }
-
-/* textos */
-#premios{
-  font-size:18px;
-}
-
-#armadas{
-  font-size:18px;
-  margin-top:10px;
-}
 </style>
 </head>
 
 <body>
 
-<div id="principal">
-  <div id="n">--</div>
-  <div id="c"></div>
+<button class="botaoSom" onclick="toggleSom()">🔊 Som ON</button>
 
-  <div id="ganhador"></div>
-  <div id="premios"></div>
-  <div id="armadas"></div>
-
-  <div id="painel"></div>
+<div class="container">
+  <div id="topo">
+    <div id="n">--</div>
+    <div id="c"></div>
+    <div id="ganhador"></div>
+    <div id="premios"></div>
+    <div id="armadas"></div>
+  </div>
 </div>
 
-<div id="lateral">
-  <h2>Cartela</h2>
-  <input id="inputCartela" placeholder="Nº da cartela">
-  <div id="cartelaVisual"></div>
+<div class="titulos">
+  <div class="tituloBox">
+    <h2>🎯 BINGO GERAL</h2>
+    <div class="linha-real"></div>
+  </div>
+  <div class="tituloBox">
+    <h2>🎫 CARTELA</h2>
+    <div class="linha-cartela-fixa"></div>
+  </div>
+</div>
+
+<div id="conteudo">
+  <div>
+    <div id="painel"></div>
+  </div>
+
+  <div id="lateral">
+    <input id="inputCartela" placeholder="Digite o nº da cartela">
+    <div id="cartelaVisual"></div>
+  </div>
 </div>
 
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyBYpJLTbts47UQge9xwGJlggnuFO1n381o",
   authDomain: "bingo-facuc.firebaseapp.com",
-  databaseURL: "https://bingo-facuc-default-rtdb.firebaseio.com/",
+  databaseURL: "https://bingo-facuc-default-rtdb.firebaseio.com",
   projectId: "bingo-facuc"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
+let somAtivo = true;
+let ultimoNumero = null;
+
+function toggleSom(){
+  somAtivo = !somAtivo;
+  document.querySelector('.botaoSom').innerText = somAtivo ? "🔊 Som ON" : "🔇 Som OFF";
+}
+
+function falarNumero(n){
+  if(!somAtivo || n === ultimoNumero) return;
+
+  const letra = letras[Math.floor((n-1)/15)];
+
+  speechSynthesis.cancel();
+
+  setTimeout(()=>{
+    const msg = new SpeechSynthesisUtterance(`${letra} ${n}`);
+    msg.lang = "pt-BR";
+    msg.rate = 0.9;
+    speechSynthesis.speak(msg);
+  }, 100);
+
+  ultimoNumero = n;
+}
 
 let letras=["B","I","N","G","O"];
 let cartelas={};
@@ -152,47 +248,68 @@ function getLetra(n){
   return letras[Math.floor((n-1)/15)];
 }
 
-/* painel */
 function desenharPainel(s){
   let painel=document.getElementById("painel");
   painel.innerHTML="";
 
-  letras.forEach((l,i)=>{
+  let topo=document.createElement("div");
+  topo.style.display="flex";
+  topo.style.justifyContent="center";
+
+  letras.forEach(l=>{
+    let d=document.createElement("div");
+    d.style.width="clamp(30px,4vw,60px)";
+    d.style.height="clamp(30px,4vw,60px)";
+    d.style.display="flex";
+    d.style.alignItems="center";
+    d.style.justifyContent="center";
+    d.style.fontWeight="bold";
+    d.style.fontSize="clamp(16px,2vw,28px)";
+    d.innerText=l;
+    topo.appendChild(d);
+  });
+
+  painel.appendChild(topo);
+
+  for(let i=0;i<15;i++){
     let linha=document.createElement("div");
-    linha.className="linha";
+    linha.style.display="flex";
+    linha.style.justifyContent="center";
 
-    let letra=document.createElement("div");
-    letra.className="letra";
-    letra.innerText=l;
-    linha.appendChild(letra);
-
-    for(let n=i*15+1;n<=i*15+15;n++){
+    for(let j=0;j<5;j++){
+      let n = j*15 + (i+1);
       let d=document.createElement("div");
-      d.className="num";
       d.innerText=n;
 
-      if(s.includes(n)) d.classList.add("sel");
+      d.style.width="clamp(30px,4vw,60px)";
+      d.style.height="clamp(25px,3.5vw,50px)";
+      d.style.margin="2px";
+      d.style.border="1px solid #00ffcc";
+      d.style.display="flex";
+      d.style.alignItems="center";
+      d.style.justifyContent="center";
+
+      if(s.includes(n)){
+        d.style.background="#00ffcc";
+        d.style.color="#000";
+        d.style.fontWeight="bold";
+      }
 
       linha.appendChild(d);
     }
-
     painel.appendChild(linha);
-  });
+  }
 }
 
-/* cartela lateral */
 function atualizarCartela(){
-  let id=inputCartela.value.trim();
+  let id=document.getElementById("inputCartela").value.trim();
   let div=document.getElementById("cartelaVisual");
 
   if(!id){ div.innerHTML=""; return; }
 
   let chave=null;
-
   for(let k in cartelas){
-    if(String(k).replace(/^0+/,"")===id){
-      chave=k; break;
-    }
+    if(String(k).replace(/^0+/,"")===id){ chave=k; break; }
   }
 
   if(!chave){
@@ -222,75 +339,42 @@ function atualizarCartela(){
   div.innerHTML=html;
 }
 
-inputCartela.addEventListener("input", atualizarCartela);
+document.getElementById("inputCartela").addEventListener("input", atualizarCartela);
 
-/* firebase */
 db.ref("bingo").on("value", snap=>{
   let d=snap.val();
   if(!d) return;
 
   sorteados=d.sorteados||[];
-  letras=d.letras||letras;
   cartelas=d.cartelas||cartelas;
 
-  let listaPremios=d.premios||[];
-  let listaArmadas=d.armadas||[];
+  if(d.letras){
+    letras = Array.isArray(d.letras) ? d.letras : d.letras.split("");
+  }
 
-  /* número */
   if(sorteados.length){
     let u=sorteados[sorteados.length-1];
-    n.innerText=getLetra(u)+" "+u;
-    c.innerText=sorteados.length+" de 75";
+    document.getElementById("n").innerText=getLetra(u)+" "+u;
+    document.getElementById("c").innerText=sorteados.length+" de 75";
+    falarNumero(u);
   }
 
-  /* ganhador */
-  if(listaPremios.length){
-    ganhador.innerHTML="🏆 GANHADOR(A)";
+  let premiosHTML="";
+  (d.premios||[]).forEach(p=>{
+    premiosHTML += `<div><b>${p.numero}º PRÊMIO</b> (${getLetra(p.pedra)} ${p.pedra}) - ${p.ganhadores.join(", ")}</div>`;
+  });
+  document.getElementById("premios").innerHTML=premiosHTML;
+
+  if(d.armadas?.length){
+    document.getElementById("armadas").innerHTML =
+      `<b>🔥 CARTELAS ARMADAS (${d.armadas.length})</b><br>` +
+      d.armadas.join(" | ");
   } else {
-    ganhador.innerHTML="";
+    document.getElementById("armadas").innerHTML="";
   }
 
-  /* prêmios */
-  if(listaPremios.length){
-    let txt="";
-    listaPremios.forEach(p=>{
-      txt+=`<div>${p.numero}º prêmio (${getLetra(p.pedra)} ${p.pedra}) - ${p.ganhadores.join(", ")}</div>`;
-    });
-    premios.innerHTML=txt;
-  } else {
-    premios.innerHTML="";
-  }
-
-  /* 🔥 cartelas armadas em linha */
-  if(listaArmadas.length){
-    armadas.innerHTML = `
-      <div style="font-size:22px;color:#ff5722;font-weight:bold">
-        🔥 CARTELAS ARMADAS (${listaArmadas.length})
-      </div>
-
-      <div style="
-        margin-top:8px;
-        display:flex;
-        flex-wrap:wrap;
-        justify-content:center;
-        gap:8px;
-      ">
-        ${listaArmadas.map(n => `
-          <div style="
-            background:#ff5722;
-            color:#fff;
-            padding:6px 10px;
-            border-radius:6px;
-            font-weight:bold;
-          ">
-            ${n}
-          </div>
-        `).join("")}
-      </div>
-    `;
-  } else {
-    armadas.innerHTML="";
-  }
+  document.getElementById("ganhador").innerHTML =
+    (d.premios||[]).length ? "🏆 GANHADOR(A)" : "";
 
   desenharPainel(sorteados);
   atualizarCartela();
