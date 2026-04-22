@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SUPER TELÃO BINGO</title>
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -12,114 +13,234 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-body{
-  background:#000;
-  color:#00ffcc;
-  font-family:Arial;
-  margin:0;
-  padding:10px;
-}
-#app{ max-width:1000px; margin:auto; }
-#btnSom{ position:absolute; top:10px; left:10px; padding:6px 12px; cursor:pointer; }
-#topoGeral{ display:grid; grid-template-columns: 1fr auto; gap:20px; }
-#sorteio{ text-align:center; }
+  body{
+    background:#000;
+    color:#00ffcc;
+    font-family: Arial, sans-serif;
+    margin:0;
+    padding:10px;
+    overflow-x:hidden;
+  }
 
-#ganhador{
-  font-size:32px;
-  font-weight:bold;
-  color:yellow;
-  margin-top:12px;
-  text-shadow:0 0 12px yellow;
-}
+  #app{
+    max-width:1000px;
+    margin:auto;
+  }
 
-#premios{
-  margin-top:18px;
-  line-height:1.8;
-  font-size:22px;
-}
+  /* Botão: não absoluto (evita quebrar no mobile) */
+  #btnSom{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 12px;
+    cursor:pointer;
+    border:1px solid #00ffcc55;
+    background:#000;
+    color:#00ffcc;
+    border-radius:10px;
+    margin-bottom:10px;
+  }
 
-#armadas{ margin-top:18px; line-height:1.8; }
+  #topoGeral{
+    display:grid;
+    grid-template-columns: 1fr auto;
+    gap:20px;
+    align-items:start;
+  }
 
-#n{
-  font-size:clamp(100px,14vw,220px);
-  font-weight:bold;
-  text-shadow:0 0 30px #00ffcc;
-}
+  #sorteio{ text-align:center; }
 
-#cartelaArea{
-  display:inline-block;
-  background:#111;
-  padding:6px;
-  border-radius:8px;
-  border:2px solid orange;
-}
+  #ganhador{
+    font-size:clamp(16px, 2.2vw, 32px);
+    font-weight:bold;
+    color:yellow;
+    margin-top:12px;
+    text-shadow:0 0 12px yellow;
+  }
 
-.numCartela{
-  width:36px; height:36px; margin:2px;
-  border:1px solid #555;
-  display:flex; align-items:center; justify-content:center;
-}
+  #premios{
+    margin-top:18px;
+    line-height:1.5;
+    font-size:clamp(14px, 2vw, 22px);
+  }
 
-#inputCartela{
-  width:calc(5 * (36px + 4px));
-  height:36px;
-  font-size:18px;
-  text-align:center;
-  margin:0 auto 6px auto;
-  display:block;
-}
+  #armadas{
+    margin-top:18px;
+    line-height:1.5;
+    font-size:clamp(14px, 1.9vw, 20px);
+  }
 
-#tituloPainel{ margin-top:20px; margin-left:44px; font-weight:bold; }
+  #n{
+    font-size:clamp(64px, 14vw, 220px);
+    font-weight:bold;
+    text-shadow:0 0 30px #00ffcc;
+    line-height:1;
+  }
 
-.containerPainel{ display:flex; }
+  #cartelaArea{
+    display:inline-block;
+    background:#111;
+    padding:6px;
+    border-radius:8px;
+    border:2px solid orange;
+  }
 
-.colLetras{
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-}
+  .numCartela{
+    width:clamp(26px, 3.5vw, 42px);
+    height:clamp(26px, 3.5vw, 42px);
+    margin:2px;
+    border:1px solid #555;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 auto;
+  }
 
-.letra{
-  width:40px;
-  height:clamp(25px,3vw,40px);
-  margin:2px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:bold;
-  background:#00ffcc;
-  color:#000;
-}
+  /* input: largura fluida */
+  #inputCartela{
+    width: min(92vw, 320px);
+    height:clamp(34px, 6vw, 40px);
+    font-size:clamp(14px, 2.2vw, 18px);
+    text-align:center;
+    margin:0 auto 6px auto;
+    display:block;
+  }
 
-.grid{ flex:1; }
+  #tituloPainel{
+    margin-top:20px;
+    margin-left:0;
+    font-weight:bold;
+    text-align:left;
+    padding-left:4px;
+    font-size:clamp(18px, 3.2vw, 26px);
+  }
 
-.linha{ display:flex; }
+  /* Painel do bingo */
+  .containerPainel{
+    display:flex;
+    gap:12px;
+    align-items:stretch;
+  }
 
-.numero{
-  flex:1;
-  height:clamp(25px,3vw,40px);
-  margin:2px;
-  border:1px solid #00ffcc;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
+  .colLetras{
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  }
 
-.marcado{
-  background:#00ffcc;
-  color:#000;
-  font-weight:bold;
-}
+  .letra{
+    width:clamp(34px, 5vw, 56px);
+    height:clamp(30px, 4.2vw, 52px);
+    margin:2px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+    background:#00ffcc;
+    color:#000;
+    border-radius:6px;
+    flex:0 0 auto;
+  }
 
-.linhaCartela{
-  display:flex;
-  justify-content:center;
-}
+  .grid{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+  }
 
-.selCartela{
-  background:orange;
-  color:#000;
-}
+  .linha{
+    display:flex;
+  }
+
+  .numero{
+    flex:1;
+    min-width:0;
+    height:clamp(30px, 4.2vw, 52px);
+    margin:2px;
+    border:1px solid #00ffcc;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:clamp(12px, 2.3vw, 22px);
+    border-radius:6px;
+  }
+
+  .marcado{
+    background:#00ffcc;
+    color:#000;
+    font-weight:bold;
+  }
+
+  .linhaCartela{
+    display:flex;
+    justify-content:center;
+    flex-wrap:nowrap;
+  }
+
+  .selCartela{
+    background:orange;
+    color:#000;
+  }
+
+  /* ===== Celular retrato ===== */
+  @media (max-width: 720px){
+    #topoGeral{
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+
+    #cartelaArea{
+      width:100%;
+      overflow-x:auto;
+    }
+
+    .containerPainel{
+      flex-direction:column;
+    }
+
+    .colLetras{
+      flex-direction:row;
+      justify-content:space-between;
+    }
+
+    .letra{
+      width:clamp(44px, 18vw, 70px);
+      height:clamp(30px, 7vw, 50px);
+    }
+
+    .linha{
+      overflow-x:auto;
+    }
+  }
+
+  /* ===== Celular paisagem (landscape) ===== */
+  @media (max-width: 900px) and (orientation: landscape){
+    #topoGeral{
+      grid-template-columns: 1fr auto;
+      gap:12px;
+    }
+
+    .containerPainel{
+      flex-direction:row;
+    }
+
+    .colLetras{
+      flex-direction:column;
+      justify-content:space-between;
+    }
+
+    /* reduzir um pouco pra caber na horizontal */
+    .letra{
+      width:clamp(34px, 8vw, 60px);
+      height:clamp(28px, 5.2vw, 48px);
+    }
+
+    .numero{
+      height:clamp(28px, 5.2vw, 48px);
+      font-size:clamp(10px, 2.2vw, 20px);
+    }
+  }
 </style>
 </head>
 
