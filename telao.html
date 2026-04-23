@@ -10,88 +10,41 @@
 
 <style>
   * { box-sizing: border-box; }
-
-  body {
-    background: #000;
-    color: #fff;
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    margin: 0;
-    padding: 10px;
-    overflow-x: hidden;
-    width: 100vw;
-  }
-
-  .header-evento {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(90deg, #1a1a1a, #333);
-    padding: 10px 15px;
-    border-radius: 12px;
-    border-bottom: 4px solid #ff9800;
-    margin-bottom: 15px;
-    gap: 10px;
-  }
-  .header-evento h1 { margin: 0; color: #ff9800; text-transform: uppercase; font-size: 20px; flex: 1; }
+  body { background: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 10px; width: 100vw; overflow-x: hidden; }
   
-  .btn-som-topo {
-    background: #444; border: 2px solid #ff9800; color: #fff;
-    padding: 6px 12px; border-radius: 20px; cursor: pointer;
-    font-weight: bold; font-size: 12px; display: flex; align-items: center; gap: 5px;
-  }
-  .btn-som-topo.ativo { background: #28a745; border-color: #fff; }
+  .header-evento { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; padding: 10px 15px; border-radius: 12px; border-bottom: 4px solid #ff9800; margin-bottom: 15px; }
+  .header-evento h1 { margin: 0; color: #ff9800; text-transform: uppercase; font-size: 20px; }
+  
+  .btn-som-topo { background: #444; border: 2px solid #ff9800; color: #fff; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+  .btn-som-topo.ativo { background: #28a745; }
 
-  .info-topo { text-align: right; font-size: 12px; color: #00ffcc; line-height: 1.2; }
-
-  .main-grid {
-    display: grid;
-    grid-template-columns: 300px 1fr 300px;
-    gap: 15px;
-  }
-
-  @media (max-width: 1024px) {
-    .main-grid { display: flex; flex-direction: column; }
-    #numero-grande { font-size: 100px !important; }
-  }
+  .main-grid { display: grid; grid-template-columns: 300px 1fr 300px; gap: 15px; }
+  @media (max-width: 1024px) { .main-grid { display: flex; flex-direction: column; } }
 
   .box { background: #111; border: 2px solid #333; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
-  .box h2 { margin-top: 0; font-size: 15px; color: #ff9800; border-bottom: 1px solid #ff9800; padding-bottom: 5px; text-transform: uppercase; }
+  .box h2 { margin: 0 0 10px 0; font-size: 15px; color: #ff9800; border-bottom: 1px solid #ff9800; text-transform: uppercase; }
 
-  .col-central { text-align: center; }
-  #numero-grande { font-size: 150px; font-weight: 900; color: #ff9800; line-height: 1; margin: 10px 0; }
+  #numero-grande { font-size: 150px; font-weight: 900; color: #ff9800; text-align: center; margin: 10px 0; }
   
-  #alerta-emocao { height: 40px; margin-bottom: 5px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-  .aviso-armada { color: #ff5252; animation: pulse 0.8s infinite; font-size: 22px; text-shadow: 0 0 10px rgba(255,0,0,0.3); }
-  .aviso-ganhador { color: #fff; background: #b8860b; padding: 5px 15px; border-radius: 5px; font-size: 22px; }
+  #alerta-emocao { height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+  .aviso-armada { color: #ff5252; animation: pulse 0.8s infinite; font-size: 22px; }
 
-  .painel-geral { width: 100%; background: #0a0a0a; padding: 8px; border-radius: 10px; }
+  .painel-geral { background: #0a0a0a; padding: 8px; border-radius: 10px; }
   .linha-bingo { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
-  .letra-guia { width: 30px; height: 30px; background: #ff9800; color: #000; font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+  .letra-guia { width: 30px; height: 30px; background: #ff9800; color: #000; font-weight: bold; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
   .grid-pedras { display: grid; grid-template-columns: repeat(15, 1fr); gap: 3px; flex: 1; }
-  .pedra { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #333; }
-  .pedra.ativa { background: #00ffcc; color: #000; border-color: #00ffcc; }
+  .pedra { aspect-ratio: 1/1; border: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #333; }
+  .pedra.ativa { background: #00ffcc; color: #000; }
 
-  /* CONFERÊNCIA - TAMANHO IGUALADO */
-  .conferencia-box { background: #1a1a1a; border: 2px solid #444; }
-  #inputConf { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ff9800; text-align: center; font-size: 18px; margin-bottom: 10px; background: #000; color: #ff9800; font-weight: bold; }
-  
-  .conferencia-header { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-bottom: 3px; }
-  .letra-conf { 
-    background: #ff9800; color: #000; font-weight: 900; text-align: center; 
-    font-size: 20px; /* Tamanho igual aos números */
-    height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px;
-  }
-  
-  .conferencia-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
-  .num-conf {
-    background: #333; height: 40px; display: flex; align-items: center; justify-content: center;
-    font-size: 20px; border-radius: 4px; color: #777; border: 1px solid #444;
-  }
-  .num-conf.marcado { background: #28a745; color: white; border-color: #2ecc71; font-weight: bold; }
+  /* CONFERÊNCIA */
+  .conferencia-header, .conferencia-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+  .letra-conf { background: #ff9800; color: #000; font-weight: 900; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 20px; }
+  .num-conf { background: #333; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 4px; color: #777; }
+  .num-conf.marcado { background: #28a745; color: white; font-weight: bold; }
+  #inputConf { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ff9800; text-align: center; font-size: 18px; margin-bottom: 10px; background: #000; color: #ff9800; }
 
   .badge-armada { display: inline-block; background: #d32f2f; color: #fff; padding: 3px 6px; border-radius: 4px; margin: 2px; font-size: 12px; }
-
-  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.05); } }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 </style>
 </head>
 <body>
@@ -99,25 +52,18 @@
 <div id="app">
   <header class="header-evento">
     <h1 id="nomeBingo">BINGO</h1>
-    <button id="btnSom" class="btn-som-topo" onclick="toggleSom()">
-      <span>🔇</span> <span>OFF</span>
-    </button>
-    <div class="info-topo">
-      <div id="dataBingo"></div>
-      <div id="valorBingo"></div>
-    </div>
+    <button id="btnSom" class="btn-som-topo" onclick="toggleSom()"><span>🔇</span> <span>OFF</span></button>
   </header>
 
   <div class="main-grid">
     <div class="col-lateral">
       <div class="box">
         <h2>🎁 PRÊMIOS</h2>
-        <div id="descricaoPremios" style="color: #00ffcc; font-size: 14px; white-space: pre-line;"></div>
+        <div id="descricaoPremios" style="color: #00ffcc; white-space: pre-line;"></div>
       </div>
-      
-      <div class="box conferencia-box">
+      <div class="box">
         <h2>🔍 CONFERIR CARTELA</h2>
-        <input type="text" id="inputConf" placeholder="Nº Cartela" inputmode="numeric" oninput="conferirCartela(this.value)">
+        <input type="text" id="inputConf" placeholder="Nº Cartela" oninput="conferirCartela(this.value)">
         <div class="conferencia-header" id="letrasCartela"></div>
         <div id="resultadoConf" class="conferencia-grid"></div>
       </div>
@@ -126,17 +72,17 @@
     <div class="col-central">
       <div id="alerta-emocao"></div>
       <div id="numero-grande">--</div>
-      <div id="contador-bolas" style="color:#00ffcc">0 BOLAS</div>
+      <div id="contador-bolas" style="color:#00ffcc; text-align: center;">0 BOLAS</div>
       <div id="painel" class="painel-geral"></div>
     </div>
 
     <div class="col-lateral">
       <div class="box">
         <h2>🏆 GANHADORES</h2>
-        <ul id="listaGanhadores" style="list-style:none; padding:0; margin:0; font-size:13px;"></ul>
+        <ul id="listaGanhadores" style="list-style:none; padding:0;"></ul>
       </div>
       <div class="box">
-        <h2 style="color: #ff5252;">🔥 CARTELAS ARMADAS</h2>
+        <h2>🔥 CARTELAS ARMADAS</h2>
         <div id="listaArmadas"></div>
       </div>
     </div>
@@ -162,27 +108,38 @@ function toggleSom() {
   const btn = document.getElementById("btnSom");
   btn.innerHTML = somAtivo ? "<span>🔊</span> <span>ON</span>" : "<span>🔇</span> <span>OFF</span>";
   btn.classList.toggle("ativo", somAtivo);
+  if(!somAtivo) window.speechSynthesis.cancel();
 }
 
 function falar(t) {
   if (somAtivo) {
+    window.speechSynthesis.cancel();
     let m = new SpeechSynthesisUtterance(t);
     m.lang = "pt-BR";
-    window.speechSynthesis.cancel();
     window.speechSynthesis.speak(m);
   }
 }
 
+// FUNÇÃO CORRIGIDA PARA EXIBIR POR COLUNAS
 function conferirCartela(id) {
   const container = document.getElementById("resultadoConf");
   container.innerHTML = "";
   if (!id || !todasCartelas[id]) return;
-  todasCartelas[id].forEach(num => {
-    const div = document.createElement("div");
-    div.className = "num-conf " + (sorteadosAtuais.includes(num) ? "marcado" : "");
-    div.innerText = num;
-    container.appendChild(div);
-  });
+
+  const numeros = todasCartelas[id]; 
+
+  // Lógica de Transposição para Grid 5x5
+  for (let linha = 0; linha < 5; linha++) {
+    for (let col = 0; col < 5; col++) {
+      const indiceOriginal = (col * 5) + linha;
+      const num = numeros[indiceOriginal];
+      
+      const div = document.createElement("div");
+      div.className = "num-conf " + (sorteadosAtuais.includes(num) ? "marcado" : "");
+      div.innerText = (num === 0 || num === "0" || !num) ? "X" : num;
+      container.appendChild(div);
+    }
+  }
 }
 
 db.ref("bingo").on("value", snap => {
@@ -195,21 +152,10 @@ db.ref("bingo").on("value", snap => {
 
   document.getElementById("letrasCartela").innerHTML = letrasAtuais.map(l => `<div class="letra-conf">${l}</div>`).join("");
   document.getElementById("nomeBingo").innerText = d.nomeBingo || "BINGO";
-  document.getElementById("dataBingo").innerText = d.dataBingo || "";
-  document.getElementById("valorBingo").innerText = d.valorCartela || "";
   document.getElementById("descricaoPremios").innerText = d.descricaoPremios || "";
 
   const areaAlerta = document.getElementById("alerta-emocao");
-  areaAlerta.innerHTML = "";
-  if (d.premios?.length > 0) {
-      const uG = d.premios[d.premios.length - 1];
-      if (uG.pedra === sorteadosAtuais[sorteadosAtuais.length - 1]) {
-          areaAlerta.innerHTML = `<div class="aviso-ganhador">🏆 TEMOS GANHADOR(A)!</div>`;
-      }
-  } else if (d.armadas?.length > 0) {
-      // TEXTO ATUALIZADO AQUI
-      areaAlerta.innerHTML = `<div class="aviso-armada">🔥 TEM CARTELA ARMADA!</div>`;
-  }
+  areaAlerta.innerHTML = (d.armadas?.length > 0) ? `<div class="aviso-armada">🔥 TEM CARTELA ARMADA!</div>` : "";
 
   if (sorteadosAtuais.length > 0) {
     const u = sorteadosAtuais[sorteadosAtuais.length - 1];
@@ -234,7 +180,7 @@ db.ref("bingo").on("value", snap => {
   });
 
   document.getElementById("listaGanhadores").innerHTML = (d.premios || []).map(p => 
-    `<li style="margin-bottom:5px; border-bottom:1px solid #222;"><b>${p.numero}º Prêmio</b><br><span style="color:#00ffcc">${p.ganhadores.join(", ")}</span></li>`
+    `<li><b>${p.numero}º Prêmio</b>: <span style="color:#00ffcc">${p.ganhadores.join(", ")}</span></li>`
   ).join("");
 
   document.getElementById("listaArmadas").innerHTML = (d.armadas || []).map(a => `<span class="badge-armada">${a}</span>`).join("");
