@@ -76,14 +76,14 @@
     <div class="config-grid">
         <div><label>Nome do Evento</label><input id="nomeBingoInput" placeholder="Ex: Bingo de Natal"></div>
         <div><label>Letras</label><input id="letrasInput" placeholder="BINGO" maxlength="5"></div>
-        <div><label>Data (DD/MM/AAAA)</label><input id="dataInput" placeholder="22/04/2024" maxlength="10"></div>
+        <div><label>Data (DD/MM/AAAA)</label><input id="dataInput" placeholder="22/04/2026" maxlength="10"></div>
         <div><label>Local</label><input id="localInput" placeholder="Pavilhão Central"></div>
         <div><label>Valor Cartela</label><input id="valorInput" placeholder="R$ 10,00"></div>
         <div><label>Importar Excel</label><input type="file" id="fileInput"></div>
     </div>
     <div class="premios-escritos">
-        <label style="font-weight: bold; font-size: 11px; color: #555;">LISTA DE PRÉMIOS DO BINGO (DESCRIÇÃO COMPLETA)</label>
-        <textarea id="listaPremiosEscritos" rows="2" placeholder="Ex: 1º prémio: 01 cafeteira, 2º prémio: 01 liquidificador..."></textarea>
+        <label style="font-weight: bold; font-size: 11px; color: #555;">LISTA DE PRÊMIOS DO BINGO (DESCRIÇÃO COMPLETA)</label>
+        <textarea id="listaPremiosEscritos" rows="2" placeholder="Ex: 1º prêmio: 01 cafeteira, 2º prémio: 01 liquidificador..."></textarea>
     </div>
     <button class="btn-save" onclick="salvarConfiguracoes()">💾 ATUALIZAR INFORMAÇÕES NO TELÃO</button>
 
@@ -105,12 +105,12 @@
 
         <div>
             <div class="info-box">
-                <h3>🏆 GANHADORES (RODADA)</h3>
+                <h3>🏆 GANHADORES</h3>
                 <ul id="listaGanhadores" class="lista-resumo"><li style="color:#999">Aguardando sorteio...</li></ul>
             </div>
 
             <div class="info-box">
-                <h3>🔥 ARMADAS (<span id="countArmadas">0</span>)</h3>
+                <h3>🔥 CARTELAS ARMADAS (<span id="countArmadas">0</span>)</h3>
                 <div id="listaArmadas"><small style="color:#999">Nenhuma armada...</small></div>
             </div>
             
