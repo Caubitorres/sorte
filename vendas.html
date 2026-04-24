@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Venda de Cartelas - Bingo</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+    :root { --bg: #0f172a; --card-bg: #1e293b; --primary: #3b82f6; --success: #22c55e; --text: #f8fafc; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+    .container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .box { width: 450px; padding: 20px; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #334155; }
+    
+    .info-evento { background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--primary); }
+    .info-evento h2 { margin: 0; color: #ff9800; font-size: 1.4rem; text-transform: uppercase; }
+    .info-evento p { margin: 5px 0; font-size: 0.9rem; color: #94a3b8; }
+    .preco-destaque { font-weight: bold; color: var(--success); font-size: 1.2rem; display: block; margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px; }
+
+    .stats-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    .stat-card { background: #0f172a; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #334155; }
+    .stat-card small { display: block; font-size: 10px; color: #94a3b8; text-transform: uppercase; }
+    .stat-card span { font-size: 18px; font-weight: bold; color: var(--primary); }
+
+    .busca-box { background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #1e3a8a; }
+    
+    input { width: 100%; padding: 12px; margin: 5px 0; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; box-sizing: border-box; }
+    button { width: 100%; padding: 12px; margin: 5px 0; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+    .btn-reserva { background: var(--success); }
+    .btn-pix { background: var(--primary); }
+    .btn-print { background: #64748b; }
+    
+    .status-bar { display: flex; justify-content: space-around; background: #0f172a; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 14px; border: 1px solid #3b82f6; }
+    
+    .legenda { display: flex; justify-content: center; gap: 15px; font-size: 12px; margin: 15px 0; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+
+    .lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; margin-top: 15px; }
+    .item { aspect-ratio: 1/1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+    .item small { font-size: 9px; margin-top: 2px; color: #fff; text-shadow: 1px 1px 1px #000; }
+</style>
+</head>
+
+<body>
+<div class="container">
+    <div class="box">
+        <h1 style="text-align:center; color: #3b82f6; margin-bottom: 20px;">🛒 Venda de Cartelas</h1>
+        
+        <div class="info-evento">
+            <h2 id="displayNomeBingo">Carregando...</h2>
+            <p id="displayDataBingo"></p>
+            <p id="displayLocalBingo"></p>
+            <p id="displayPremiosBingo" style="color: #ff9800; font-weight: bold;"></p>
+            <span class="preco-destaque" id="displayPreco">Preço: R$ 0,00</span>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card"><small>Total de Cartelas</small><span id="totalCartelas">0</span></div>
+            <div class="stat-card"><small>Disponíveis</small><span id="totalDisponiveis" style="color: #22c55e;">0</span></div>
+        </div>
+
+        <div class="busca-box">
+            <small style="color: #94a3b8; font-weight: bold;">RECUPERAR POR WHATSAPP:</small>
+            <div style="display: flex; gap: 5px; margin-top: 5px;">
+                <input id="buscaZap" placeholder="Ex: 849XXXXXXXX" style="margin:0">
+                <button onclick="buscarPorZap()" style="width: 60px; background: var(--primary); margin: 0;">🔍</button>
+            </div>
+        </div>
+
+        <input id="nome" placeholder="Nome do Comprador">
+        <input id="zap" placeholder="WhatsApp (DDD + Número)">
+        
+        <button class="btn-reserva" onclick="concluirEReservar()">✅ CONCLUIR RESERVA</button>
+        <button class="btn-pix" onclick="copiarPix()">📋 COPIAR CHAVE PIX</button>
+        <button class="btn-print" onclick="imprimir()">🖨️ IMPRIMIR SELECIONADAS</button>
+
+        <div class="status-bar">
+            <span id="txtQtde">Selecionadas: 0</span>
+            <span id="txtTotal" style="color:var(--success); font-weight:bold;">Total: R$ 0,00</span>
+        </div>
+
+        <div class="legenda">
+            <span><div class="dot" style="background:#22c55e"></div> Livre</span>
+            <span><div class="dot" style="background:#f59e0b"></div> Reserva</span>
+            <span><div class="dot" style="background:#ef4444"></div> Pago</span>
+        </div>
+
+        <h3 style="text-align:center; color: #3b82f6; margin-top: 20px;">👇 Escolha sua cartela</h3>
+        <div class="lista" id="lista"></div>
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyBYpJLTbts47UQge9xwGJlggnuFO1n381o",
+    authDomain: "bingo-facuc.firebaseapp.com",
+    databaseURL: "https://bingo-facuc-default-rtdb.firebaseio.com/",
+    projectId: "bingo-facuc",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let cartelas = {}, status = {}, selecionadas = [], valorGlobal = 0;
+let configBingo = { nome: "", data: "", local: "", premios: "", letras: "BINGO", valorOriginal: "R$ 0,00" };
+
+// Sincronização com o Firebase (Dados do Index)
+db.ref("bingo").on("value", snapshot => {
+    const data = snapshot.val();
+    if (data) {
+        configBingo.nome = data.nomeBingo || "BINGO";
+        configBingo.data = data.dataBingo || "A definir";
+        configBingo.local = data.localBingo || "A definir";
+        configBingo.premios = data.descricaoPremios || "A definir";
+        configBingo.letras = data.letrasBingo || "BINGO";
+        configBingo.valorOriginal = data.valorCartela || "R$ 0,00";
+
+        document.getElementById("displayNomeBingo").innerText = configBingo.nome;
+        document.getElementById("displayDataBingo").innerText = "📅 Data: " + configBingo.data;
+        document.getElementById("displayLocalBingo").innerText = "📍 Local: " + configBingo.local;
+        document.getElementById("displayPremiosBingo").innerText = "🎁 Prêmios: " + configBingo.premios;
+        document.getElementById("displayPreco").innerText = "Valor da Cartela: " + configBingo.valorOriginal;
+
+        let limpo = configBingo.valorOriginal.replace(/[^\d,]/g, "").replace(",", ".");
+        valorGlobal = parseFloat(limpo) || 0;
+        cartelas = data.cartelas || {};
+        render();
+    }
+});
+
+db.ref("status").on("value", s => { status = s.val() || {}; render(); });
+
+function selecionar(n) {
+    const st = status[n]?.status || "livre";
+    if (st !== "livre" && !selecionadas.includes(n)) return;
+    selecionadas.includes(n) ? selecionadas = selecionadas.filter(x => x != n) : selecionadas.push(n);
+    render();
+}
+
+function render() {
+    let html = "";
+    const chaves = Object.keys(cartelas).sort((a,b) => parseInt(a)-parseInt(b));
+    let livres = 0;
+    chaves.forEach(k => {
+        let st = status[k]?.status || "livre";
+        if(st === "livre") livres++;
+        let cor = st === "reservado" ? "#f59e0b" : (st === "pago" ? "#ef4444" : "#22c55e");
+        let borda = selecionadas.includes(k) ? "3px solid #ff9800" : "none";
+        html += `<div class="item" onclick="selecionar('${k}')" style="background:${cor}; border:${borda}">${k}<br><small>${status[k]?.nome?.split(' ')[0] || ''}</small></div>`;
+    });
+    document.getElementById("lista").innerHTML = html;
+    document.getElementById("totalCartelas").innerText = chaves.length;
+    document.getElementById("totalDisponiveis").innerText = livres;
+    
+    let totalReal = (selecionadas.length * valorGlobal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    document.getElementById("txtQtde").innerText = `Selecionadas: ${selecionadas.length}`;
+    document.getElementById("txtTotal").innerText = `Total: ${totalReal}`;
+}
+
+function imprimir() {
+    if (selecionadas.length === 0) return alert("Selecione cartelas.");
+    let w = window.open('', '', 'width=1100,height=900');
+    let letrasArr = (configBingo.letras || "BINGO").split("");
+    let agora = new Date().toLocaleString('pt-BR');
+    
+    let conteudo = `<html><head><style>
+        @page { size: A4 landscape; margin: 0; }
+        body { font-family: sans-serif; margin: 0; padding: 0; }
+        .folha { width: 297mm; height: 210mm; display: flex; page-break-after: always; }
+        .cartela-a5 { width: 148.5mm; height: 210mm; padding: 10mm; box-sizing: border-box; border-right: 1px dashed #ccc; position: relative; display: flex; flex-direction: column; }
+        .header-area { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 10px; }
+        .cartela-num { font-size: 30px; font-weight: 900; background: #000; color: #fff; padding: 5px 15px; border-radius: 5px; }
+        .premio-topo { background: #fff3e0; border: 2px solid #ff9800; padding: 8px; text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 10px; border-radius: 5px; }
+        .cliente-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px; border-radius: 5px; margin-bottom: 10px; text-align: center; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; border: 2px solid #000; }
+        .b-head { background: #000; color: #fff; text-align: center; font-size: 22px; font-weight: bold; padding: 5px; border: 1px solid #000; }
+        .cell { border: 1px solid #000; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; }
+        .status-msg { text-align: center; color: red; font-weight: bold; border: 2px solid red; padding: 5px; margin: 5px 0; text-transform: uppercase; }
+    </style></head><body>`;
+
+    for (let i = 0; i < selecionadas.length; i += 2) {
+        conteudo += `<div class="folha">`;
+        [selecionadas[i], selecionadas[i+1]].forEach(num => {
+            if (!num) return;
+            let s = status[num] || {};
+            let isPago = s.status === 'pago';
+            conteudo += `
+            <div class="cartela-a5">
+                <div class="header-area">
+                    <div style="font-size: 22px; font-weight: bold; color: #3b82f6;">${configBingo.nome}</div>
+                    <div class="cartela-num">№ ${num}</div>
+                </div>
+                <div class="premio-topo">🏆 PRÊMIOS: ${configBingo.premios}</div>
+                <div style="text-align:center; font-size:12px; margin-bottom:10px;">DATA: ${configBingo.data} | LOCAL: ${configBingo.local}</div>
+                <div class="cliente-box">
+                    <div style="font-size:16px;">👤 COMPRADOR: ${s.nome || '________________'}</div>
+                    <div style="font-size:16px;">📱 WHATSAPP: ${s.zap || '________________'}</div>
+                </div>
+                <div class="status-msg" style="color:${isPago?'green':'red'}; border-color:${isPago?'green':'red'};">
+                    ${isPago ? 'PAGAMENTO CONFIRMADO' : 'PAGAMENTO PENDENTE'}
+                </div>
+                <div class="grid">
+                    ${letrasArr.map(l => `<div class="b-head">${l}</div>`).join('')}
+                    ${(cartelas[num] || []).map(n => `<div class="cell">${n}</div>`).join('')}
+                </div>
+            </div>`;
+        });
+        conteudo += `</div>`;
+    }
+    w.document.write(conteudo + "</body></html>");
+    w.document.close();
+}
+
+function concluirEReservar() {
+    let nome = document.getElementById("nome").value.trim();
+    let zap = document.getElementById("zap").value.trim();
+    if (!nome || !zap || selecionadas.length === 0) return alert("Preencha os dados.");
+    selecionadas.forEach(num => {
+        db.ref("status/" + num).update({ status: "reservado", nome, zap, tempo: Date.now() });
+    });
+    alert("Reserva concluída!");
+}
+
+function copiarPix() { 
+    navigator.clipboard.writeText("caubitorres@gmail.com"); 
+    alert("Chave PIX copiada com sucesso!"); 
+}
+
+function buscarPorZap() {
+    const zapBusca = document.getElementById("buscaZap").value.trim().replace(/\D/g, '');
+    if (zapBusca.length < 8) return alert("Digite um número válido.");
+    let encontradas = [];
+    Object.keys(status).forEach(num => {
+        if (status[num].zap && status[num].zap.replace(/\D/g, '').includes(zapBusca)) encontradas.push(num);
+    });
+    if (encontradas.length > 0) {
+        selecionadas = encontradas;
+        document.getElementById("nome").value = status[encontradas[0]].nome || "";
+        document.getElementById("zap").value = status[encontradas[0]].zap || "";
+        render();
+    } else { alert("Nenhuma cartela encontrada para este número."); }
+}
+</script>
+</body>
+</html>
