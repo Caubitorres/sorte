@@ -5,102 +5,80 @@
     <title>Gerenciamento de Vendas - Bingo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
         
-        /* Dashboard Superior */
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
+        /* Estilo do Login */
+        #login-container { 
+            max-width: 400px; margin: 100px auto; background: white; padding: 30px; 
+            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center;
         }
-        .card-stat {
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border-bottom: 5px solid #ccc;
-        }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 5px; color: #666; }
+        .input-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        
+        /* Conteúdo Protegido (escondido por padrão) */
+        #admin-content { display: none; max-width: 1200px; margin: 0 auto; }
+        
+        /* Dashboard e Tabela (Seus estilos originais) */
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card-stat { background: white; padding: 15px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-bottom: 5px solid #ccc; }
         .card-stat h4 { margin: 0; color: #666; font-size: 11px; text-transform: uppercase; }
         .card-stat p { margin: 8px 0 0; font-size: 22px; font-weight: bold; }
         .card-finance { background: #e8f5e9; border-color: #2e7d32; }
-
-        /* Botões de Controle */
-        .controles-mestre {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
+        .controles-mestre { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .btn { border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
         .btn-pagar-todos { background: #2e7d32; color: white; }
         .btn-reset { background: #d32f2f; color: white; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-
-        /* Tabela */
+        .btn-login { background: #1976d2; color: white; width: 100%; margin-top: 10px; }
+        .btn-sair { background: #666; color: white; padding: 5px 15px; font-size: 12px; }
         .tabela-vendas { width: 100%; background: white; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .tabela-vendas th { background: #333; color: white; padding: 15px; text-align: left; }
         .tabela-vendas td { padding: 12px 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
-        
         .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .status-reservada { background: #fff9c4; color: #f57c00; }
         .status-paga { background: #c8e6c9; color: #2e7d32; }
-
         .btn-confirmar { background: #1976d2; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
         .btn-liberar { background: #607d8b; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        
         .link-zap { color: #25d366; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 5px; }
-        .link-zap:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2 id="titulo-bingo" style="text-align: center; color: #333; margin-bottom: 5px;">Painel de Controle de Vendas</h2>
-    <p id="subtitulo-bingo" style="text-align: center; color: #666; margin-bottom: 25px; font-weight: bold;"></p>
+<div id="login-container">
+    <h2>Acesso Restrito</h2>
+    <p>Identifique-se para gerenciar as vendas</p>
+    <div class="input-group">
+        <label>E-mail</label>
+        <input type="email" id="email" placeholder="admin@exemplo.com">
+    </div>
+    <div class="input-group">
+        <label>Senha</label>
+        <input type="password" id="senha" placeholder="******">
+    </div>
+    <button class="btn btn-login" onclick="fazerLogin()">Entrar no Painel</button>
+</div>
+
+<div id="admin-content">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="titulo-bingo">Painel de Controle de Vendas</h2>
+        <button class="btn btn-sair" onclick="fazerLogout()">Sair</button>
+    </div>
+    <p id="subtitulo-bingo" style="text-align: center; color: #666; font-weight: bold;"></p>
 
     <div class="dashboard">
-        <div class="card-stat">
-            <h4>Total Cartelas</h4>
-            <p id="dash-total">0</p>
-        </div>
-        <div class="card-stat">
-            <h4>Livres</h4>
-            <p id="dash-livres">0</p>
-        </div>
-        <div class="card-stat" style="border-color: #ffd600;">
-            <h4>Reservadas</h4>
-            <p id="dash-res">0</p>
-        </div>
-        <div class="card-stat" style="border-color: #4caf50;">
-            <h4>Pagas</h4>
-            <p id="dash-pagas">0</p>
-        </div>
-        <div class="card-stat card-finance">
-            <h4>Recebido</h4>
-            <p id="dash-recebido" style="color: #2e7d32;">R$ 0,00</p>
-        </div>
-        <div class="card-stat" style="background: #fff3e0; border-color: #ff9800;">
-            <h4>A Receber</h4>
-            <p id="dash-areceber" style="color: #e65100;">R$ 0,00</p>
-        </div>
+        <div class="card-stat"><h4>Total Cartelas</h4><p id="dash-total">0</p></div>
+        <div class="card-stat"><h4>Livres</h4><p id="dash-livres">0</p></div>
+        <div class="card-stat" style="border-color: #ffd600;"><h4>Reservadas</h4><p id="dash-res">0</p></div>
+        <div class="card-stat" style="border-color: #4caf50;"><h4>Pagas</h4><p id="dash-pagas">0</p></div>
+        <div class="card-stat card-finance"><h4>Recebido</h4><p id="dash-recebido">R$ 0,00</p></div>
+        <div class="card-stat" style="background: #fff3e0; border-color: #ff9800;"><h4>A Receber</h4><p id="dash-areceber">R$ 0,00</p></div>
     </div>
 
     <div class="controles-mestre">
-        <button class="btn btn-pagar-todos" onclick="pagarTodasReservadas()">
-            ✅ ATIVAR PAGAMENTO DE TODAS
-        </button>
-        
-        <button class="btn btn-reset" onclick="resetarVendas()">
-            <span>🗑️</span> ZERAR VENDAS E LIMPAR TUDO
-        </button>
+        <button class="btn btn-pagar-todos" onclick="pagarTodasReservadas()">✅ ATIVAR PAGAMENTO DE TODAS</button>
+        <button class="btn btn-reset" onclick="resetarVendas()"><span>🗑️</span> ZERAR VENDAS E LIMPAR TUDO</button>
     </div>
 
     <table class="tabela-vendas">
@@ -108,7 +86,7 @@
             <tr>
                 <th>Nº</th>
                 <th>Comprador</th>
-                <th>WhatsApp (Clique p/ falar)</th>
+                <th>WhatsApp</th>
                 <th>Status</th>
                 <th>Ações</th>
             </tr>
@@ -118,6 +96,7 @@
 </div>
 
 <script>
+// Configuração do Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyBYpJLTbts47UQge9xwGJlggnuFO1n381o",
     authDomain: "bingo-facuc.firebaseapp.com",
@@ -126,96 +105,101 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
 
-db.ref("bingo").on("value", snap => {
-    const dados = snap.val() || {};
-    const cartelas = dados.cartelas || {};
-    const vendas = dados.vendas || {};
-    
-    // Puxa o nome do Bingo
-    const nomeBingo = dados.nomeBingo || "Bingo Online";
-    document.getElementById("subtitulo-bingo").innerText = nomeBingo;
+// --- LÓGICA DE SEGURANÇA ---
 
-    const precoUnit = parseFloat((dados.valorCartela || "0").replace(/[^\d,]/g, "").replace(",", "."));
-
-    const totalCartelas = Object.keys(cartelas).length;
-    let qtdPagas = 0;
-    let qtdRes = 0;
-
-    const tbody = document.getElementById("corpoTabela");
-    tbody.innerHTML = "";
-
-    const vendasOrdenadas = Object.keys(vendas).sort((a,b) => a - b);
-    
-    vendasOrdenadas.forEach(num => {
-        const v = vendas[num];
-        if(v.status === "paga") qtdPagas++;
-        if(v.status === "reservada") qtdRes++;
-
-        // Limpa o número do WhatsApp (remove caracteres não numéricos)
-        const zapLimpo = v.whatsapp.replace(/\D/g, '');
-        const mensagem = encodeURIComponent(`Olá, ${v.comprador}. Quero falar com você sobre sua reserva no ${nomeBingo}.`);
-        const linkWhatsapp = `https://wa.me/55${zapLimpo}?text=${mensagem}`;
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td><b>${num}</b></td>
-            <td>${v.comprador}</td>
-            <td>
-                <a href="${linkWhatsapp}" target="_blank" class="link-zap">
-                    📱 ${v.whatsapp}
-                </a>
-            </td>
-            <td><span class="status-badge status-${v.status}">${v.status.toUpperCase()}</span></td>
-            <td>
-                ${v.status === 'reservada' ? `<button class="btn-confirmar" onclick="confirmarPaga('${num}')">Confirmar Pago</button>` : ''}
-                <button class="btn-liberar" onclick="liberarCartela('${num}')">Liberar</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    // Atualizar Contadores
-    document.getElementById("dash-total").innerText = totalCartelas;
-    document.getElementById("dash-pagas").innerText = qtdPagas;
-    document.getElementById("dash-res").innerText = qtdRes;
-    document.getElementById("dash-livres").innerText = totalCartelas - (qtdPagas + qtdRes);
-
-    // Atualizar Financeiro
-    const totalRecebido = qtdPagas * precoUnit;
-    const totalAReceber = qtdRes * precoUnit;
-
-    document.getElementById("dash-recebido").innerText = totalRecebido.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-    document.getElementById("dash-areceber").innerText = totalAReceber.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+// Monitora o estado do usuário (Logado ou não)
+auth.onAuthStateChanged(user => {
+    if (user) {
+        document.getElementById("login-container").style.display = "none";
+        document.getElementById("admin-content").style.display = "block";
+        carregarDados(); // Inicia o carregamento das vendas
+    } else {
+        document.getElementById("login-container").style.display = "block";
+        document.getElementById("admin-content").style.display = "none";
+    }
 });
 
+function fazerLogin() {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
+    
+    auth.signInWithEmailAndPassword(email, senha)
+        .catch(error => {
+            alert("Erro ao acessar: " + error.message);
+        });
+}
+
+function fazerLogout() {
+    auth.signOut();
+}
+
+// --- LÓGICA DE DADOS (CARREGA APÓS LOGIN) ---
+
+function carregarDados() {
+    db.ref("bingo").on("value", snap => {
+        const dados = snap.val() || {};
+        const cartelas = dados.cartelas || {};
+        const vendas = dados.vendas || {};
+        const nomeBingo = dados.nomeBingo || "Bingo Online";
+        document.getElementById("subtitulo-bingo").innerText = nomeBingo;
+
+        const precoUnit = parseFloat((dados.valorCartela || "0").replace(/[^\d,]/g, "").replace(",", "."));
+        const totalCartelas = Object.keys(cartelas).length;
+        let qtdPagas = 0, qtdRes = 0;
+
+        const tbody = document.getElementById("corpoTabela");
+        tbody.innerHTML = "";
+
+        Object.keys(vendas).sort((a,b) => a - b).forEach(num => {
+            const v = vendas[num];
+            if(v.status === "paga") qtdPagas++;
+            if(v.status === "reservada") qtdRes++;
+
+            const zapLimpo = v.whatsapp.replace(/\D/g, '');
+            const mensagem = encodeURIComponent(`Olá, ${v.comprador}. Quero falar com você sobre sua reserva no ${nomeBingo}.`);
+            const linkWhatsapp = `https://wa.me/55${zapLimpo}?text=${mensagem}`;
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><b>${num}</b></td>
+                <td>${v.comprador}</td>
+                <td><a href="${linkWhatsapp}" target="_blank" class="link-zap">📱 ${v.whatsapp}</a></td>
+                <td><span class="status-badge status-${v.status}">${v.status.toUpperCase()}</span></td>
+                <td>
+                    ${v.status === 'reservada' ? `<button class="btn-confirmar" onclick="confirmarPaga('${num}')">Confirmar Pago</button>` : ''}
+                    <button class="btn-liberar" onclick="liberarCartela('${num}')">Liberar</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById("dash-total").innerText = totalCartelas;
+        document.getElementById("dash-pagas").innerText = qtdPagas;
+        document.getElementById("dash-res").innerText = qtdRes;
+        document.getElementById("dash-livres").innerText = totalCartelas - (qtdPagas + qtdRes);
+        document.getElementById("dash-recebido").innerText = (qtdPagas * precoUnit).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        document.getElementById("dash-areceber").innerText = (qtdRes * precoUnit).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+    });
+}
+
+// Funções de Ação (Confirmar, Liberar, Resetar) permanecem as mesmas
+function confirmarPaga(num) { db.ref(`bingo/vendas/${num}`).update({ status: "paga" }); }
+function liberarCartela(num) { 
+    if(confirm(`Liberar cartela ${num}?`)) db.ref(`bingo/vendas/${num}`).remove(); 
+}
 function pagarTodasReservadas() {
     if(confirm("Deseja marcar TODAS as reservadas como PAGAS?")) {
         db.ref("bingo/vendas").once("value", snap => {
-            const vendas = snap.val() || {};
-            const updates = {};
-            for(let n in vendas) {
-                if(vendas[n].status === "reservada") updates[`${n}/status`] = "paga";
-            }
+            const vendas = snap.val() || {}, updates = {};
+            for(let n in vendas) if(vendas[n].status === "reservada") updates[`${n}/status`] = "paga";
             db.ref("bingo/vendas").update(updates);
         });
     }
 }
-
 function resetarVendas() {
-    if(prompt("Digite ZERAR para apagar todas as vendas:") === "ZERAR") {
-        db.ref("bingo/vendas").remove();
-    }
-}
-
-function confirmarPaga(num) {
-    db.ref(`bingo/vendas/${num}`).update({ status: "paga" });
-}
-
-function liberarCartela(num) {
-    if(confirm(`Deseja realmente liberar a cartela ${num}? Ela voltará a ficar disponível para venda.`)) {
-        db.ref(`bingo/vendas/${num}`).remove();
-    }
+    if(prompt("Digite ZERAR para apagar tudo:") === "ZERAR") db.ref("bingo/vendas").remove();
 }
 </script>
 </body>
