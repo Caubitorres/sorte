@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BINGO PROFISSIONAL - TELÃO</title>
+<title>SORTEIO BINGO PROFISSIONAL</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -15,6 +15,10 @@
   .header-evento { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; padding: 10px 15px; border-radius: 12px; border-bottom: 4px solid #ff9800; margin-bottom: 15px; }
   .header-evento h1 { margin: 0; color: #ff9800; text-transform: uppercase; font-size: 20px; }
   
+  /* Novos estilos para Data, Hora e Preço  */
+  .info-topo { display: flex; flex-direction: column; align-items: flex-end; font-size: 14px; color: #00ffcc; font-weight: bold; text-align: right; }
+  .preco-destaque { color: #ff9800; font-size: 16px; }
+
   .btn-som-topo { background: #444; border: 2px solid #ff9800; color: #fff; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; }
   .btn-som-topo.ativo { background: #28a745; }
 
@@ -36,7 +40,6 @@
   .pedra { aspect-ratio: 1/1; border: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #333; }
   .pedra.ativa { background: #00ffcc; color: #000; }
 
-  /* CONFERÊNCIA */
   .conferencia-header, .conferencia-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
   .letra-conf { background: #ff9800; color: #000; font-weight: 900; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 20px; }
   .num-conf { background: #333; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; border-radius: 4px; color: #777; }
@@ -51,8 +54,18 @@
 
 <div id="app">
   <header class="header-evento">
-    <h1 id="nomeBingo">BINGO</h1>
-    <button id="btnSom" class="btn-som-topo" onclick="toggleSom()"><span>🔇</span> <span>OFF</span></button>
+    <div>
+      <h1 id="nomeBingo">BINGO</h1>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <div class="info-topo">
+        <span id="txtData">--/--/----</span>
+        <span id="txtHora">--:--</span>
+        <span id="txtPreco" class="preco-destaque">R$ 0,00</span>
+      </div>
+      <button id="btnSom" class="btn-som-topo" onclick="toggleSom()"><span>🔇</span> <span>OFF</span></button>
+    </div>
   </header>
 
   <div class="main-grid">
@@ -120,20 +133,15 @@ function falar(t) {
   }
 }
 
-// FUNÇÃO CORRIGIDA PARA EXIBIR POR COLUNAS
 function conferirCartela(id) {
   const container = document.getElementById("resultadoConf");
   container.innerHTML = "";
   if (!id || !todasCartelas[id]) return;
-
   const numeros = todasCartelas[id]; 
-
-  // Lógica de Transposição para Grid 5x5
   for (let linha = 0; linha < 5; linha++) {
     for (let col = 0; col < 5; col++) {
       const indiceOriginal = (col * 5) + linha;
       const num = numeros[indiceOriginal];
-      
       const div = document.createElement("div");
       div.className = "num-conf " + (sorteadosAtuais.includes(num) ? "marcado" : "");
       div.innerText = (num === 0 || num === "0" || !num) ? "X" : num;
@@ -145,6 +153,11 @@ function conferirCartela(id) {
 db.ref("bingo").on("value", snap => {
   const d = snap.val();
   if (!d) return;
+
+  // Atualização dos novos campos sincronizados com o index.html
+  document.getElementById("txtData").innerText = d.dataBingo || "Data: --";
+  document.getElementById("txtHora").innerText = d.horaBingo || "--:--";
+  document.getElementById("txtPreco").innerText = d.valorCartela ? `Cartela: ${d.valorCartela}` : "Preço: --";
 
   todasCartelas = d.cartelas || {};
   sorteadosAtuais = d.sorteados || [];
