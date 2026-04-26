@@ -11,7 +11,7 @@
             --livre: #22c55e; 
             --reservada: #f59e0b; 
             --paga: #ef4444;      
-            --selecionada: #7dd3fc; /* Azul Claro */
+            --selecionada: #7dd3fc; 
         }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f4f7f9; margin: 0; padding: 10px; color: #333; }
         .container { max-width: 850px; margin: 0 auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
@@ -58,7 +58,7 @@
         .btn-whatsapp { background: #2e7d32; color: white; }
         .btn-imprimir { background: #212121; color: white; margin-top: 15px; display: none; }
 
-        /* --- ESTILO DE IMPRESSÃO PROFISSIONAL (TICKET) --- */
+        /* --- ESTILO DE IMPRESSÃO --- */
         #areaImpressao { display: none; }
         @media print {
             @page { size: A4 landscape; margin: 0; }
@@ -85,7 +85,7 @@
     <div class="header-event">
         <h1 id="view-nome">Bingo</h1>
         <div class="info-texto-puro">
-            Data: <b id="view-data">--</b> | Local: <b id="view-local">--</b> | Valor: <b id="view-valor">--</b><br>
+            Data: <b id="view-data">--</b> | Local: <b id="view-local">--</b> | Hora: <b id="view-hora">--</b> | Valor: <b id="view-valor">--</b><br>
             Prêmios: <b id="view-premios">--</b> | Letras: <b id="view-letras">--</b>
         </div>
     </div>
@@ -94,7 +94,7 @@
         <h3>1. Identificação</h3>
         <div class="identificacao-grid">
             <div class="bloco-id">
-                <input type="text" id="comp-nome" placeholder="Nome e Sobrenome">
+                <input type="text" id="comp-nome" placeholder="Nome e sobrenome">
                 <input type="tel" id="comp-whatsapp" placeholder="WhatsApp (11 dígitos com DDD)" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             </div>
             <div class="bloco-id">
@@ -156,6 +156,7 @@ db.ref("bingo").on("value", snap => {
     document.getElementById("view-nome").innerText = d.nomeBingo || "Bingo";
     document.getElementById("view-data").innerText = d.dataBingo || "--";
     document.getElementById("view-local").innerText = d.localBingo || "--";
+    document.getElementById("view-hora").innerText = d.horaBingo || "--"; // 
     document.getElementById("view-valor").innerText = d.valorCartela || "R$ 0,00";
     document.getElementById("view-premios").innerText = d.descricaoPremios || "--";
     document.getElementById("view-letras").innerText = (d.letras || []).join(" ");
