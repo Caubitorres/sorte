@@ -9,26 +9,33 @@
     <style>
         /* INTERFACE ADMINISTRATIVA */
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: none; }
-        .admin-panel { max-width: 600px; margin: 50px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
-        .btn-group { display: flex; flex-direction: column; gap: 15px; }
-        .btn-adm { border: none; border-radius: 8px; padding: 18px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .admin-panel { max-width: 600px; margin: 20px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
+        
+        .search-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .search-box { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+        .search-box label { font-size: 12px; font-weight: bold; color: #555; }
+        .input-busca { padding: 10px; border-radius: 6px; border: 1px solid #ccc; outline: none; }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .btn-adm { border: none; border-radius: 8px; padding: 15px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.3s; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        
         .btn-pagas { background: #2e7d32; }
-        .btn-todas { background: #1565c0; }
-        .btn-disponiveis { background: #607d8b; } /* Cor Cinza Azulado para diferenciar */
-        .btn-logout { background: #d32f2f; margin-top: 20px; padding: 10px; font-size: 12px; }
+        .btn-reservadas { background: #ed6c02; }
+        .btn-todas-vendas { background: #1565c0; }
+        .btn-disponiveis { background: #7b1fa2; }
+        .btn-geral { background: #444; grid-column: span 2; }
+        .btn-busca { background: #000; grid-column: span 2; margin-top: 5px; }
+        
+        .btn-logout { background: #d32f2f; margin-top: 20px; padding: 10px; font-size: 12px; grid-column: span 2; }
         .btn-adm:disabled { background: #ccc; cursor: not-allowed; }
         
-        /* LAYOUT DE IMPRESSÃO */
+        /* LAYOUT DE IMPRESSÃO (Mantido conforme original) */
         #areaImpressao { display: none; }
-
         @media print {
             @page { margin: 0; size: auto; }
             body * { visibility: hidden; }
             #areaImpressao, #areaImpressao * { visibility: visible; }
-            #areaImpressao { 
-                display: flex; flex-wrap: wrap; 
-                position: absolute; left: 0; top: 0; width: 100%; background: white; 
-            }
+            #areaImpressao { display: flex; flex-wrap: wrap; position: absolute; left: 0; top: 0; width: 100%; background: white; }
             .a4-page { width: 210mm; height: 297mm; display: flex; box-sizing: border-box; position: relative; page-break-after: always; overflow: hidden; padding: 8mm; gap: 5mm; }
             .retrato { flex-direction: column; width: 210mm; height: 297mm; }
             .paisagem { flex-direction: row; width: 297mm; height: 210mm; }
@@ -47,7 +54,6 @@
             .status-badge { font-size: 11px; font-weight: 900; padding: 5px 0; text-transform: uppercase; width: 85px; text-align: center; box-sizing: border-box; border: 3px solid #000; margin-top: -3px; }
             .status-paga { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; }
             .status-nao-paga { background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact; }
-            .status-disponivel { background: #eee !important; color: #666 !important; border-color: #666 !important; -webkit-print-color-adjust: exact; }
             .info-comprador { margin-bottom: 10px; font-size: 15px; border-bottom: 1px solid #000; padding-bottom: 5px; width: 100%; display: flex; gap: 10px; }
             .chamadas-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 15px; width: 100%; }
             .titulo-chamada { font-size: 16px; font-weight: 900; text-align: center; background: #eee !important; margin-bottom: 2px; border: 1px solid #000; -webkit-print-color-adjust: exact; }
@@ -64,10 +70,25 @@
 
 <div class="admin-panel">
     <h2 id="status-title">Autenticando...</h2>
+
+    <div class="search-grid">
+        <div class="search-box">
+            <label>Nº DA CARTELA</label>
+            <input type="number" id="inputNumero" class="input-busca" placeholder="Ex: 105">
+        </div>
+        <div class="search-box">
+            <label>WHATSAPP</label>
+            <input type="text" id="inputZap" class="input-busca" placeholder="Ex: 849999...">
+        </div>
+        <button class="btn-adm btn-busca" onclick="gerarImpressao('busca')">🔍 IMPRIMIR POR BUSCA</button>
+    </div>
+
     <div class="btn-group">
-        <button id="btnPagas" class="btn-adm btn-pagas" onclick="gerarImpressao('pagas')" disabled>🖨️ IMPRIMIR PAGAS</button>
-        <button id="btnTodas" class="btn-adm btn-todas" onclick="gerarImpressao('todas')" disabled>🖨️ IMPRIMIR VENDIDAS (TODAS)</button>
-        <button id="btnDisponiveis" class="btn-adm btn-disponiveis" onclick="gerarImpressao('disponiveis')" disabled>🖨️ IMPRIMIR DISPONÍVEIS (DO SISTEMA)</button>
+        <button id="btnPagas" class="btn-adm btn-pagas" onclick="gerarImpressao('pagas')" disabled>✅ SÓ PAGAS</button>
+        <button id="btnRes" class="btn-adm btn-reservadas" onclick="gerarImpressao('reservadas')" disabled>⏳ SÓ RESERVADAS</button>
+        <button id="btnTodasVendas" class="btn-adm btn-todas-vendas" onclick="gerarImpressao('todas_vendas')" disabled>📋 TODAS VENDIDAS</button>
+        <button id="btnDisp" class="btn-adm btn-disponiveis" onclick="gerarImpressao('disponiveis')" disabled>🆓 DISPONÍVEIS</button>
+        <button id="btnGeral" class="btn-adm btn-geral" onclick="gerarImpressao('todas_bingo')" disabled>🖨️ TODAS AS CARTELAS DO BINGO</button>
         <button class="btn-adm btn-logout" onclick="firebase.auth().signOut()">Sair do Painel</button>
     </div>
     <p id="info-count" style="margin-top: 20px; font-size: 13px; color: #666;"></p>
@@ -89,7 +110,6 @@ const auth = firebase.auth();
 
 let dadosBingo = null;
 
-// --- CONTROLE DE ACESSO ---
 auth.onAuthStateChanged(user => {
     if (user) {
         document.body.style.display = "block";
@@ -102,102 +122,90 @@ auth.onAuthStateChanged(user => {
 
 async function solicitarLogin() {
     const email = prompt("E-mail do administrador:");
-    if (!email) return;
     const senha = prompt("Senha:");
-    if (!senha) return;
-
-    try {
-        await auth.signInWithEmailAndPassword(email, senha);
-    } catch (error) {
-        alert("Acesso Negado: " + error.message);
-        location.reload();
-    }
+    if (email && senha) {
+        try { await auth.signInWithEmailAndPassword(email, senha); } 
+        catch (e) { alert("Erro: " + e.message); location.reload(); }
+    } else { location.reload(); }
 }
 
 function carregarDadosSistema() {
     db.ref("bingo").on("value", snap => {
         dadosBingo = snap.val() || {};
         const totalVendas = Object.keys(dadosBingo.vendas || {}).length;
-        const totalGeradas = Object.keys(dadosBingo.cartelas || {}).length;
-        
         document.getElementById("status-title").innerText = "Painel de Impressão";
-        document.getElementById("info-count").innerText = `${totalVendas} vendidas / ${totalGeradas} total no sistema.`;
-        
-        document.getElementById("btnPagas").disabled = false;
-        document.getElementById("btnTodas").disabled = false;
-        document.getElementById("btnDisponiveis").disabled = false;
+        document.getElementById("info-count").innerText = `${totalVendas} vendas registradas no sistema.`;
+        document.querySelectorAll('.btn-adm').forEach(btn => btn.disabled = false);
     });
 }
 
-// --- LÓGICA DE IMPRESSÃO ---
 async function gerarImpressao(tipo) {
     const area = document.getElementById("areaImpressao");
-    
-    if (!dadosBingo) {
-        const refresh = await db.ref("bingo").once("value");
-        dadosBingo = refresh.val() || {};
-    }
-
-    const cfgSnap = await db.ref("bingo/config_impressao").once("value");
-    const cfg = cfgSnap.val() || { layout: 'retrato-2', nChamadas: '3', aviso: "ESTA CARTELA SÓ CONCORRE SE PAGA", fMain: 42, fSec: 20 };
-
     const v = dadosBingo.vendas || {};
     const c = dadosBingo.cartelas || {};
     const letras = dadosBingo.letras || ["B", "I", "N", "G", "O"];
-
-    let chaves;
-    if (tipo === 'disponiveis') {
-        chaves = Object.keys(c); // Pega todas as cartelas existentes
-    } else {
-        chaves = Object.keys(v); // Pega apenas as que possuem registro de venda
-        if (tipo === 'pagas') chaves = chaves.filter(n => v[n].status === "paga");
-    }
     
-    chaves.sort((a, b) => parseInt(a) - parseInt(b));
+    const cfgSnap = await db.ref("bingo/config_impressao").once("value");
+    const cfg = cfgSnap.val() || { layout: 'retrato-2', nChamadas: '3', aviso: "ESTA CARTELA SÓ CONCORRE SE PAGA", fMain: 42, fSec: 20 };
 
-    if (chaves.length === 0) return alert("Nenhuma cartela disponível para este filtro.");
+    let chavesParaImprimir = [];
+
+    switch(tipo) {
+        case 'busca':
+            const numBusca = document.getElementById("inputNumero").value;
+            const zapBusca = document.getElementById("inputZap").value.replace(/\D/g, '');
+            if (numBusca) {
+                chavesParaImprimir = Object.keys(c).filter(n => n == numBusca);
+            } else if (zapBusca) {
+                chavesParaImprimir = Object.keys(v).filter(n => (v[n].whatsapp || "").replace(/\D/g, '').includes(zapBusca));
+            } else { return alert("Informe um número ou WhatsApp para busca."); }
+            break;
+
+        case 'pagas':
+            chavesParaImprimir = Object.keys(v).filter(n => v[n].status === "paga");
+            break;
+
+        case 'reservadas':
+            chavesParaImprimir = Object.keys(v).filter(n => v[n].status !== "paga");
+            break;
+
+        case 'todas_vendas':
+            chavesParaImprimir = Object.keys(v);
+            break;
+
+        case 'disponiveis':
+            chavesParaImprimir = Object.keys(c).filter(n => !v[n]);
+            break;
+
+        case 'todas_bingo':
+            chavesParaImprimir = Object.keys(c);
+            break;
+    }
+
+    chavesParaImprimir.sort((a, b) => parseInt(a) - parseInt(b));
+    if (chavesParaImprimir.length === 0) return alert("Nenhuma cartela encontrada para este critério.");
 
     const ticketsPorFolha = parseInt(cfg.layout.split('-')[1]);
     const orientacao = cfg.layout.split('-')[0];
-    
     let htmlFinal = "";
     
-    for (let i = 0; i < chaves.length; i += ticketsPorFolha) {
+    for (let i = 0; i < chavesParaImprimir.length; i += ticketsPorFolha) {
         let paginaHTML = `<div class="a4-page ${orientacao}">`;
         if(ticketsPorFolha > 1) paginaHTML += `<div class="linha-divisora"></div>`;
         
         for (let j = 0; j < ticketsPorFolha; j++) {
             const index = i + j;
-            if (index >= chaves.length) break;
+            if (index >= chavesParaImprimir.length) break;
             
-            const n = chaves[index];
+            const n = chavesParaImprimir[index];
+            const venda = v[n] || { comprador: "DISPONÍVEL", whatsapp: "", status: "disponivel" };
             const nums = c[n] || [];
-            
-            // Se não houver venda (tipo disponível), cria objeto vazio para evitar erro
-            const venda = v[n] || { comprador: "________________", whatsapp: "(__) _____-____", status: "disponivel" };
-            const isPaga = venda.status === "paga";
-            const isDisponivel = venda.status === "disponivel";
+            const statusLabel = venda.status === "paga" ? "CARTELA PAGA" : (venda.status === "disponivel" ? "DISPONÍVEL" : "RESERVADA");
 
-            let statusLabel = isPaga ? 'CARTELA PAGA' : 'NÃO PAGA';
-            let statusClass = isPaga ? 'status-paga' : 'status-nao-paga';
-            
-            if(isDisponivel) {
-                statusLabel = 'DISPONÍVEL';
-                statusClass = 'status-disponivel';
-            }
-
-            let chamadasHTML = `
-                <div style="width:100%">
-                    <div class="titulo-chamada">1ª CHAMADA</div>
-                    <table class="mini-table" style="font-size:${cfg.fMain}px">${gerarTabelaHTML(nums, letras)}</table>
-                </div>`;
-
+            let chamadasHTML = `<div style="width:100%"><div class="titulo-chamada">1ª CHAMADA</div><table class="mini-table" style="font-size:${cfg.fMain}px">${gerarTabelaHTML(nums, letras)}</table></div>`;
             if (parseInt(cfg.nChamadas) >= 2) {
-                chamadasHTML += `<div style="display:flex; gap:15px; width:100%; justify-content:center; margin-top:5px;">
-                    <div style="flex:1"><div class="titulo-chamada">2ª CHAMADA</div><table class="mini-table" style="font-size:${cfg.fSec}px; width:100%">${gerarTabelaHTML(nums, letras)}</table></div>`;
-                if (parseInt(cfg.nChamadas) === 3) {
-                    chamadasHTML += `<div style="flex:1"><div class="titulo-chamada">3ª CHAMADA</div><table class="mini-table" style="font-size:${cfg.fSec}px; width:100%">${gerarTabelaHTML(nums, letras)}</table></div>`;
-                }
+                chamadasHTML += `<div style="display:flex; gap:15px; width:100%; justify-content:center; margin-top:5px;"><div style="flex:1"><div class="titulo-chamada">2ª CHAMADA</div><table class="mini-table" style="font-size:${cfg.fSec}px; width:100%">${gerarTabelaHTML(nums, letras)}</table></div>`;
+                if (parseInt(cfg.nChamadas) === 3) chamadasHTML += `<div style="flex:1"><div class="titulo-chamada">3ª CHAMADA</div><table class="mini-table" style="font-size:${cfg.fSec}px; width:100%">${gerarTabelaHTML(nums, letras)}</table></div>`;
                 chamadasHTML += `</div>`;
             }
 
@@ -206,25 +214,22 @@ async function gerarImpressao(tipo) {
                     <div class="header-top">
                         <div class="info-evento">
                             <h1 class="nome-bingo">${dadosBingo.nomeBingo || 'BINGO'}</h1>
-                            <div class="detalhes-evento">
-                                <b>LOCAL:</b> ${dadosBingo.localBingo || '---'} | <b>VALOR:</b> R$ 10,00<br>
-                                <b>DATA:</b> ${dadosBingo.dataBingo || '---'} | <b>HORA:</b> ${dadosBingo.horaBingo || '15:00h'}
-                            </div>
+                            <div class="detalhes-evento"><b>LOCAL:</b> ${dadosBingo.localBingo || '---'} | <b>DATA:</b> ${dadosBingo.dataBingo || '---'}</div>
                             <div class="premios-box">PRÊMIOS: ${dadosBingo.descricaoPremios || '---'}</div>
                         </div>
                         <div class="box-numero-status">
                             <div class="num-destaque-box"><span>Nº CARTELA</span><b>${n}</b></div>
-                            <div class="status-badge ${statusClass}">${statusLabel}</div>
+                            <div class="status-badge ${venda.status === 'paga' ? 'status-paga' : 'status-nao-paga'}">${statusLabel}</div>
                         </div>
                     </div>
                     <div class="info-comprador">
                         <div style="flex:2"><b>COMPRADOR:</b> ${venda.comprador.toUpperCase()}</div>
-                        <div style="flex:1"><b>ZAP:</b> ${venda.whatsapp}</div>
+                        <div style="flex:1"><b>ZAP:</b> ${venda.whatsapp || '(__) _____-____'}</div>
                     </div>
                     <div class="chamadas-container">${chamadasHTML}</div>
                     <div class="footer-container">
                         <div class="footer-nota">${cfg.aviso}</div>
-                        <div class="footer-geracao">Emitido em: ${new Date().toLocaleString('pt-BR')} - Sistema Bingo Pro</div>
+                        <div class="footer-geracao">Emitido em: ${new Date().toLocaleString('pt-BR')}</div>
                     </div>
                 </div>`;
         }
@@ -238,9 +243,7 @@ async function gerarImpressao(tipo) {
 
 function gerarTabelaHTML(nums, letras) {
     let h = `<thead><tr>${letras.map(l => `<th>${l}</th>`).join("")}</tr></thead><tbody>`;
-    for (let r = 0; r < 5; r++) {
-        h += `<tr>${[0, 1, 2, 3, 4].map(col => `<td>${nums[r + col * 5] || "XX"}</td>`).join("")}</tr>`;
-    }
+    for (let r = 0; r < 5; r++) { h += `<tr>${[0,1,2,3,4].map(col => `<td>${nums[r + col * 5] || "XX"}</td>`).join("")}</tr>`; }
     return h + `</tbody>`;
 }
 </script>
