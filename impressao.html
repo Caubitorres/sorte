@@ -5,17 +5,19 @@
     <title>Painel de Impressão Pro - Bingo</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <style>
         /* INTERFACE ADMINISTRATIVA */
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: none; } /* Escondido por padrão */
         .admin-panel { max-width: 600px; margin: 50px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }
         .btn-group { display: flex; flex-direction: column; gap: 15px; }
         .btn-adm { border: none; border-radius: 8px; padding: 18px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-pagas { background: #2e7d32; }
         .btn-todas { background: #1565c0; }
+        .btn-logout { background: #d32f2f; margin-top: 20px; padding: 10px; font-size: 12px; }
         .btn-adm:disabled { background: #ccc; cursor: not-allowed; }
         
-        /* LAYOUT DE IMPRESSÃO - SINCRONIZADO COM CONFIG-IMPRESSAO */
+        /* LAYOUT DE IMPRESSÃO */
         #areaImpressao { display: none; }
 
         @media print {
@@ -26,42 +28,30 @@
                 display: flex; flex-wrap: wrap; 
                 position: absolute; left: 0; top: 0; width: 100%; background: white; 
             }
-
             .a4-page { width: 210mm; height: 297mm; display: flex; box-sizing: border-box; position: relative; page-break-after: always; overflow: hidden; padding: 8mm; gap: 5mm; }
             .retrato { flex-direction: column; width: 210mm; height: 297mm; }
             .paisagem { flex-direction: row; width: 297mm; height: 210mm; }
-
             .linha-divisora { position: absolute; border: 1px dashed #aaa; pointer-events: none; z-index: 50; }
             .retrato .linha-divisora { width: 100%; top: 50%; left: 0; }
             .paisagem .linha-divisora { height: 100%; left: 50%; top: 0; }
-
             .ticket-preview { padding: 2mm; display: flex; flex-direction: column; flex: 1; position: relative; background: #fff; box-sizing: border-box; }
-            
-            /* Cabeçalho Robusto */
             .header-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
             .nome-bingo { font-size: 32px; font-weight: 900; margin: 0; letter-spacing: -1px; text-transform: uppercase; line-height: 1; color: #000; }
             .detalhes-evento { font-size: 13px; margin-top: 5px; line-height: 1.3; }
             .premios-box { font-size: 14px; margin-top: 6px; padding-top: 4px; border-top: 1px solid #ccc; font-weight: bold; }
-            
-            /* Box Número e Status */
             .box-numero-status { display: flex; flex-direction: column; align-items: center; width: 85px; gap: 2px; }
             .num-destaque-box { border: 3px solid #000; width: 85px; height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; }
             .num-destaque-box span { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: -4px; }
             .num-destaque-box b { font-size: 48px; line-height: 1; }
-            
             .status-badge { font-size: 11px; font-weight: 900; padding: 5px 0; text-transform: uppercase; width: 85px; text-align: center; box-sizing: border-box; border: 3px solid #000; margin-top: -3px; }
             .status-paga { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; }
             .status-nao-paga { background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact; }
-
             .info-comprador { margin-bottom: 10px; font-size: 15px; border-bottom: 1px solid #000; padding-bottom: 5px; width: 100%; display: flex; gap: 10px; }
             .chamadas-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 15px; width: 100%; }
             .titulo-chamada { font-size: 16px; font-weight: 900; text-align: center; background: #eee !important; margin-bottom: 2px; border: 1px solid #000; -webkit-print-color-adjust: exact; }
-            
-            /* Tabelas */
             .mini-table { border-collapse: collapse; width: 100%; }
             .mini-table th { background: #fff; color: #000; border: 3px solid #000; font-size: 1.4em; padding: 5px 0; font-weight: 900; }
             .mini-table td { border: 1px solid #000; text-align: center; font-weight: bold; padding: 6px; }
-            
             .footer-container { margin-top: auto; text-align: center; width: 100%; padding-top: 10px; border-top: 1px solid #ccc; }
             .footer-nota { font-size: 14px; font-weight: 900; margin-bottom: 4px; text-transform: uppercase; }
             .footer-geracao { font-size: 11px; color: #333; font-weight: bold; }
@@ -71,10 +61,11 @@
 <body>
 
 <div class="admin-panel">
-    <h2 id="status-title">Carregando Dados...</h2>
+    <h2 id="status-title">Autenticando...</h2>
     <div class="btn-group">
         <button id="btnPagas" class="btn-adm btn-pagas" onclick="gerarImpressao('pagas')" disabled>🖨️ IMPRIMIR PAGAS</button>
         <button id="btnTodas" class="btn-adm btn-todas" onclick="gerarImpressao('todas')" disabled>🖨️ IMPRIMIR TODAS</button>
+        <button class="btn-adm btn-logout" onclick="firebase.auth().signOut()">Sair do Painel</button>
     </div>
     <p id="info-count" style="margin-top: 20px; font-size: 13px; color: #666;"></p>
 </div>
@@ -88,20 +79,50 @@ const firebaseConfig = {
     databaseURL: "https://bingo-facuc-default-rtdb.firebaseio.com/",
     projectId: "bingo-facuc",
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
 
 let dadosBingo = null;
 
-db.ref("bingo").on("value", snap => {
-    dadosBingo = snap.val() || {};
-    const totalVendas = Object.keys(dadosBingo.vendas || {}).length;
-    document.getElementById("status-title").innerText = "Painel de Impressão";
-    document.getElementById("info-count").innerText = `${totalVendas} cartelas encontradas no sistema.`;
-    document.getElementById("btnPagas").disabled = false;
-    document.getElementById("btnTodas").disabled = false;
+// --- CONTROLE DE ACESSO ---
+auth.onAuthStateChanged(user => {
+    if (user) {
+        document.body.style.display = "block";
+        carregarDadosSistema();
+    } else {
+        document.body.style.display = "none";
+        solicitarLogin();
+    }
 });
 
+async function solicitarLogin() {
+    const email = prompt("E-mail do administrador:");
+    if (!email) return location.reload();
+    const senha = prompt("Senha:");
+    if (!senha) return location.reload();
+
+    try {
+        await auth.signInWithEmailAndPassword(email, senha);
+    } catch (error) {
+        alert("Acesso Negado: " + error.message);
+        location.reload();
+    }
+}
+
+function carregarDadosSistema() {
+    db.ref("bingo").on("value", snap => {
+        dadosBingo = snap.val() || {};
+        const totalVendas = Object.keys(dadosBingo.vendas || {}).length;
+        document.getElementById("status-title").innerText = "Painel de Impressão";
+        document.getElementById("info-count").innerText = `${totalVendas} cartelas encontradas no sistema.`;
+        document.getElementById("btnPagas").disabled = false;
+        document.getElementById("btnTodas").disabled = false;
+    });
+}
+
+// --- LÓGICA DE IMPRESSÃO ---
 async function gerarImpressao(tipo) {
     const area = document.getElementById("areaImpressao");
     
