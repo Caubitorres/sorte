@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciamento de Vendas - Bingo</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        #login-container { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group input { width: 100%; padding: 10px; }
+        #admin-content { display: none; max-width: 1200px; margin: 0 auto; }
+        .btn { border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; }
+        .btn-login { background: #1976d2; color: white; width: 100%; }
+        .btn-sair { background: #666; color: white; }
+        .tabela-vendas { width: 100%; background: white; border-collapse: collapse; }
+        .tabela-vendas th, .tabela-vendas td { padding: 10px; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+<div id="login-container">
+    <h2>Acesso Restrito</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="senha" placeholder="Senha">
+    <button class="btn btn-login" onclick="fazerLogin()">Entrar</button>
+</div>
+
+<div id="admin-content">
+    <h2>Painel de Controle</h2>
+    <button class="btn btn-sair" onclick="fazerLogout()">Sair</button>
+
+    <div style="display:flex; gap:20px; align-items:flex-start; margin-top:20px;">
+
+        <!-- COLUNA ESQUERDA -->
+        <div style="width:280px; background:white; padding:15px; border-radius:12px;">
+            <h3>➕ Venda Manual</h3>
+
+            <input type="number" id="numCartela" placeholder="Nº da cartela" style="width:100%; margin-bottom:10px;">
+            <input type="text" id="nomeComprador" placeholder="Nome" style="width:100%; margin-bottom:10px;">
+            <input type="text" id="whatsappComprador" placeholder="WhatsApp" style="width:100%; margin-bottom:10px;">
+
+            <select id="statusVenda" style="width:100%; margin-bottom:10px;">
+                <option value="reservada">Reservada</option>
+                <option value="paga">Paga</option>
+            </select>
+
+            <button class="btn btn-login" onclick="adicionarVendaManual()">Adicionar</button>
+        </div>
+
+        <!-- COLUNA DIREITA -->
+        <div style="flex:1;">
+            <table class="tabela-vendas">
+                <thead>
+                    <tr>
+                        <th>Nº</th>
+                        <th>Comprador</th>
+                        <th>WhatsApp</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela"></tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyBYpJLTbts47UQge9xwGJlggnuFO1n381o",
+    authDomain: "bingo-facuc.firebaseapp.com",
+    databaseURL: "https://bingo-facuc-default-rtdb.firebaseio.com/",
+    projectId: "bingo-facuc",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+auth.onAuthStateChanged(user => {
+    document.getElementById("login-container").style.display = user ? "none" : "block";
+    document.getElementById("admin-content").style.display = user ? "block" : "none";
+    if(user) carregarDados();
+});
+
+function fazerLogin(){
+    auth.signInWithEmailAndPassword(email.value, senha.value)
+    .catch(e=>alert(e.message));
+}
+function fazerLogout(){ auth.signOut(); }
+
+function carregarDados(){
+    db.ref("bingo/vendas").on("value", snap=>{
+        const vendas = snap.val()||{};
+        const tbody = document.getElementById("corpoTabela");
+        tbody.innerHTML="";
+        Object.keys(vendas).sort((a,b)=>a-b).forEach(num=>{
+            const v = vendas[num];
+            tbody.innerHTML += `<tr><td>${num}</td><td>${v.comprador}</td><td>${v.whatsapp}</td><td>${v.status}</td></tr>`;
+        });
+    });
+}
+
+function adicionarVendaManual(){
+    const num = numCartela.value;
+    const nome = nomeComprador.value;
+    const whatsapp = whatsappComprador.value;
+    const status = statusVenda.value;
+
+    if(!num||!nome||!whatsapp){
+        alert("Preencha tudo");
+        return;
+    }
+
+    db.ref(`bingo/vendas/${num}`).once("value", snap=>{
+        if(snap.exists()){
+            if(!confirm("Cartela já existe. Deseja sobrescrever?")) return;
+        }
+
+        db.ref(`bingo/vendas/${num}`).set({
+            comprador:nome,
+            whatsapp:whatsapp,
+            status:status
+        });
+
+        numCartela.value = parseInt(num)+1; // auto próximo número
+        nomeComprador.value="";
+        whatsappComprador.value="";
+    });
+}
+
+// ENTER salva rápido
+document.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+        adicionarVendaManual();
+    }
+});
+</script>
+
+</body>
+</html>
