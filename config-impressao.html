@@ -6,80 +6,85 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        /* Ajuste Geral para preenchimento da tela */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #525659; display: flex; margin: 0; height: 100vh; overflow: hidden; }
         .sidebar { width: 380px; background: #fff; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.3); overflow-y: auto; z-index: 100; color: #333; }
         .preview-area { flex-grow: 1; padding: 10px; display: flex; justify-content: center; overflow-y: auto; }
         
-        /* Configuração da Folha A4 - Otimização de Espaço [cite: 11] */
-        .a4-page { background: white; padding: 8mm; box-sizing: border-box; box-shadow: 0 0 20px rgba(0,0,0,0.5); display: flex; position: relative; gap: 5mm; }
-        .retrato { width: 210mm; min-height: 297mm; flex-direction: column; }
+        .a4-page { 
+            background: white; 
+            padding: 8mm 15mm; 
+            box-sizing: border-box; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.5); 
+            display: flex; 
+            position: relative; 
+            gap: 5mm; 
+        }
+        .retrato { width: 210mm; min-height: 295mm; flex-direction: column; }
         .paisagem { width: 297mm; min-height: 210mm; flex-direction: row; }
 
-        /* Linha de corte */
         .linha-divisora { position: absolute; border: 1px dashed #aaa; pointer-events: none; z-index: 50; }
         .retrato .linha-divisora { width: 100%; top: 50%; left: 0; }
         .paisagem .linha-divisora { height: 100%; left: 50%; top: 0; }
 
-        /* Estrutura da Cartela */
-        .ticket-preview { 
-            padding: 2mm; 
-            display: flex; 
-            flex-direction: column; 
-            flex: 1; 
-            position: relative; 
-            background: #fff; 
-        }
+        .ticket-preview { padding: 2mm; display: flex; flex-direction: column; flex: 1; position: relative; background: #fff; width: 100%; }
         
-        /* Cabeçalho Robusto com Data, Hora e Valor [cite: 1, 8] */
-        .header-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
+        /* CABEÇALHO MAXIMIZADO */
+        .header-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 4px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
         .info-evento { text-align: left; flex: 1; }
-        .nome-bingo { font-size: 32px; font-weight: 900; margin: 0; letter-spacing: -1px; text-transform: uppercase; line-height: 1; }
-        .detalhes-evento { font-size: 13px; margin-top: 5px; line-height: 1.3; }
-        .premios-box { font-size: 14px; margin-top: 6px; padding-top: 4px; border-top: 1px solid #ccc; font-weight: bold; }
         
-        /* Box de Número e Status Sincronizados (85px) [cite: 2, 9] */
-        .box-numero-status { display: flex; flex-direction: column; align-items: center; width: 85px; gap: 2px; }
-        .num-destaque-box { 
-            border: 3px solid #000; width: 85px; height: 80px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box;
+        .nome-bingo { 
+            font-size: 45px; 
+            font-weight: 900; 
+            margin: 0; 
+            letter-spacing: -2px; 
+            text-transform: uppercase; 
+            line-height: 0.85; 
+            color: #000; 
         }
+        
+        .detalhes-evento { 
+            font-size: 16px; 
+            margin-top: 8px; 
+            line-height: 1.2; 
+            text-transform: uppercase;
+        }
+
+        .detalhes-evento b { font-weight: 900; }
+        .detalhes-evento span { font-weight: 400; }
+
+        .premios-box { 
+            font-size: 16px; 
+            margin-top: 6px; 
+            padding-top: 4px; 
+            border-top: 2px solid #000; 
+        }
+        .premios-box b { font-weight: 900; }
+        .premios-box span { font-weight: 400; }
+        
+        .box-numero-status { display: flex; flex-direction: column; align-items: center; width: 95px; gap: 2px; }
+        .num-destaque-box { border: 4px solid #000; width: 95px; height: 95px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; }
         .num-destaque-box span { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: -4px; }
-        .num-destaque-box b { font-size: 48px; line-height: 1; }
+        .num-destaque-box b { font-size: 55px; line-height: 1; }
         
-        .status-badge { 
-            font-size: 11px; font-weight: 900; padding: 5px 0; 
-            text-transform: uppercase; width: 85px; text-align: center; 
-            box-sizing: border-box; border: 3px solid #000; margin-top: -3px;
-        }
+        .status-badge { font-size: 12px; font-weight: 900; padding: 5px 0; text-transform: uppercase; width: 95px; text-align: center; box-sizing: border-box; border: 4px solid #000; margin-top: -3px; }
         .status-nao-paga { background: #fff; color: #000; }
         .status-paga { background: #000; color: #fff; }
 
-        /* Info Comprador com Campo WhatsApp [cite: 2, 10] */
-        .info-comprador { margin-bottom: 10px; font-size: 15px; border-bottom: 1px solid #000; padding-bottom: 5px; width: 100%; display: flex; gap: 10px; }
+        .info-comprador { margin-bottom: 10px; font-size: 16px; border-bottom: 2px solid #000; padding-bottom: 5px; width: 100%; display: flex; gap: 10px; }
+        .info-comprador b { font-weight: 900; }
+        .info-comprador span { font-weight: 400; }
 
-        /* Tabelas e Chamadas Otimizadas [cite: 3, 13] */
-        .chamadas-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 15px; width: 100%; }
-        .titulo-chamada { font-size: 16px; font-weight: 900; text-align: center; background: #eee; margin-bottom: 2px; border: 1px solid #000; }
+        .chamadas-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 12px; width: 100%; }
+        .titulo-chamada { font-size: 18px; font-weight: 900; text-align: center; background: #eee; margin-bottom: 2px; border: 2px solid #000; }
         
-        /* Letras do Bingo - Versão Econômica (Borda Grossa)  */
         .mini-table { border-collapse: collapse; width: 100%; }
-        .mini-table th { 
-            background: #fff; 
-            color: #000; 
-            border: 3px solid #000; 
-            font-size: 1.4em; 
-            padding: 5px 0;
-            font-weight: 900;
-        }
-        .mini-table td { border: 1px solid #000; text-align: center; font-weight: bold; padding: 6px; }
+        .mini-table th { background: #fff; color: #000; border: 4px solid #000; font-size: 1.6em; padding: 5px 0; font-weight: 900; }
+        .mini-table td { border: 1px solid #000; text-align: center; font-weight: bold; padding: 8px; }
         
-        /* Rodapé e Dados de Geração Ampliados [cite: 4, 13] */
         .footer-container { margin-top: auto; text-align: center; width: 100%; padding-top: 10px; border-top: 1px solid #ccc; }
-        .footer-nota { font-size: 14px; font-weight: 900; margin-bottom: 4px; text-transform: uppercase; }
+        .footer-nota { font-size: 15px; font-weight: 900; margin-bottom: 4px; text-transform: uppercase; }
         .footer-geracao { font-size: 11px; color: #333; font-weight: bold; }
 
-        /* Controles da Sidebar */
         .control-group { margin-bottom: 15px; background: #f9f9f9; padding: 12px; border-radius: 8px; border: 1px solid #ddd; }
         label { display: block; font-weight: bold; font-size: 12px; margin-bottom: 6px; color: #555; }
         select, input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
@@ -137,7 +142,15 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let letrasBingo = ["B","I","N","G","O"];
-db.ref("bingo/letras").on("value", snap => { if(snap.exists()) { letrasBingo = snap.val(); atualizarPreview(); } });
+let dadosGlobais = {};
+
+db.ref("bingo").on("value", snap => {
+    if(snap.exists()) {
+        dadosGlobais = snap.val();
+        if(dadosGlobais.letras) letrasBingo = dadosGlobais.letras;
+        atualizarPreview();
+    }
+});
 
 function atualizarPreview() {
     const layout = document.getElementById("cfg-layout").value;
@@ -164,6 +177,12 @@ function atualizarPreview() {
         const statusTexto = (i % 2 === 0) ? "CARTELA PAGA" : "NÃO PAGA";
         const statusClasse = (i % 2 === 0) ? "status-paga" : "status-nao-paga";
 
+        // Corrigido para não duplicar o R$
+        let valorExibicao = dadosGlobais.valorCartela || '0,00';
+        if (!valorExibicao.includes('R$')) {
+            valorExibicao = 'R$ ' + valorExibicao;
+        }
+
         let chamadasHTML = `
             <div style="width:100%">
                 <div class="titulo-chamada">1ª CHAMADA</div>
@@ -182,13 +201,14 @@ function atualizarPreview() {
         ticket.innerHTML = `
             <div class="header-top">
                 <div class="info-evento">
-                    <h1 class="nome-bingo">BINGO DO CAUBI</h1>
+                    <h1 class="nome-bingo">${dadosGlobais.nomeBingo || 'BINGO'}</h1>
                     <div class="detalhes-evento">
-                        <b>LOCAL:</b> CÓRREGO, APODI RN | <b>VALOR:</b> R$ 10,00<br>
-                        <b>DATA:</b> 12/04/2026 | <b>HORA:</b> 15:00h
+                        <b>LOCAL:</b> <span>${dadosGlobais.localBingo || '---'}</span><br>
+                        <b>DATA:</b> <span>${dadosGlobais.dataBingo || '---'}</span> | <b>HORA:</b> <span>${dadosGlobais.horaBingo || '--:--h'}</span><br>
+                        <b>VALOR DA CARTELA:</b> <span>${valorExibicao}</span>
                     </div>
                     <div class="premios-box">
-                        PRÊMIOS: 1º R$ 500 | 2º R$ 200 | 3º R$ 100
+                        <b>PRÊMIOS:</b> <span>${dadosGlobais.descricaoPremios || '---'}</span>
                     </div>
                 </div>
                 <div class="box-numero-status">
@@ -200,13 +220,13 @@ function atualizarPreview() {
                 </div>
             </div>
             <div class="info-comprador">
-                <div style="flex:2"><b>COMPRADOR:</b> _________________________</div>
-                <div style="flex:1"><b>ZAP:</b> (__) __________</div>
+                <div style="flex:2"><b>COMPRADOR:</b> <span>EXEMPLO DE NOME</span></div>
+                <div style="flex:1"><b>ZAP:</b> <span>(84) 9.0000-0000</span></div>
             </div>
             <div class="chamadas-container">${chamadasHTML}</div>
             <div class="footer-container">
                 <div class="footer-nota">${aviso}</div>
-                <div class="footer-geracao">Gerado em: ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString()} - Sistema Bingo Pro</div>
+                <div class="footer-geracao">Gerado em: ${new Date().toLocaleDateString()} - Sistema Bingo Pro</div>
             </div>
         `;
         folha.appendChild(ticket);
