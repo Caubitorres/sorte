@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserva de Cartelas</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+}
+
+.header {
+    background: #1976d2;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.lista-disponiveis {
+    padding: 10px;
+    text-align: center;
+}
+
+/* GRID CORRIGIDO */
+.grid-disponiveis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(36px, 36px));
+    gap: 6px;
+    margin-top: 10px;
+    justify-content: center;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.num-disponivel {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 6px 0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+}
+
+.selecionado {
+    background: #1976d2;
+    color: white;
+}
+
+.container {
+    max-width: 420px;
+    margin: 10px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+input, textarea {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 12px;
+}
+
+.barra-container {
+    width: 100%;
+    height: 20px;
+    background: #ddd;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+.barra {
+    height: 100%;
+    width: 0%;
+    background: #4caf50;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <h2 id="nomeBingo">Bingo</h2>
+    <p id="dataBingo">Data: --</p>
+    <p id="horaBingo">Hora: --</p>
+    <p id="disponiveis">Cartelas disponíveis: --</p>
+
+    <div class="barra-container">
+        <div id="barraProgresso" class="barra"></div>
+    </div>
+</div>
+
+<div class="lista-disponiveis">
+    <h4>Cartelas disponíveis</h4>
+    <div id="gridDisponiveis" class="grid-disponiveis"></div>
+</div>
+
+<div class="container">
+    <input type="text" id="nome" placeholder="Nome e Sobrenome">
+    <input type="text" id="whatsapp" placeholder="Seu WhatsApp com 11 números">
+    <textarea id="cartelas" placeholder="Clique no número e ele aparece aqui"></textarea>
+
+    <button onclick="reservar()">Reservar</button>
+    <button onclick="limparSelecao()" style="background:#dc3545;margin-top:5px;">Limpar</button>
+
+    <div id="resultado"></div>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyBYpJLTbts47UQge9xwGJlggnuFO1n381o",
+    authDomain: "bingo-facuc.firebaseapp.com",
+    databaseURL: "https://bingo-facuc-default-rtdb.firebaseio.com/",
+    projectId: "bingo-facuc",
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const TOTAL_CARTELAS = 100;
+
+// DADOS DO BINGO
+db.ref("bingo").on("value", snap => {
+    const d = snap.val() || {};
+
+    document.getElementById("nomeBingo").innerText = d.nomeBingo || "Bingo";
+    document.getElementById("dataBingo").innerText = "Data: " + (d.dataBingo || "--");
+    document.getElementById("horaBingo").innerText = "Hora: " + (d.horaBingo || "--");
+});
+
+// VENDAS + GRID
+db.ref("bingo/vendas").on("value", snap => {
+    const vendas = snap.val() || {};
+    const vendidas = Object.keys(vendas);
+
+    const grid = document.getElementById("gridDisponiveis");
+    grid.innerHTML = "";
+
+    let disponiveis = 0;
+
+    for(let i=1;i<=TOTAL_CARTELAS;i++){
+        if(!vendidas.includes(String(i))){
+            disponiveis++;
+            grid.innerHTML += `<div class="num-disponivel" onclick="selecionarCartela(${i})">${i}</div>`;
+        }
+    }
+
+    document.getElementById("disponiveis").innerText = "Cartelas disponíveis: " + disponiveis;
+
+    const porcentagem = ((TOTAL_CARTELAS - disponiveis) / TOTAL_CARTELAS) * 100;
+    document.getElementById("barraProgresso").style.width = porcentagem + "%";
+});
+
+// SELEÇÃO
+function selecionarCartela(num){
+    const campo = document.getElementById("cartelas");
+
+    let lista = campo.value ? campo.value.split(",").map(n => n.trim()) : [];
+
+    if(lista.includes(String(num))){
+        lista = [];
+    } else {
+        lista = [String(num)];
+    }
+
+    campo.value = lista.join(", ");
+
+    document.querySelectorAll(".num-disponivel").forEach(el => {
+        if(lista.includes(el.innerText)) el.classList.add("selecionado");
+        else el.classList.remove("selecionado");
+    });
+}
+
+function limparSelecao(){
+    document.getElementById("cartelas").value = "";
+    document.querySelectorAll(".num-disponivel").forEach(el => el.classList.remove("selecionado"));
+}
+
+// RESERVA
+function reservar(){
+    const nome = document.getElementById("nome").value;
+    const whatsapp = document.getElementById("whatsapp").value;
+    const cartelas = document.getElementById("cartelas").value;
+
+    if(!nome || !whatsapp || !cartelas){
+        alert("Preencha tudo!");
+        return;
+    }
+
+    const lista = cartelas.split(",").map(c => c.trim());
+
+    lista.forEach(num => {
+        db.ref(`bingo/vendas/${num}`).once("value", snap => {
+            if(!snap.exists()){
+                db.ref(`bingo/vendas/${num}`).set({
+                    comprador: nome,
+                    whatsapp: whatsapp,
+                    status: "reservada"
+                });
+            }
+        });
+    });
+
+    alert("Reserva feita!");
+    limparSelecao();
+}
+</script>
+
+</body>
+</html>
