@@ -58,7 +58,6 @@
         .btn-whatsapp { background: #2e7d32; color: white; }
         .btn-imprimir { background: #212121; color: white; margin-top: 15px; display: none; }
 
-        /* --- SOLUÇÃO FINAL PARA PÁGINA EM BRANCO --- */
         #areaImpressao { display: none; }
         
         @media print {
@@ -77,7 +76,7 @@
             
             .a4-page { 
                 width: 210mm; 
-                height: 295mm; /* Altura reduzida para garantir que cabe em 1 folha */
+                height: 295mm; 
                 display: flex; 
                 box-sizing: border-box; 
                 position: relative; 
@@ -86,7 +85,6 @@
                 gap: 5mm; 
             }
 
-            /* Força a quebra apenas se NÃO for a última página */
             .a4-page:not(:last-child) { 
                 page-break-after: always !important; 
                 break-after: page !important;
@@ -274,9 +272,36 @@ function recuperarCartelas() {
 function reservar() {
     const nome = document.getElementById("comp-nome").value;
     const zap = document.getElementById("comp-whatsapp").value;
-    if(!nome || !zap || !selecionadas.length) return alert("Preencha os dados.");
-    selecionadas.forEach(n => { db.ref(`bingo/vendas/${n}`).set({ comprador: nome, whatsapp: zap, status: "reservada" }); });
-    alert("Reservado! Envie o comprovante.");
+
+    if (!nome || !zap || !selecionadas.length) {
+        return alert("Por favor, preencha seu nome, WhatsApp e selecione ao menos uma cartela.");
+    }
+
+    const updates = {};
+    const cartelasParaReservar = [...selecionadas];
+
+    cartelasParaReservar.forEach(n => {
+        updates[`bingo/vendas/${n}`] = { 
+            comprador: nome, 
+            whatsapp: zap, 
+            status: "reservada" 
+        };
+    });
+
+    // UI Otimista: Atualiza a cor localmente antes de terminar o envio ao Firebase
+    selecionadas = []; 
+    renderizar(); 
+    atualizar();
+
+    db.ref().update(updates)
+    .then(() => {
+        alert("Sucesso! Suas cartelas foram reservadas. Envie o comprovante");
+        document.getElementById("btnImprimir").style.display = "block";
+    })
+    .catch((error) => {
+        console.error("Erro ao reservar:", error);
+        alert("Erro ao salvar. Verifique sua conexão.");
+    });
 }
 
 function enviarWhatsApp() {
@@ -284,7 +309,6 @@ function enviarWhatsApp() {
     window.open(`https://wa.me/5584998396406?text=${encodeURIComponent(texto)}`, "_blank");
 }
 
-/* IMPRESSÃO CORRIGIDA PARA PÁGINA ÚNICA */
 async function prepararImpressao() {
     const zap = document.getElementById("comp-whatsapp").value;
     const area = document.getElementById("areaImpressao");
