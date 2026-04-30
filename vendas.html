@@ -65,61 +65,32 @@
             html, body { height: 100%; margin: 0 !important; padding: 0 !important; overflow: hidden; background: #fff; }
             body * { visibility: hidden; }
             #areaImpressao, #areaImpressao * { visibility: visible; }
-            #areaImpressao { 
-                display: block !important; 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 210mm; 
-                height: auto;
-            }
-            
-            .a4-page { 
-                width: 210mm; 
-                height: 295mm; 
-                display: flex; 
-                box-sizing: border-box; 
-                position: relative; 
-                overflow: hidden; 
-                padding: 10mm; 
-                gap: 5mm; 
-            }
-
-            .a4-page:not(:last-child) { 
-                page-break-after: always !important; 
-                break-after: page !important;
-            }
-
+            #areaImpressao { display: block !important; position: absolute; left: 0; top: 0; width: 210mm; height: auto; }
+            .a4-page { width: 210mm; height: 295mm; display: flex; box-sizing: border-box; position: relative; overflow: hidden; padding: 10mm; gap: 5mm; }
+            .a4-page:not(:last-child) { page-break-after: always !important; break-after: page !important; }
             .retrato { flex-direction: column; width: 210mm; height: 295mm; }
             .paisagem { flex-direction: row; width: 297mm; height: 208mm; }
-            
             .linha-divisora { position: absolute; border: 1px dashed #aaa; pointer-events: none; z-index: 50; }
             .retrato .linha-divisora { width: 100%; top: 50%; left: 0; }
             .paisagem .linha-divisora { height: 100%; left: 50%; top: 0; }
-
             .ticket-preview { padding: 2mm; display: flex; flex-direction: column; flex: 1; position: relative; background: #fff; box-sizing: border-box; border: 1px solid transparent; }
             .header-top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
             .nome-bingo { font-size: 32px; font-weight: 900; margin: 0; letter-spacing: -1px; text-transform: uppercase; line-height: 1; color: #000; }
             .detalhes-evento { font-size: 13px; margin-top: 5px; line-height: 1.3; }
             .premios-box { font-size: 14px; margin-top: 6px; padding-top: 4px; border-top: 1px solid #ccc; font-weight: bold; }
-            
             .box-numero-status { display: flex; flex-direction: column; align-items: center; width: 85px; gap: 2px; }
             .num-destaque-box { border: 3px solid #000; width: 85px; height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; }
             .num-destaque-box span { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: -4px; }
             .num-destaque-box b { font-size: 48px; line-height: 1; }
-            
             .status-badge { font-size: 11px; font-weight: 900; padding: 5px 0; text-transform: uppercase; width: 85px; text-align: center; box-sizing: border-box; border: 3px solid #000; margin-top: -3px; }
             .status-paga { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; }
             .status-nao-paga { background: #fff !important; color: #000 !important; border: 3px solid #000; -webkit-print-color-adjust: exact; }
-
             .info-comprador { margin-bottom: 10px; font-size: 15px; border-bottom: 1px solid #000; padding-bottom: 5px; width: 100%; display: flex; gap: 10px; }
             .chamadas-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 15px; width: 100%; }
             .titulo-chamada { font-size: 16px; font-weight: 900; text-align: center; background: #eee !important; margin-bottom: 2px; border: 1px solid #000; -webkit-print-color-adjust: exact; }
-            
             .mini-table { border-collapse: collapse; width: 100%; }
             .mini-table th { background: #fff; color: #000; border: 3px solid #000; font-size: 1.4em; padding: 5px 0; font-weight: 900; }
             .mini-table td { border: 1px solid #000; text-align: center; font-weight: bold; padding: 6px; }
-            
             .footer-container { margin-top: auto; text-align: center; width: 100%; padding-top: 10px; border-top: 1px solid #ccc; }
             .footer-nota { font-size: 14px; font-weight: 900; margin-bottom: 4px; text-transform: uppercase; }
             .footer-geracao { font-size: 11px; color: #333; font-weight: bold; }
@@ -142,7 +113,7 @@
         <div class="identificacao-grid">
             <div class="bloco-id">
                 <input type="text" id="comp-nome" placeholder="Nome e sobrenome">
-                <input type="tel" id="comp-whatsapp" placeholder="WhatsApp (11 dígitos com DDD)" maxlength="11" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                <input type="tel" id="comp-whatsapp" placeholder="WhatsApp (DDD + Número)">
             </div>
             <div class="bloco-id">
                 <button class="btn-recuperar" onclick="recuperarCartelas()">VER MINHAS CARTELAS</button>
@@ -196,6 +167,29 @@ const db = firebase.database();
 let dadosBingo = {};
 let selecionadas = [];
 let precoUnit = 0;
+
+// INICIALIZAÇÃO: Recupera dados salvos e aplica máscara ao digitar[cite: 1]
+window.onload = function() {
+    const nomeSalvo = localStorage.getItem("bingo_nome");
+    const zapSalvo = localStorage.getItem("bingo_zap");
+    
+    if (nomeSalvo) document.getElementById("comp-nome").value = nomeSalvo;
+    if (zapSalvo) document.getElementById("comp-whatsapp").value = formatarZap(zapSalvo);
+
+    document.getElementById("comp-whatsapp").addEventListener('input', (e) => {
+        e.target.value = formatarZap(e.target.value);
+    });
+};
+
+function formatarZap(v) {
+    v = v.replace(/\D/g, ""); 
+    if (v.length > 11) v = v.slice(0, 11);
+    if (v.length > 10) return `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
+    if (v.length > 5) return `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
+    if (v.length > 2) return `(${v.slice(0, 2)}) ${v.slice(2)}`;
+    if (v.length > 0) return `(${v.slice(0, 2)}`;
+    return v;
+}
 
 db.ref("bingo").on("value", snap => {
     dadosBingo = snap.val() || {};
@@ -256,11 +250,11 @@ function atualizar() {
 }
 
 function recuperarCartelas() {
-    const zap = document.getElementById("comp-whatsapp").value;
-    if(!zap) return alert("Digite seu WhatsApp.");
+    const zapRaw = document.getElementById("comp-whatsapp").value.replace(/\D/g, "");
+    if(!zapRaw) return alert("Digite seu WhatsApp.");
     const v = dadosBingo.vendas || {};
     let encontradas = [];
-    for(let n in v) { if(v[n].whatsapp === zap) { encontradas.push(n); document.getElementById("comp-nome").value = v[n].comprador; } }
+    for(let n in v) { if(v[n].whatsapp === zapRaw) { encontradas.push(n); document.getElementById("comp-nome").value = v[n].comprador; } }
     if(encontradas.length) {
         selecionadas = encontradas;
         atualizar();
@@ -269,38 +263,34 @@ function recuperarCartelas() {
     } else { alert("Nenhuma encontrada."); }
 }
 
+// RESERVAR COM UI OTIMISTA E SALVAMENTO LOCAL[cite: 1]
 function reservar() {
     const nome = document.getElementById("comp-nome").value;
-    const zap = document.getElementById("comp-whatsapp").value;
+    const zapRaw = document.getElementById("comp-whatsapp").value.replace(/\D/g, "");
 
-    if (!nome || !zap || !selecionadas.length) {
-        return alert("Por favor, preencha seu nome, WhatsApp e selecione ao menos uma cartela.");
+    if (!nome || zapRaw.length < 11 || !selecionadas.length) {
+        return alert("Preencha o nome e o WhatsApp com DDD (11 dígitos).");
     }
 
-    const updates = {};
-    const cartelasParaReservar = [...selecionadas];
+    localStorage.setItem("bingo_nome", nome);
+    localStorage.setItem("bingo_zap", zapRaw);
 
-    cartelasParaReservar.forEach(n => {
-        updates[`bingo/vendas/${n}`] = { 
-            comprador: nome, 
-            whatsapp: zap, 
-            status: "reservada" 
-        };
+    const updates = {};
+    selecionadas.forEach(n => {
+        updates[`bingo/vendas/${n}`] = { comprador: nome, whatsapp: zapRaw, status: "reservada" };
     });
 
-    // UI Otimista: Atualiza a cor localmente antes de terminar o envio ao Firebase
+    // Atualização instantânea na tela[cite: 1]
     selecionadas = []; 
     renderizar(); 
     atualizar();
 
-    db.ref().update(updates)
-    .then(() => {
-        alert("Sucesso! Suas cartelas foram reservadas. Envie o comprovante");
+    db.ref().update(updates).then(() => {
+        alert("Reservado com sucesso! Envie o comprovante.");
         document.getElementById("btnImprimir").style.display = "block";
-    })
-    .catch((error) => {
-        console.error("Erro ao reservar:", error);
+    }).catch(err => {
         alert("Erro ao salvar. Verifique sua conexão.");
+        renderizar();
     });
 }
 
@@ -310,45 +300,33 @@ function enviarWhatsApp() {
 }
 
 async function prepararImpressao() {
-    const zap = document.getElementById("comp-whatsapp").value;
+    const zapRaw = document.getElementById("comp-whatsapp").value.replace(/\D/g, "");
     const area = document.getElementById("areaImpressao");
-    
     const cfgSnap = await db.ref("bingo/config_impressao").once("value");
     const cfg = cfgSnap.val() || { layout: 'retrato-2', nChamadas: '3', aviso: "ESTA CARTELA SÓ CONCORRE SE PAGA", fMain: 42, fSec: 20 };
-
     const v = dadosBingo.vendas || {};
     const c = dadosBingo.cartelas || {};
     const letras = dadosBingo.letras || ["B", "I", "N", "G", "O"];
-    
-    let minhas = Object.keys(v).filter(n => v[n].whatsapp === zap).sort((a,b) => parseInt(a)-parseInt(b));
+    let minhas = Object.keys(v).filter(n => v[n].whatsapp === zapRaw).sort((a,b) => parseInt(a)-parseInt(b));
     if(minhas.length === 0) return alert("Nenhuma cartela encontrada.");
-
     const ticketsPorFolha = parseInt(cfg.layout.split('-')[1]);
     const orientacao = cfg.layout.split('-')[0];
     let htmlFinal = "";
-
     for (let i = 0; i < minhas.length; i += ticketsPorFolha) {
         let paginaHTML = `<div class="a4-page ${orientacao}">`;
         if(ticketsPorFolha > 1) paginaHTML += `<div class="linha-divisora"></div>`;
-
         for (let j = 0; j < ticketsPorFolha; j++) {
             const index = i + j;
             if (index >= minhas.length) break;
-            
             const n = minhas[index];
             const venda = v[n];
             const statusLabel = venda.status === "paga" ? "CARTELA PAGA" : "RESERVADA";
-
             let chamadasHTML = `<div style="width:100%"><div class="titulo-chamada">1ª CHAMADA</div><table class="mini-table" style="font-size:${cfg.fMain}px">${gerarTabelaHTML(c[n], letras)}</table></div>`;
-            
             if (parseInt(cfg.nChamadas) >= 2) {
                 chamadasHTML += `<div style="display:flex; gap:15px; width:100%; justify-content:center; margin-top:5px;"><div style="flex:1"><div class="titulo-chamada">2ª CHAMADA</div><table class="mini-table" style="font-size:${cfg.fSec}px; width:100%">${gerarTabelaHTML(c[n], letras)}</table></div>`;
-                if (parseInt(cfg.nChamadas) === 3) {
-                    chamadasHTML += `<div style="flex:1"><div class="titulo-chamada">3ª CHAMADA</div><table class="mini-table" style="font-size:${cfg.fSec}px; width:100%">${gerarTabelaHTML(c[n], letras)}</table></div>`;
-                }
+                if (parseInt(cfg.nChamadas) === 3) chamadasHTML += `<div style="flex:1"><div class="titulo-chamada">3ª CHAMADA</div><table class="mini-table" style="font-size:${cfg.fSec}px; width:100%">${gerarTabelaHTML(c[n], letras)}</table></div>`;
                 chamadasHTML += `</div>`;
             }
-
             paginaHTML += `
                 <div class="ticket-preview">
                     <div class="header-top">
@@ -364,7 +342,7 @@ async function prepararImpressao() {
                     </div>
                     <div class="info-comprador">
                         <div style="flex:2"><b>COMPRADOR:</b> ${venda.comprador.toUpperCase()}</div>
-                        <div style="flex:1"><b>ZAP:</b> ${venda.whatsapp || '(__) _____-____'}</div>
+                        <div style="flex:1"><b>ZAP:</b> ${formatarZap(venda.whatsapp) || '(__) _____-____'}</div>
                     </div>
                     <div class="chamadas-container">${chamadasHTML}</div>
                     <div class="footer-container">
@@ -373,19 +351,15 @@ async function prepararImpressao() {
                     </div>
                 </div>`;
         }
-        paginaHTML += `</div>`;
-        htmlFinal += paginaHTML;
+        paginaHTML += `</div>`; htmlFinal += paginaHTML;
     }
-    
     area.innerHTML = htmlFinal;
     setTimeout(() => { window.print(); area.innerHTML = ""; }, 800);
 }
 
 function gerarTabelaHTML(nums, letras) {
     let h = `<thead><tr>${letras.map(l => `<th>${l}</th>`).join("")}</tr></thead><tbody>`;
-    for (let r = 0; r < 5; r++) {
-        h += `<tr>${[0, 1, 2, 3, 4].map(col => `<td>${nums[r + col * 5] || ""}</td>`).join("")}</tr>`;
-    }
+    for (let r = 0; r < 5; r++) { h += `<tr>${[0, 1, 2, 3, 4].map(col => `<td>${nums[r + col * 5] || ""}</td>`).join("")}</tr>`; }
     return h + `</tbody>`;
 }
 </script>
