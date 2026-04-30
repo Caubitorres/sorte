@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <meta charset="UTF-8">
-<title>INDEX BINGO</title>
+<title>INDEX BINGO - CONTROLE</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
@@ -18,13 +22,18 @@
     .config-grid label { font-weight: bold; font-size: 11px; color: #555; text-transform: uppercase; }
     input, textarea { padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; margin-top: 3px; font-family: inherit; }
     
-    /* Estilos dos Alertas [cite: 7] */
+    .premios-escritos { background: #e9ecef; padding: 10px 15px; border-radius: 0; text-align: left; border: 1px solid #ccc; border-top: none; }
+    
+    .action-bar { display: flex; gap: 2px; margin-bottom: 15px; }
+    .btn-save { background: #28a745; flex: 2; font-size: 16px; border-radius: 0 0 0 8px; color: white; padding: 15px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-backup { background: #6f42c1; flex: 1; color: white; border: none; cursor: pointer; font-weight: bold; }
+    .btn-restore { background: #17a2b8; flex: 1; border-radius: 0 0 8px 0; color: white; border: none; cursor: pointer; font-weight: bold; }
+
     .alerta-bingo { padding: 15px; margin-bottom: 10px; border-radius: 8px; font-weight: bold; display: none; animation: pulse 1.5s infinite; font-size: 18px; }
     .alerta-armada { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     .alerta-ganhador { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; font-size: 24px; }
     @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
-    .premios-escritos { background: #e9ecef; padding: 10px 15px; border-radius: 0 0 8px 8px; text-align: left; margin-bottom: 15px; border: 1px solid #ccc; border-top: none; }
     .main-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; margin-top: 10px; }
     .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 4px; width: 100%; }
     .linha { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
@@ -38,12 +47,17 @@
     .lista-resumo { list-style: none; padding: 0; margin: 0; font-size: 14px; }
     .lista-resumo li { padding: 8px 0; border-bottom: 1px solid #eee; line-height: 1.4; }
     .badge-armada { display: inline-block; background: #ff9800; color: white; padding: 3px 8px; border-radius: 10px; margin: 2px; font-size: 12px; font-weight: bold; }
+    
     button { padding: 12px 18px; cursor: pointer; border-radius: 6px; border: none; background: #007bff; color: white; font-weight: bold; }
     .btn-reset { background: #dc3545; }
-    .btn-save { background: #28a745; width: 100%; font-size: 16px; border-radius: 0 0 8px 8px; }
     
-    /* Interruptor do Filtro [cite: 3] */
-    .switch-pago { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; padding: 10px; border-radius: 8px; border: 2px solid #28a745; margin-bottom: 10px; }
+    .switch-pago { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; padding: 10px; border-radius: 8px; border: 2px solid #28a745; margin-bottom: 5px; }
+    
+    /* Estilo do botão automático atualizado */
+    .btn-auto-toggle { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; font-size: 16px; transition: 0.3s; border: 2px solid #333; font-weight: 900; letter-spacing: 1px; }
+    .auto-off { background: #e0e0e0; color: #333; }
+    .auto-on { background: #d32f2f; color: white; border-color: #8b0000; box-shadow: 0 4px 10px rgba(211, 47, 47, 0.4); }
+
     #loginBox { position:fixed; top:0; left:0; width:100%; height:100%; background:#000; color:#ff9800; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999; }
 </style>
 </head>
@@ -73,7 +87,13 @@
         <label style="font-weight: bold; font-size: 11px; color: #555;">LISTA DE PRÊMIOS DO BINGO (DESCRIÇÃO COMPLETA)</label>
         <textarea id="listaPremiosEscritos" rows="2" placeholder="Ex: 1º prêmio: 01 cafeteira, 2º prémio: 01 liquidificador..."></textarea>
     </div>
-    <button class="btn-save" onclick="salvarConfiguracoes()">💾 ATUALIZAR INFORMAÇÕES NO TELÃO</button>
+    
+    <div class="action-bar">
+        <button class="btn-save" onclick="salvarConfiguracoes()">💾 ATUALIZAR INFORMAÇÕES NO TELÃO</button>
+        <button class="btn-backup" onclick="salvarBackup()">📥 SALVAR BACKUP</button>
+        <button class="btn-restore" onclick="document.getElementById('fileRestore').click()">📤 ABRIR BACKUP</button>
+        <input type="file" id="fileRestore" style="display:none" accept=".json" onchange="abrirBackup(this)">
+    </div>
 
     <div class="main-layout">
         <div>
@@ -99,6 +119,9 @@
                 <input type="checkbox" id="filtroPagas" style="width: 20px; height: 20px; cursor: pointer;">
                 <label for="filtroPagas" style="font-weight: bold; color: #2e7d32; font-size: 13px;">Sorteio somente CARTELAS PAGAS</label>
             </div>
+
+            <!-- BOTÃO SORTEIO AUTOMÁTICO ON/OFF -->
+            <button id="btnAutoMode" class="btn-auto-toggle auto-off" onclick="toggleAutoMode()">SORTEIO AUTOMÁTICO: OFF</button>
 
             <div class="info-box">
                 <h3>🏆 GANHADORES</h3>
@@ -127,6 +150,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+let sorteados=[];
+let letras=["B","I","N","G","O"];
+let cartelas={};
+let premios=[];
+let somAtivo=false;
+let ultimaPedraFalada=null;
+let modoAutomatico = false; // Controle ON/OFF do modo automático[cite: 1]
+
+// Mascaras de input
 document.getElementById('dataInput').addEventListener('input', function (e) {
     let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,2})(\d{0,4})/);
     e.target.value = !x[2] ? x[1] : x[1] + '/' + x[2] + (x[3] ? '/' + x[3] : '');
@@ -138,13 +170,6 @@ document.getElementById('valorInput').addEventListener('blur', function (e) {
     valor = (valor / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     e.target.value = valor;
 });
-
-let sorteados=[];
-let letras=["B","I","N","G","O"];
-let cartelas={};
-let premios=[];
-let somAtivo=false;
-let ultimaPedraFalada=null;
 
 function login(){
     let e = document.getElementById("email").value;
@@ -161,12 +186,63 @@ function salvarConfiguracoes() {
         nomeBingo: document.getElementById("nomeBingoInput").value,
         dataBingo: document.getElementById("dataInput").value,
         localBingo: document.getElementById("localInput").value,
-        horaBingo: document.getElementById("horaInput").value, // Sincroniza hora [cite: 6]
+        horaBingo: document.getElementById("horaInput").value,
         valorCartela: document.getElementById("valorInput").value,
         descricaoPremios: document.getElementById("listaPremiosEscritos").value,
         letras: letras
     }).then(() => alert("Dados sincronizados com o Telão!"));
     criarPainel();
+}
+
+function salvarBackup() {
+    const backup = {
+        nome: document.getElementById("nomeBingoInput").value,
+        letras: document.getElementById("letrasInput").value,
+        data: document.getElementById("dataInput").value,
+        local: document.getElementById("localInput").value,
+        hora: document.getElementById("horaInput").value,
+        valor: document.getElementById("valorInput").value,
+        premios: document.getElementById("listaPremiosEscritos").value
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `backup_bingo_${backup.nome || 'config'}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function abrirBackup(input) {
+    const reader = new FileReader();
+    reader.onload = function() {
+        try {
+            const data = JSON.parse(reader.result);
+            if(data.nome) document.getElementById("nomeBingoInput").value = data.nome;
+            if(data.letras) document.getElementById("letrasInput").value = data.letras;
+            if(data.data) document.getElementById("dataInput").value = data.data;
+            if(data.local) document.getElementById("localInput").value = data.local;
+            if(data.hora) document.getElementById("horaInput").value = data.hora;
+            if(data.valor) document.getElementById("valorInput").value = data.valor;
+            if(data.premios) document.getElementById("listaPremiosEscritos").value = data.premios;
+            alert("Backup carregado!");
+        } catch (e) { alert("Erro ao ler backup."); }
+    };
+    reader.readAsText(input.files[0]);
+    input.value = "";
+}
+
+// LOGICA DO MODO AUTOMÁTICO ON/OFF[cite: 1]
+function toggleAutoMode() {
+    modoAutomatico = !modoAutomatico;
+    const btn = document.getElementById("btnAutoMode");
+    if(modoAutomatico) {
+        btn.innerText = "SORTEIO AUTOMÁTICO: ON";
+        btn.className = "btn-auto-toggle auto-on";
+    } else {
+        btn.innerText = "SORTEIO AUTOMÁTICO: OFF";
+        btn.className = "btn-auto-toggle auto-off";
+    }
 }
 
 fileInput.onchange = e => {
@@ -177,12 +253,12 @@ fileInput.onchange = e => {
         cartelas = {};
         j.forEach((l, i) => {
             if(i === 0) return;
-            let idCartela = l[0]; // Assume que a primeira coluna é o número da cartela
+            let idCartela = l[0]; 
             let nums = l.slice(1, 26).map(n => parseInt(n)).filter(n => !isNaN(n));
             if(nums.length === 25 && idCartela) cartelas[idCartela] = nums;
         });
         db.ref("bingo/cartelas").set(cartelas);
-        alert("Cartelas importadas com sucesso!");
+        alert("Cartelas importadas!");
     };
     r.readAsArrayBuffer(e.target.files[0]);
 };
@@ -191,16 +267,25 @@ function sortear(){
     let disp=[];
     for(let i=1; i<=75; i++) if(!sorteados.includes(i)) disp.push(i);
     if(!disp.length) return;
-    adicionarNumero(disp[Math.floor(Math.random()*disp.length)]);
+    adicionarNumero(disp[Math.floor(Math.random()*disp.length)], true); 
 }
 
 function inserirManual(){
+    if(modoAutomatico) {
+        alert("SORTEIO AUTOMÁTICO ATIVO! Bloqueio de inserção manual.");
+        return;
+    }
     let n = parseInt(document.getElementById("inputNumero").value);
     if(n) adicionarNumero(n);
     document.getElementById("inputNumero").value = "";
 }
 
-function adicionarNumero(n){
+function adicionarNumero(n, vindoDoSorteio = false){
+    // Se o modo automático estiver ON e não for vindo do botão sortear, ignora.[cite: 1]
+    if(modoAutomatico && !vindoDoSorteio) {
+        return;
+    }
+    
     if(!n || n<1 || n>75 || sorteados.includes(n)) return;
     sorteados.push(n);
     let pedraTexto = letras[Math.floor((n-1)/15)] + " " + n;
@@ -218,28 +303,21 @@ function resetar(){
 async function salvarJogo(){
     const filtrarPagas = document.getElementById("filtroPagas").checked;
     let vendas = {};
-    
-    // Busca status das vendas do Firebase (controle.html) [cite: 19, 21]
     if(filtrarPagas) {
         const snap = await db.ref("bingo/vendas").once("value");
         vendas = snap.val() || {};
     }
-
     let armadas = [];
     let ganhadoresNestaRodada = [];
     let ultimaBolinha = sorteados[sorteados.length - 1];
-
     for(let id in cartelas){
-        // Validação: se o filtro estiver ativo, a cartela deve estar como "paga" [cite: 13, 21]
         if(filtrarPagas && (!vendas[id] || vendas[id].status !== "paga")) continue;
-
         let acertos = cartelas[id].filter(n => sorteados.includes(n)).length;
         if(acertos === 24) armadas.push(id);
         if(acertos === 25) {
             if(!premios.some(p => p.ganhadores.includes(id))) ganhadoresNestaRodada.push(id);
         }
     }
-    
     if(ganhadoresNestaRodada.length > 0) {
         premios.push({ numero: premios.length + 1, pedra: ultimaBolinha, ganhadores: ganhadoresNestaRodada });
     }
@@ -249,12 +327,20 @@ async function salvarJogo(){
 db.ref("bingo").on("value", snap => {
     let d = snap.val();
     if(!d) return;
+
+    if(d.nomeBingo) document.getElementById("nomeBingoInput").value = d.nomeBingo;
+    if(d.dataBingo) document.getElementById("dataInput").value = d.dataBingo;
+    if(d.localBingo) document.getElementById("localInput").value = d.localBingo;
+    if(d.horaBingo) document.getElementById("horaInput").value = d.horaBingo;
+    if(d.valorCartela) document.getElementById("valorInput").value = d.valorCartela;
+    if(d.descricaoPremios) document.getElementById("listaPremiosEscritos").value = d.descricaoPremios;
+    if(d.letras) document.getElementById("letrasInput").value = d.letras.join("");
+
     sorteados = d.sorteados || [];
     letras = d.letras || ["B","I","N","G","O"];
     cartelas = d.cartelas || {};
     premios = d.premios || [];
     
-    // Controle de Exibição dos Alertas [cite: 8]
     document.getElementById("msgArmada").style.display = (d.armadas && d.armadas.length > 0) ? "block" : "none";
     document.getElementById("msgGanhador").style.display = (premios.length > 0) ? "block" : "none";
 
@@ -290,7 +376,8 @@ function criarPainel(){
         let divGrid = document.createElement("div"); divGrid.className = "grid";
         for(let n = i*15+1; n <= i*15+15; n++){
             let d = document.createElement("div"); d.className = "num " + (sorteados.includes(n) ? "selected" : "");
-            d.innerText = n; d.onclick = () => adicionarNumero(n);
+            d.innerText = n; 
+            d.onclick = () => adicionarNumero(n, false); 
             divGrid.appendChild(d);
         }
         divLinha.appendChild(divGrid);
