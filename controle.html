@@ -9,7 +9,6 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
         
-        /* Estilo do Login */
         #login-container { 
             max-width: 400px; margin: 100px auto; background: white; padding: 30px; 
             border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center;
@@ -18,28 +17,33 @@
         .input-group label { display: block; margin-bottom: 5px; color: #666; }
         .input-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         
-        /* Conteúdo Protegido (escondido por padrão) */
         #admin-content { display: none; max-width: 1200px; margin: 0 auto; }
         
-        /* Dashboard e Tabela (Seus estilos originais) */
         .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .card-stat { background: white; padding: 15px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-bottom: 5px solid #ccc; }
         .card-stat h4 { margin: 0; color: #666; font-size: 11px; text-transform: uppercase; }
         .card-stat p { margin: 8px 0 0; font-size: 22px; font-weight: bold; }
         .card-finance { background: #e8f5e9; border-color: #2e7d32; }
-        .controles-mestre { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        
+        .controles-mestre { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        
         .btn { border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-nova-venda { background: #1976d2; color: white; }
         .btn-pagar-todos { background: #2e7d32; color: white; }
         .btn-reset { background: #d32f2f; color: white; }
         .btn-login { background: #1976d2; color: white; width: 100%; margin-top: 10px; }
         .btn-sair { background: #666; color: white; padding: 5px 15px; font-size: 12px; }
+        
         .tabela-vendas { width: 100%; background: white; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .tabela-vendas th { background: #333; color: white; padding: 15px; text-align: left; }
         .tabela-vendas td { padding: 12px 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        
         .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
         .status-reservada { background: #fff9c4; color: #f57c00; }
         .status-paga { background: #c8e6c9; color: #2e7d32; }
+        
         .btn-confirmar { background: #1976d2; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
+        .btn-editar { background: #f57c00; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px; }
         .btn-liberar { background: #607d8b; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
         .link-zap { color: #25d366; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 5px; }
     </style>
@@ -77,6 +81,7 @@
     </div>
 
     <div class="controles-mestre">
+        <button class="btn btn-nova-venda" onclick="adicionarVendaManual()">➕ NOVA VENDA MANUAL</button>
         <button class="btn btn-pagar-todos" onclick="pagarTodasReservadas()">✅ ATIVAR PAGAMENTO DE TODAS</button>
         <button class="btn btn-reset" onclick="resetarVendas()"><span>🗑️</span> ZERAR VENDAS E LIMPAR TUDO</button>
     </div>
@@ -96,7 +101,7 @@
 </div>
 
 <script>
-// Configuração do Firebase
+// Configuração do Firebase[cite: 1]
 const firebaseConfig = {
     apiKey: "AIzaSyBYpJLTbts47UQge9xwGJlggnuFO1n381o",
     authDomain: "bingo-facuc.firebaseapp.com",
@@ -107,14 +112,12 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
-// --- LÓGICA DE SEGURANÇA ---
-
-// Monitora o estado do usuário (Logado ou não)
+// Monitoramento de Login[cite: 1]
 auth.onAuthStateChanged(user => {
     if (user) {
         document.getElementById("login-container").style.display = "none";
         document.getElementById("admin-content").style.display = "block";
-        carregarDados(); // Inicia o carregamento das vendas
+        carregarDados();
     } else {
         document.getElementById("login-container").style.display = "block";
         document.getElementById("admin-content").style.display = "none";
@@ -124,19 +127,12 @@ auth.onAuthStateChanged(user => {
 function fazerLogin() {
     const email = document.getElementById("email").value;
     const senha = document.getElementById("senha").value;
-    
-    auth.signInWithEmailAndPassword(email, senha)
-        .catch(error => {
-            alert("Erro ao acessar: " + error.message);
-        });
+    auth.signInWithEmailAndPassword(email, senha).catch(error => alert("Erro: " + error.message));
 }
 
-function fazerLogout() {
-    auth.signOut();
-}
+function fazerLogout() { auth.signOut(); }
 
-// --- LÓGICA DE DADOS (CARREGA APÓS LOGIN) ---
-
+// Carregamento de Dados e Tabela[cite: 1]
 function carregarDados() {
     db.ref("bingo").on("value", snap => {
         const dados = snap.val() || {};
@@ -158,8 +154,7 @@ function carregarDados() {
             if(v.status === "reservada") qtdRes++;
 
             const zapLimpo = v.whatsapp.replace(/\D/g, '');
-            const mensagem = encodeURIComponent(`Olá, ${v.comprador}. Quero falar com você sobre sua reserva no ${nomeBingo}.`);
-            const linkWhatsapp = `https://wa.me/55${zapLimpo}?text=${mensagem}`;
+            const linkWhatsapp = `https://wa.me/55${zapLimpo}`;
 
             const tr = document.createElement("tr");
             tr.innerHTML = `
@@ -168,8 +163,9 @@ function carregarDados() {
                 <td><a href="${linkWhatsapp}" target="_blank" class="link-zap">📱 ${v.whatsapp}</a></td>
                 <td><span class="status-badge status-${v.status}">${v.status.toUpperCase()}</span></td>
                 <td>
-                    ${v.status === 'reservada' ? `<button class="btn-confirmar" onclick="confirmarPaga('${num}')">Confirmar Pago</button>` : ''}
-                    <button class="btn-liberar" onclick="liberarCartela('${num}')">Liberar</button>
+                    ${v.status === 'reservada' ? `<button class="btn-confirmar" onclick="confirmarPaga('${num}')">Pagar</button>` : ''}
+                    <button class="btn-editar" onclick="editarVenda('${num}', '${v.comprador}', '${v.whatsapp}')">Editar</button>
+                    <button class="btn-liberar" onclick="liberarCartela('${num}')">Limpar</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -184,13 +180,46 @@ function carregarDados() {
     });
 }
 
-// Funções de Ação (Confirmar, Liberar, Resetar) permanecem as mesmas
-function confirmarPaga(num) { db.ref(`bingo/vendas/${num}`).update({ status: "paga" }); }
-function liberarCartela(num) { 
-    if(confirm(`Liberar cartela ${num}?`)) db.ref(`bingo/vendas/${num}`).remove(); 
+// Registro de Venda Manual como 'reservada'[cite: 1]
+function adicionarVendaManual() {
+    const num = prompt("Digite o número da cartela:");
+    if (!num) return;
+
+    db.ref(`bingo/vendas/${num}`).once("value", snap => {
+        if (snap.exists()) {
+            alert("Atenção: Esta cartela já está ocupada por " + snap.val().comprador);
+        } else {
+            const nome = prompt("Nome do Comprador:");
+            if (!nome) return;
+            const zap = prompt("WhatsApp (apenas números):");
+            if (!zap) return;
+
+            db.ref(`bingo/vendas/${num}`).set({
+                comprador: nome,
+                whatsapp: zap,
+                status: "reservada" 
+            }).then(() => alert("Venda registrada como RESERVADA!"));
+        }
+    });
 }
+
+// Edição de Comprador e WhatsApp[cite: 1]
+function editarVenda(num, nomeAtual, zapAtual) {
+    const novoNome = prompt("Novo nome:", nomeAtual);
+    if (novoNome === null) return;
+    const novoZap = prompt("Novo WhatsApp:", zapAtual);
+    if (novoZap === null) return;
+
+    db.ref(`bingo/vendas/${num}`).update({
+        comprador: novoNome,
+        whatsapp: novoZap
+    });
+}
+
+function confirmarPaga(num) { db.ref(`bingo/vendas/${num}`).update({ status: "paga" }); }
+function liberarCartela(num) { if(confirm(`Limpar dados da cartela ${num}?`)) db.ref(`bingo/vendas/${num}`).remove(); }
 function pagarTodasReservadas() {
-    if(confirm("Deseja marcar TODAS as reservadas como PAGAS?")) {
+    if(confirm("Deseja marcar TODAS como PAGAS?")) {
         db.ref("bingo/vendas").once("value", snap => {
             const vendas = snap.val() || {}, updates = {};
             for(let n in vendas) if(vendas[n].status === "reservada") updates[`${n}/status`] = "paga";
@@ -198,9 +227,7 @@ function pagarTodasReservadas() {
         });
     }
 }
-function resetarVendas() {
-    if(prompt("Digite ZERAR para apagar tudo:") === "ZERAR") db.ref("bingo/vendas").remove();
-}
+function resetarVendas() { if(prompt("Digite ZERAR para limpar tudo:") === "ZERAR") db.ref("bingo/vendas").remove(); }
 </script>
 </body>
 </html>
