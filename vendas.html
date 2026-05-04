@@ -53,7 +53,7 @@
         <div class="secao-titulo">
             <span>1. Identificação</span>
             <div class="flex gap-2">
-                <button onclick="verMinhasCartelas()" class="text-[10px] bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded font-bold transition-all">
+                <button onclick="verMinhasCartelas()" class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-500 px-3 py-1.5 rounded font-bold transition-all">
                     🔍 VER MINHAS CARTELAS
                 </button>
                 <button onclick="limparDados()" class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-500 px-3 py-1.5 rounded font-bold transition-all">
@@ -65,12 +65,10 @@
         <section id="sessaoUsuario" class="bg-[#fafafa] p-5 rounded-lg border border-gray-200 mb-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-1">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Nome e Sobrenome</label>
-                    <input type="text" id="compNome" placeholder="Ex: João Silva" class="p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-semibold">
+                    <input type="text" id="compNome" placeholder="Nome e Sobrenome" class="p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-semibold">
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">WhatsApp</label>
-                    <input type="tel" id="compZap" placeholder="(84) 99999-9999" class="p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-semibold">
+                    <input type="tel" id="compZap" placeholder="WhatsApp (84) 99999-9999" class="p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-semibold">
                 </div>
             </div>
         </section>
@@ -301,7 +299,7 @@
                 if (ocupada) {
                     const partes = (c.comprador || "").split(" ");
                     const nomeExibir = partes.length > 1 ? `${partes[0]} ${partes[1]}` : partes[0];
-                    div.innerHTML = `<span class="text-[10px] mb-0.5">${c.n}</span><span class="text-[8px] uppercase truncate px-1 font-bold w-full text-center opacity-80">${nomeExibir}</span>`;
+                    div.innerHTML = `<span class="text-[10px] mb-0.5 text-white">${c.n}</span><span class="text-[8px] uppercase truncate px-1 font-bold w-full text-center text-white opacity-100">${nomeExibir}</span>`;
                 } else {
                     div.innerText = c.n;
                     div.onclick = () => {
@@ -376,6 +374,21 @@
             let msg = `Olá! Acabei de reservar cartelas no *${dadosBingo.nome}*.\n\n👤 *Nome:* ${nome}\n🎟️ *Cartelas:* ${cartelas}\n💰 *Total:* ${valorTotal}\n\nVou te mandar o comprovante!`;
             window.open(`https://wa.me/${numLimpo}?text=${encodeURIComponent(msg)}`);
         }
+        
+document.getElementById('compZap').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length > 11) v = v.slice(0, 11);
+
+    if (v.length > 6) {
+        v = v.replace(/^(\d{2})(\d{5})(\d+)/, '($1) $2-$3');
+    } else if (v.length > 2) {
+        v = v.replace(/^(\d{2})(\d+)/, '($1) $2');
+    } else {
+        v = v.replace(/^(\d*)/, '($1');
+    }
+    e.target.value = v;
+});
+
         init();
     </script>
 </body>
