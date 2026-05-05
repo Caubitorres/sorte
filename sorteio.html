@@ -23,21 +23,22 @@
         <h1 id="titulo-instrucao" class="text-xl font-black italic uppercase text-blue-400">Clique para Iniciar o Sensor</h1>
     </div>
 
-    <!-- BOTÃO DE ATIVAÇÃO PARA O SAMSUNG A56 -->
     <button id="btnAtivar" class="mb-8 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase shadow-lg transition-all active:scale-95">
         Ativar Sorteio por Balanço
     </button>
 
-    <div id="globo" class="relative w-64 h-64 bg-slate-800 rounded-full border-8 border-slate-700 flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.2)] transition-all duration-300">
+    <div id="globo" class="relative w-64 h-64 bg-slate-800 rounded-full border-8 border-slate-700 flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.2)]">
         <div id="numero-display" class="text-8xl font-black italic tracking-tighter">--</div>
     </div>
 
-    <div id="status" class="mt-10 text-slate-500 font-bold uppercase text-[10px] tracking-widest text-center">
+    <!-- LOG DE TESTE: Se os números aqui mudarem quando você mexe o celular, o sensor está OK -->
+    <div id="debug" class="mt-4 text-[8px] text-slate-600 font-mono uppercase">Força G: 0.00</div>
+
+    <div id="status" class="mt-6 text-slate-500 font-bold uppercase text-[10px] tracking-widest text-center">
         Aguardando ativação...
     </div>
 
     <script>
-        // Lógica de Sorteio Existente no seu site
         let pedrasRestantes = Array.from({length: 75}, (_, i) => i + 1);
         let sorteando = false;
         let ultimoSorteio = 0;
@@ -46,23 +47,25 @@
         const status = document.getElementById('status');
         const display = document.getElementById('numero-display');
         const globo = document.getElementById('globo');
+        const debug = document.getElementById('debug');
 
-        // FUNÇÃO PARA ATIVAR O ACELERÔMETRO NO SEU CELULAR
         async function ativarSensores() {
             try {
-                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                    const permissao = await DeviceMotionEvent.requestPermission();
-                    if (permissao !== 'granted') return;
-                }
-
+                // Tenta ativar a escuta de movimento
                 window.addEventListener('devicemotion', (event) => {
                     const acc = event.accelerationIncludingGravity;
-                    if (!acc || sorteando) return;
+                    if (!acc) {
+                        status.innerText = "ERRO: ACELERÔMETRO NÃO ENCONTRADO";
+                        return;
+                    }
 
                     const forcaG = Math.sqrt(acc.x ** 2 + acc.y ** 2 + acc.z ** 2);
                     
-                    // Se o balanço for forte o suficiente (valor 18)
-                    if (forcaG > 18) {
+                    // Mostra o valor em tempo real para teste
+                    debug.innerText = "Força G: " + forcaG.toFixed(2);
+
+                    // SENSIBILIDADE REDUZIDA: Mude de 18 para 12 para ficar mais fácil de disparar
+                    if (forcaG > 14 && !sorteando) {
                         const agora = Date.now();
                         if (agora - ultimoSorteio > 4000) { 
                             sortear();
@@ -72,24 +75,23 @@
                 });
                 
                 btnAtivar.classList.add('hidden');
-                document.getElementById('titulo-instrucao').innerText = "Balance o celular para sortear!";
+                document.getElementById('titulo-instrucao').innerText = "Balance o celular!";
                 status.innerText = "SENSOR PRONTO";
-                if (navigator.vibrate) navigator.vibrate(200);[cite: 3]
+                if (navigator.vibrate) navigator.vibrate(200);
 
             } catch (erro) {
-                alert("Erro ao acessar sensores. Use HTTPS.");
+                status.innerText = "ERRO AO ATIVAR";
             }
         }
 
-        // FUNÇÃO DE SORTEIO ADAPTADA
         function sortear() {
             if (pedrasRestantes.length === 0) {
-                status.innerText = "TODAS AS PEDRAS SORTEADAS!";
+                status.innerText = "FIM DO BINGO!";
                 return;
             }
 
             sorteando = true;
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);[cite: 3]
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
 
             globo.classList.add('shake-anim');
             status.innerText = "SORTEANDO...";
@@ -99,18 +101,14 @@
                 display.innerText = Math.floor(Math.random() * 75) + 1;
                 tempoAnimacao++;
 
-                if (tempoAnimacao > 20) {
+                if (tempoAnimacao > 15) {
                     clearInterval(intervalo);
-                    
                     const index = Math.floor(Math.random() * pedrasRestantes.length);
                     const numero = pedrasRestantes.splice(index, 1)[0];
-                    
                     display.innerText = numero;
                     display.classList.add('text-blue-500');
                     globo.classList.remove('shake-anim');
-                    
-                    if (navigator.vibrate) navigator.vibrate(500);[cite: 3]
-                    
+                    if (navigator.vibrate) navigator.vibrate(500);
                     setTimeout(() => {
                         sorteando = false;
                         display.classList.remove('text-blue-500');
