@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONFERÊNCIA - BINGO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .marcado { background-color: #22c55e !important; color: white !important; font-weight: bold; transform: scale(1.1); transition: all 0.3s; }
+        .grid-bingo { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 2px; }
+        @media (min-width: 768px) { .bola-gigante { font-size: 12rem; } }
+        @media (max-width: 767px) { .bola-gigante { font-size: 6rem; } }
+        .animar-ganhador { animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-sans">
+
+<div class="min-h-screen flex flex-col p-2 md:p-4">
+    <!-- HEADER -->
+    <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl shadow-2xl mb-3 border-b-4 border-slate-700">
+        <div>
+            <h1 id="nomeBingo" class="text-xl md:text-3xl font-black text-yellow-500 uppercase tracking-widest">BINGO</h1>
+            <p class="text-[10px] md:text-xs text-slate-400 font-bold uppercase">
+                <span id="local">--</span> | <span id="data">--</span>
+            </p>
+        </div>
+        <div class="text-right">
+            <div id="contador" class="text-2xl md:text-4xl font-black text-white">00</div>
+            <div class="text-[10px] text-slate-400 uppercase font-bold">Bolas</div>
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-4 flex-1">
+        <!-- CENTRO: BOLA E ARMADAS -->
+        <div class="lg:w-1/2 flex flex-col gap-4">
+            <div class="bg-slate-800 rounded-3xl p-6 flex flex-col items-center justify-center border-2 border-slate-700 shadow-inner relative min-h-[250px]">
+                <div class="text-sm md:text-xl font-black text-slate-500 uppercase absolute top-4">Última Bola</div>
+                <div id="ultima" class="bola-gigante font-black text-white drop-shadow-2xl">--</div>
+                <div id="txtGanhador" class="hidden bg-green-600 px-6 py-2 rounded-full text-lg md:text-2xl font-black animar-ganhador">🏆 GANHADOR!</div>
+            </div>
+
+            <!-- SEÇÃO DE ARMADAS -->
+            <div class="bg-red-900/30 border-2 border-red-700 p-4 rounded-2xl shadow-lg">
+                <h3 class="text-red-500 font-black text-center uppercase text-sm mb-2 italic">🔥 Cartelas Armadas!</h3>
+                <div id="quase" class="flex flex-wrap justify-center gap-2 text-xs md:text-sm font-bold">
+                    <!-- Cartelas armadas aparecem aqui -->
+                </div>
+            </div>
+        </div>
+
+        <!-- DIREITA: GRADE E GANHADORES -->
+        <div class="lg:w-1/2 flex flex-col gap-4">
+            <div class="bg-slate-800 p-3 rounded-2xl border-2 border-slate-700">
+                <div id="grade"></div>
+            </div>
+
+            <div class="bg-slate-800 p-3 rounded-2xl border-2 border-slate-700 flex-1 min-h-[150px]">
+                <h3 class="text-yellow-500 font-black text-sm mb-2 uppercase italic">🏆 Ganhadores</h3>
+                <div class="overflow-y-auto max-h-[200px]">
+                    <table class="w-full text-left text-[10px] md:text-xs">
+                        <tbody id="ganhadores" class="text-green-400 font-bold"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let letrasCustom = ["B","I","N","G","O"];
+
+    function gerarGrade() {
+        const grade = document.getElementById("grade");
+        grade.innerHTML = "";
+        let n = 1;
+        letrasCustom.forEach(l => {
+            const row = document.createElement("div");
+            row.className = "grid-bingo mb-1";
+            const label = document.createElement("div");
+            label.className = "flex items-center justify-center bg-slate-700 text-yellow-500 font-black text-[10px] md:text-sm h-6 md:h-8 rounded";
+            label.innerText = l;
+            row.appendChild(label);
+            for (let i = 0; i < 15; i++) {
+                const d = document.createElement("div");
+                d.id = `n${n}`;
+                d.className = "flex items-center justify-center border border-slate-700 text-slate-600 text-[10px] md:text-sm h-6 md:h-8 bg-slate-900 rounded";
+                d.innerText = n;
+                row.appendChild(d);
+                n++;
+            }
+            grade.appendChild(row);
+        });
+    }
+
+    function atualizarPainel() {
+        const dadosRaw = localStorage.getItem('bingo_live_update');
+        if (!dadosRaw) return;
+        const dados = JSON.parse(dadosRaw);
+
+        document.getElementById("nomeBingo").innerText = dados.nome;
+        document.getElementById("local").innerText = dados.local;
+        document.getElementById("data").innerText = dados.data;
+        document.getElementById("contador").innerText = dados.sorteados.length.toString().padStart(2, '0');
+        document.getElementById("ultima").innerText = dados.ultima;
+
+        // Grade
+        document.querySelectorAll('[id^="n"]').forEach(el => el.classList.remove("marcado"));
+        dados.sorteados.forEach(n => document.getElementById(`n${n}`)?.classList.add("marcado"));
+
+        // Ganhadores: Agora em ordem crescente[cite: 1]
+        document.getElementById("ganhadores").innerHTML = dados.ganhadores.map(g => `
+            <tr class="border-b border-slate-700"><td class="py-1">${g.ordem}º</td><td class="py-1 px-2">CART. ${g.cartela}</td><td class="py-1 uppercase">${g.nome}</td></tr>
+        `).join(""); // Removido o .reverse()[cite: 1]
+
+        // Armadas
+        document.getElementById("quase").innerHTML = (dados.armadas || []).map(a => `
+            <span class="bg-red-600 text-white px-2 py-1 rounded shadow-sm">#${a}</span>
+        `).join("");
+
+        // Alerta de Ganhador
+        document.getElementById("txtGanhador").classList.toggle("hidden", !dados.temGanhador);
+    }
+
+    gerarGrade();
+    setInterval(atualizarPainel, 500);
+</script>
+</body>
+</html>
