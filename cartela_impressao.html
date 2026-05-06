@@ -5,41 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Impressão em Lote - Bingo Pro V4.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white; margin: 0; padding: 0; }
-            @page { size: A4; margin: 0; }
-            .folha-a4 { 
-                page-break-after: always; 
-                height: 29.7cm; width: 21cm; 
-                padding: 1.2cm !important; 
-                box-sizing: border-box; 
-                display: flex; flex-direction: column; 
-                overflow: hidden; 
-            }
-        }
-        .folha-a4 { background: white; width: 21cm; height: 29.7cm; padding: 1.2cm; margin: 0 auto; display: flex; flex-direction: column; box-sizing: border-box; color: black; }
-        
-        .header-container { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 8px; }
-        .info-evento { display: flex; flex-direction: column; flex-grow: 1; }
-        .box-numero { border: 4px solid #000; text-align: center; min-width: 145px; margin-left: 15px; }
-        .box-numero .label { font-size: 12px; border-bottom: 2px solid #000; padding: 2px; font-weight: bold; }
-        .box-numero .num { font-size: 46px; font-weight: 900; line-height: 1; padding: 5px; }
-        .box-numero .status-label { background: #000; color: #fff; font-size: 14px; padding: 4px; font-weight: bold; text-transform: uppercase; }
-        
-        .secao-venda-cliente { border-top: 1px dashed #000; border-bottom: 2px solid #000; padding: 6px 0; margin-top: 5px; display: flex; justify-content: space-between; font-weight: 900; font-size: 14px; text-transform: uppercase; }
-        
-        .grade-bingo-layout { border: 2px solid #000; display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; }
-        .celula { border: 1px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 400; line-height: 1; }
-        .letra-topo { background: #f0f0f0; border-bottom: 3px solid #000; font-weight: 900 !important; }
+@media print {
+    .no-print { display: none !important; }
 
-        [data-chamadas="1"] .celula { height: 105px; font-size: 75px; }
-        [data-chamadas="2"] .celula { height: 58px; font-size: 42px; }
-        [data-chamadas="3"] .celula { height: 48px; font-size: 38px; }
-        
-        .wrapper-chamada { display: flex; flex-direction: column; align-items: center; width: 100%; }
-        .titulo-chamada-selo { background: #000; color: #fff; padding: 3px 25px; font-size: 12px; font-weight: 900; text-transform: uppercase; border-radius: 5px 5px 0 0; width: fit-content; margin-top: 4px; }
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    @page {
+        size: A4;
+        margin: 0;
+    }
+
+    .folha-a4 {
+        width: 21cm;
+        height: 29.7cm;
+        padding: 1cm;
+        margin: 0;
+        box-sizing: border-box;
+
+        display: flex;
+        flex-direction: column;
+
+        page-break-inside: avoid;
+        break-inside: avoid;
+        page-break-after: always;
+    }
+
+    .folha-a4:last-child {
+        page-break-after: auto;
+    }
+}
+
+@media screen {
+    body {
+        background: #e2e8f0;
+        padding: 20px;
+    }
+
+    .folha-a4 {
+        width: 21cm;
+        height: 29.7cm;
+        padding: 1cm;
+        margin: 0 auto 20px;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+    }
+}
+
+.folha-a4 { color: black; }
+
+.header-container { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 8px; }
+.info-evento { display: flex; flex-direction: column; flex-grow: 1; }
+.box-numero { border: 4px solid #000; text-align: center; min-width: 145px; margin-left: 15px; }
+.box-numero .label { font-size: 12px; border-bottom: 2px solid #000; padding: 2px; font-weight: bold; }
+.box-numero .num { font-size: 46px; font-weight: 900; line-height: 1; padding: 5px; }
+.box-numero .status-label { background: #000; color: #fff; font-size: 14px; padding: 4px; font-weight: bold; text-transform: uppercase; }
+
+.secao-venda-cliente { border-top: 1px dashed #000; border-bottom: 2px solid #000; padding: 6px 0; margin-top: 5px; display: flex; justify-content: space-between; font-weight: 900; font-size: 14px; text-transform: uppercase; }
+
+.grade-bingo-layout { border: 2px solid #000; display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; }
+.celula { border: 1px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 400; line-height: 1; }
+.letra-topo { background: #f0f0f0; border-bottom: 3px solid #000; font-weight: 900 !important; }
+
+[data-chamadas="1"] .celula { height: 105px; font-size: 75px; }
+[data-chamadas="2"] .celula { height: 58px; font-size: 42px; }
+[data-chamadas="3"] .celula { height: 48px; font-size: 38px; }
+
+.wrapper-chamada { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.titulo-chamada-selo { background: #000; color: #fff; padding: 3px 25px; font-size: 12px; font-weight: 900; text-transform: uppercase; border-radius: 5px 5px 0 0; width: fit-content; margin-top: 4px; }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
@@ -95,7 +137,6 @@
             const letras = b.letras.split("");
             const statusText = c.status === 'paga' ? 'PAGA' : 'RESERVADA';
 
-            // Ajuste da máscara de data: AAAA-MM-DD para DD/MM/AAAA
             const dataFormatada = b.data && b.data.includes('-') 
                 ? b.data.split('-').reverse().join('/') 
                 : (b.data || "00/00/0000");
@@ -137,11 +178,11 @@
                     <span>WHATSAPP: ${c.whatsapp || "---"}</span>
                 </div>
 
-                <div class="flex-grow flex flex-col justify-center gap-2">
+                <div class="flex flex-col justify-center gap-2">
                     ${corpo}
                 </div>
 
-                <div class="text-center border-t-4 border-black pt-2 mt-4">
+                <div class="text-center border-t-4 border-black pt-2 mt-2">
                     <p class="text-xl uppercase tracking-tight leading-none">${b.rodape || "ESTA CARTELA SÓ CONCORRE SE TIVER SIDO PAGA!"}</p>
                     <p class="text-[11px] font-bold mt-1.5 uppercase tracking-widest border-t border-black pt-1">
                         AUTENTICAÇÃO: ${c.n}-${Date.now()} | GERAÇÃO: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
