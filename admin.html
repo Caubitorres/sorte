@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Gerenciador de Bingo Profissional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-100 p-4 font-sans">
+
+    <div class="max-w-5xl mx-auto bg-white p-8 rounded-2xl shadow-2xl border-t-8 border-blue-700">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-black text-gray-800 uppercase tracking-tighter">⚙️ Gestão de Bingos</h1>
+                <div id="statusAtivoGlobal" class="mt-2 inline-block bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-bold uppercase shadow-sm">
+                    Bingo Ativo: Carregando...
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="block text-xs font-bold text-gray-400 uppercase">Status do Sistema</span>
+                <span class="text-green-500 font-bold flex items-center gap-1 justify-end">● Conectado ao Firebase</span>
+            </div>
+        </div>
+
+        <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+            <div>
+                <label class="block text-xs font-black text-slate-500 mb-1 uppercase">Nº do Bingo</label>
+                <input type="text" id="bingoId" readonly 
+                       class="w-full text-3xl font-black border-2 border-slate-300 bg-slate-200 rounded-lg p-3 outline-none transition-all" 
+                       placeholder="AUTO">
+                <button id="btnHabilitarBusca" class="text-xs text-blue-600 font-bold hover:underline mt-2 flex items-center gap-1">
+                    🔍 Editar bingo existente
+                </button>
+            </div>
+            <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button id="btnCarregar" class="bg-slate-800 text-white font-bold py-4 rounded-lg hover:bg-black transition-all shadow-lg uppercase text-sm">
+                    Carregar Dados
+                </button>
+                <button id="btnAtivar" class="bg-purple-600 text-white font-bold py-4 rounded-lg hover:bg-purple-700 transition-all shadow-lg uppercase text-sm">
+                    ⭐ Deixar Ativo
+                </button>
+                <button onclick="location.reload()" class="bg-white border-2 border-slate-300 text-slate-600 font-bold py-4 rounded-lg hover:bg-slate-100 transition-all uppercase text-sm">
+                    Novo Bingo / Limpar
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Nome do Evento</label>
+                <input type="text" id="nomeBingo" class="w-full border-2 p-3 rounded-lg focus:border-blue-600 outline-none shadow-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Letras da Cartela (Vazio = BINGO)</label>
+                <input type="text" id="letrasBingo" placeholder="Ex: ASMAR" class="w-full border-2 p-3 rounded-lg focus:border-blue-600 outline-none shadow-sm uppercase">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Local</label>
+                <input type="text" id="localBingo" class="w-full border-2 p-3 rounded-lg focus:border-blue-600 outline-none shadow-sm">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Data</label>
+                    <input type="date" id="dataBingo" class="w-full border-2 p-3 rounded-lg outline-none shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Hora</label>
+                    <input type="time" id="horaBingo" class="w-full border-2 p-3 rounded-lg outline-none shadow-sm">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1 text-green-700">Valor da Cartela (R$)</label>
+                <input type="number" step="0.01" id="valorCartela" class="w-full border-2 border-green-200 p-3 rounded-lg outline-none shadow-sm text-green-700 font-black text-xl" placeholder="0.00">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Chave PIX</label>
+                <input type="text" id="pixBingo" class="w-full border-2 p-3 rounded-lg outline-none shadow-sm font-mono text-sm" placeholder="E-mail ou CPF">
+            </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Premiação</label>
+                <textarea id="premios" class="w-full border-2 p-3 rounded-lg h-28 outline-none shadow-sm resize-none" placeholder="Descreva os prêmios..."></textarea>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-blue-700 italic">Texto Final da Cartela / Rodapé</label>
+                    <input type="text" id="textoRodape" class="w-full border-2 border-blue-100 p-3 rounded-lg outline-none shadow-sm italic text-sm" placeholder="Obrigado pela participação!">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-orange-700 mb-1 uppercase">Qtd. de Chamadas (Impressão)</label>
+                    <select id="qtdChamadas" class="w-full border-2 border-orange-100 p-2 rounded-lg outline-none shadow-sm font-bold text-sm bg-orange-50">
+                        <option value="1" selected>Apenas 1ª Chamada (Padrão)</option>
+                        <option value="2">1ª e 2ª Chamadas</option>
+                        <option value="3">1ª, 2ª e 3ª Chamadas</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="responsavel" class="border-2 p-3 rounded-lg text-sm" placeholder="Responsável">
+                    <input type="tel" id="telefone" class="border-2 p-3 rounded-lg text-sm" placeholder="Telefone do Responsável" maxlength="15">
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-10 p-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div>
+                <h3 class="font-black text-blue-900 mb-3 uppercase flex items-center gap-2">📥 Importar Cartelas</h3>
+                <input type="file" id="excelInput" accept=".xlsx, .xls, .txt" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-6 file:rounded-full file:border-0 file:bg-blue-600 file:text-white file:font-bold hover:file:bg-blue-700 cursor-pointer shadow-sm">
+            </div>
+            <div class="flex flex-col gap-3 justify-center">
+                <button id="btnBackupLocal" class="bg-amber-500 text-white font-black py-3 rounded-xl hover:bg-amber-600 transition-all shadow-md text-xs uppercase tracking-widest">💾 Salvar Backup Local (JSON)</button>
+                <label class="bg-indigo-600 text-white font-black py-3 rounded-xl hover:bg-indigo-700 transition-all shadow-md text-xs uppercase tracking-widest text-center cursor-pointer">
+                    📂 Abrir Backup Externo
+                    <input type="file" id="importBackup" class="hidden" accept=".json">
+                </label>
+            </div>
+        </div>
+
+        <button id="btnSalvar" class="w-full mt-10 bg-green-600 text-white font-black py-6 rounded-2xl text-2xl hover:bg-green-700 shadow-2xl transform active:scale-[0.98] transition-all uppercase tracking-tighter">
+            Confirmar e Salvar no Banco de Dados
+        </button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD0PhZe0AuMTA14W8vzsfn4evxBBLzh4sw",
+            authDomain: "bingodocau.firebaseapp.com",
+            projectId: "bingodocau",
+            storageBucket: "bingodocau.firebasestorage.app",
+            messagingSenderId: "1052598479472",
+            appId: "1:1052598479472:web:a0b2477b5cdbe9528ce2b5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let bingoAtivoID = null;
+
+        onSnapshot(doc(db, "configuracoes", "vendas"), (docSnap) => {
+            if (docSnap.exists()) {
+                bingoAtivoID = docSnap.data().bingoAtivo;
+                document.getElementById('statusAtivoGlobal').innerText = `Bingo Ativo: ${bingoAtivoID}`;
+                atualizarEstiloBotaoAtivo();
+            }
+        });
+
+        function atualizarEstiloBotaoAtivo() {
+            const idNaTela = document.getElementById('bingoId').value;
+            const btn = document.getElementById('btnAtivar');
+            if (idNaTela && idNaTela == bingoAtivoID) {
+                btn.innerText = "✅ Bingo Ativo";
+                btn.className = "bg-green-600 text-white font-bold py-4 rounded-lg shadow-lg uppercase text-sm cursor-default";
+            } else {
+                btn.innerText = "⭐ Deixar Ativo";
+                btn.className = "bg-purple-600 text-white font-bold py-4 rounded-lg hover:bg-purple-700 transition-all shadow-lg uppercase text-sm";
+            }
+        }
+
+        // --- BACKUP LOCAL (SALVAR) CORRIGIDO ---
+        document.getElementById('btnBackupLocal').addEventListener('click', () => {
+            const dados = {
+                nome: document.getElementById('nomeBingo').value,
+                letras: document.getElementById('letrasBingo').value,
+                local: document.getElementById('localBingo').value,
+                data: document.getElementById('dataBingo').value,
+                hora: document.getElementById('horaBingo').value,
+                valor: document.getElementById('valorCartela').value,
+                pix: document.getElementById('pixBingo').value,
+                premios: document.getElementById('premios').value,
+                rodape: document.getElementById('textoRodape').value,
+                responsavel: document.getElementById('responsavel').value,
+                telefone: document.getElementById('telefone').value,
+                qtdChamadas: document.getElementById('qtdChamadas').value // Campo novo adicionado ao backup
+            };
+            const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup_bingo_${dados.nome || 'sem_nome'}.json`;
+            a.click();
+            alert("💾 Backup salvo com sucesso!");
+        });
+
+        // --- BACKUP LOCAL (ABRIR) CORRIGIDO ---
+        document.getElementById('importBackup').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const d = JSON.parse(event.target.result);
+                document.getElementById('nomeBingo').value = d.nome || "";
+                document.getElementById('letrasBingo').value = d.letras || "";
+                document.getElementById('localBingo').value = d.local || "";
+                document.getElementById('dataBingo').value = d.data || "";
+                document.getElementById('horaBingo').value = d.hora || "";
+                document.getElementById('valorCartela').value = d.valor || "";
+                document.getElementById('pixBingo').value = d.pix || "";
+                document.getElementById('premios').value = d.premios || "";
+                document.getElementById('textoRodape').value = d.rodape || "";
+                document.getElementById('responsavel').value = d.responsavel || "";
+                document.getElementById('telefone').value = d.telefone || "";
+                document.getElementById('qtdChamadas').value = d.qtdChamadas || "1"; // Restaura o campo novo
+                alert("📂 Backup restaurado!");
+            };
+            reader.readAsText(file);
+        });
+
+        async function carregarBingo() {
+            const id = document.getElementById('bingoId').value;
+            if(!id) return alert("Por favor, digite o número do bingo.");
+            try {
+                const snap = await getDoc(doc(db, "bingos", "bingo_" + id));
+                if (snap.exists()) {
+                    const d = snap.data();
+                    document.getElementById('nomeBingo').value = d.nome || "";
+                    document.getElementById('letrasBingo').value = d.letras || "";
+                    document.getElementById('localBingo').value = d.local || "";
+                    document.getElementById('dataBingo').value = d.data || "";
+                    document.getElementById('horaBingo').value = d.hora || "";
+                    document.getElementById('valorCartela').value = d.valor || "";
+                    document.getElementById('pixBingo').value = d.pix || "";
+                    document.getElementById('premios').value = d.premios || "";
+                    document.getElementById('textoRodape').value = d.rodape || "";
+                    document.getElementById('responsavel').value = d.responsavel || "";
+                    document.getElementById('telefone').value = d.telefone || "";
+                    document.getElementById('qtdChamadas').value = d.qtdChamadas || "1";
+                    
+                    document.getElementById('bingoId').readOnly = true;
+                    document.getElementById('bingoId').classList.add("bg-slate-200");
+                    atualizarEstiloBotaoAtivo();
+                    alert("✅ Bingo " + id + " carregado!");
+                }
+            } catch (err) { alert(err.message); }
+        }
+
+        async function obterProximoId() {
+            const q = query(collection(db, "bingos"), orderBy("id_numerico", "desc"), limit(1));
+            const snap = await getDocs(q);
+            return snap.empty ? 1 : parseInt(snap.docs[0].data().id_numerico) + 1;
+        }
+
+        async function salvarBingo() {
+            const btn = document.getElementById('btnSalvar');
+            const campoId = document.getElementById('bingoId');
+            let idFinal = campoId.value;
+            btn.disabled = true;
+            btn.innerText = "💾 SALVANDO...";
+            try {
+                if (!idFinal) {
+                    idFinal = await obterProximoId();
+                    campoId.value = idFinal;
+                }
+                const dados = {
+                    id_numerico: parseInt(idFinal),
+                    nome: document.getElementById('nomeBingo').value,
+                    letras: document.getElementById('letrasBingo').value.toUpperCase() || "BINGO",
+                    local: document.getElementById('localBingo').value,
+                    data: document.getElementById('dataBingo').value,
+                    hora: document.getElementById('horaBingo').value,
+                    valor: document.getElementById('valorCartela').value,
+                    pix: document.getElementById('pixBingo').value,
+                    premios: document.getElementById('premios').value,
+                    rodape: document.getElementById('textoRodape').value,
+                    responsavel: document.getElementById('responsavel').value,
+                    telefone: document.getElementById('telefone').value,
+                    qtdChamadas: document.getElementById('qtdChamadas').value,
+                    dataCriacao: new Date().toLocaleString()
+                };
+                await setDoc(doc(db, "bingos", "bingo_" + idFinal), dados, { merge: true });
+                alert("✨ Bingo Nº " + idFinal + " salvo!");
+                campoId.readOnly = true;
+                campoId.classList.add("bg-slate-200");
+                atualizarEstiloBotaoAtivo();
+            } catch (e) { alert(e.message); }
+            finally { btn.disabled = false; btn.innerText = "Confirmar e Salvar no Banco de Dados"; }
+        }
+
+        async function definirComoAtivo() {
+            const idB = document.getElementById('bingoId').value;
+            if(!idB) return alert("Salve o bingo primeiro!");
+            try {
+                await setDoc(doc(db, "configuracoes", "vendas"), { 
+                    bingoAtivo: idB,
+                    dataAtualizacao: new Date().toLocaleString()
+                }, { merge: true });
+            } catch (e) { alert(e.message); }
+        }
+
+        document.getElementById('btnHabilitarBusca').addEventListener('click', () => {
+            const cid = document.getElementById('bingoId');
+            cid.readOnly = false; cid.classList.remove("bg-slate-200"); cid.value = ""; cid.focus();
+        });
+
+        document.getElementById('btnCarregar').addEventListener('click', carregarBingo);
+        document.getElementById('btnSalvar').addEventListener('click', salvarBingo);
+        document.getElementById('btnAtivar').addEventListener('click', definirComoAtivo);
+        
+        document.getElementById('excelInput').addEventListener('change', async (event) => {
+            const idB = document.getElementById('bingoId').value;
+            if(!idB) return alert("Salve o bingo primeiro!");
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const data = new Uint8Array(e.target.result);
+                const wb = XLSX.read(data, { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                const batch = writeBatch(db);
+                json.forEach(c => {
+                    const ref = doc(db, "bingos", "bingo_" + idB, "cartelas", String(c.N));
+                    batch.set(ref, {
+                        n: c.N,
+                        b: [c.b1, c.b2, c.b3, c.b4, c.b5],
+                        i: [c.i1, c.i2, c.i3, c.i4, c.i5],
+                        n_col: [c.n1, c.n2, c.n3, c.n4, c.n5],
+                        g: [c.g1, c.g2, c.g3, c.g4, c.g5],
+                        o: [c.o1, c.o2, c.o3, c.o4, c.o5],
+                        status: "disponivel"
+                    });
+                });
+                await batch.commit();
+                alert("✅ Cartelas vinculadas!");
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    </script>
+</body>
+</html>
