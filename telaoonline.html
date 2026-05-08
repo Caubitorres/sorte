@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CONFERÊNCIA ONLINE - BINGO</title>
+    <title>TELAO ONLINE - BINGO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .marcado { background-color: #22c55e !important; color: white !important; font-weight: bold; transform: scale(1.1); transition: all 0.3s; }
@@ -12,51 +12,64 @@
         @media (max-width: 767px) { .bola-gigante { font-size: 6rem; } }
         .animar-ganhador { animation: pulse 1s infinite; }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        
+        .btn-som-mini {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            z-index: 100;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-white font-sans">
 
 <div class="min-h-screen flex flex-col p-2 md:p-4">
-    <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl shadow-2xl mb-3 border-b-4 border-slate-700">
-        <div class="flex items-center gap-4">
-            <div>
-                <h1 id="nomeBingo" class="text-xl md:text-3xl font-black text-yellow-500 uppercase tracking-widest">AGUARDANDO...</h1>
-                <p class="text-[10px] md:text-xs text-slate-400 font-bold uppercase">
-                    <span id="local">--</span> | <span id="data">--</span>
-                </p>
-            </div>
-            <button id="btnSomTelao" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-[10px] font-black uppercase flex items-center gap-2 transition-all border border-slate-600">
-                <span id="iconeSom">🔇</span> <span id="txtSom">Voz: OFF</span>
-            </button>
+    <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl shadow-2xl mb-4 border-b-4 border-green-600">
+        <div>
+            <h1 id="nomeBingo" class="text-2xl md:text-4xl font-black text-green-500 uppercase italic">CARREGANDO...</h1>
+            <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px] md:text-sm">
+                📅 <span id="data">--/--/--</span> | 📍 <span id="local">---</span>
+            </p>
         </div>
-        <div class="text-right">
-            <div id="contador" class="text-2xl md:text-4xl font-black text-white">00</div>
-            <div class="text-[10px] text-slate-400 uppercase font-bold">Bolas</div>
+        <div class="text-center bg-slate-700 px-4 md:px-8 py-1 md:py-2 rounded-xl border-2 border-slate-600 flex flex-col items-center">
+            <p id="contador" class="text-2xl md:text-5xl font-black text-white leading-none">00</p>
+            <p class="text-[10px] font-black uppercase text-slate-400 italic mt-1 leading-none">Bolas</p>
         </div>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-4 flex-1">
-        <div class="lg:w-1/2 flex flex-col gap-4">
-            <div class="bg-slate-800 rounded-3xl p-6 flex flex-col items-center justify-center border-2 border-slate-700 shadow-inner relative min-h-[250px]">
-                <div class="text-sm md:text-xl font-black text-slate-500 uppercase absolute top-4">Última Bola</div>
-                <div id="ultima" class="bola-gigante font-black text-white drop-shadow-2xl">--</div>
-                <div id="txtGanhador" class="hidden bg-green-600 px-6 py-2 rounded-full text-lg md:text-2xl font-black animar-ganhador">🏆 GANHADOR!</div>
-            </div>
-            <div class="bg-red-900/30 border-2 border-red-700 p-4 rounded-2xl shadow-lg">
-                <h3 class="text-red-500 font-black text-center uppercase text-sm mb-2 italic">🔥 Cartelas Armadas!</h3>
-                <div id="quase" class="flex flex-wrap justify-center gap-2 text-xs md:text-sm font-bold"></div>
+    <div class="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
+        <div class="md:col-span-4 flex flex-col justify-center items-center bg-slate-800 rounded-3xl border-4 border-slate-700 relative py-8 md:py-0">
+            <p class="font-black text-slate-500 uppercase text-lg mb-2">Última Bola</p>
+            <div id="ultima" class="bola-gigante font-black text-green-500 italic leading-none">--</div>
+            
+            <div id="painelGanhador" class="hidden absolute inset-0 bg-green-600 flex flex-col items-center justify-center rounded-2xl z-50 animar-ganhador p-4 text-center">
+                <h2 class="text-3xl md:text-5xl font-black mb-2 italic">TEMOS GANHADOR!</h2>
             </div>
         </div>
 
-        <div class="lg:w-1/2 flex flex-col gap-4">
-            <div class="bg-slate-800 p-3 rounded-2xl border-2 border-slate-700">
-                <div id="grade"></div>
+        <div class="md:col-span-8 flex flex-col gap-4">
+            <div class="bg-slate-800 p-2 md:p-4 rounded-2xl shadow-inner border border-slate-700">
+                <div id="grade" class="grid-bingo"></div>
             </div>
-            <div class="bg-slate-800 p-3 rounded-2xl border-2 border-slate-700 flex-1 min-h-[150px]">
-                <h3 class="text-yellow-500 font-black text-sm mb-2 uppercase italic">🏆 Ganhadores</h3>
-                <div class="overflow-y-auto max-h-[200px]">
-                    <table class="w-full text-left text-[10px] md:text-xs">
-                        <tbody id="ganhadores" class="text-green-400 font-bold"></tbody>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-red-900/20 border-2 border-red-800/50 p-4 rounded-2xl">
+                    <h3 class="text-red-500 font-black uppercase text-xs mb-2 italic">🔥 Cartelas Armadas</h3>
+                    <div id="quase" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <div class="bg-slate-800 p-4 rounded-2xl border-2 border-slate-700">
+                    <h3 class="text-green-500 font-black uppercase text-xs mb-2 italic">🏆 Lista de Ganhadores</h3>
+                    <table class="w-full text-left">
+                        <tbody id="ganhadores" class="text-sm font-bold"></tbody>
                     </table>
                 </div>
             </div>
@@ -64,78 +77,112 @@
     </div>
 </div>
 
+<button id="btnAtivarSom" class="btn-som-mini bg-red-600 text-white shadow-xl">
+    🔇
+</button>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const firebaseConfig = { apiKey: "AIzaSyD0PhZe0AuMTA14W8vzsfn4evxBBLzh4sw", authDomain: "bingodocau.firebaseapp.com", projectId: "bingodocau", databaseURL: "https://bingodocau-default-rtdb.firebaseio.com" };
-    const app = initializeApp(firebaseConfig);
-    const rtdb = getDatabase(app);
-
-    let letrasCustom = ["B","I","N","G","O"];
-    let somAtivo = false;
-    let ultimaBolaAnunciada = "";
-
-    // Função de Voz
-    function falar(texto) {
-        if (!somAtivo) return;
-        window.speechSynthesis.cancel();
-        const msg = new SpeechSynthesisUtterance(texto);
-        msg.lang = 'pt-BR';
-        msg.rate = 1.1; // Velocidade levemente aumentada
-        window.speechSynthesis.speak(msg);
-    }
-
-    // Controle do Botão de Som
-    const btnSom = document.getElementById("btnSomTelao");
-    btnSom.onclick = () => {
-        somAtivo = !somAtivo;
-        document.getElementById("iconeSom").innerText = somAtivo ? "🔊" : "🔇";
-        document.getElementById("txtSom").innerText = somAtivo ? "Voz: ON" : "Voz: OFF";
-        btnSom.classList.toggle("bg-green-600", somAtivo);
-        btnSom.classList.toggle("bg-slate-700", !somAtivo);
-        
-        if(somAtivo) falar("Som ativado");
+    const firebaseConfig = { 
+        apiKey: "AIzaSyD0PhZe0AuMTA14W8vzsfn4evxBBLzh4sw", 
+        authDomain: "bingodocau.firebaseapp.com", 
+        projectId: "bingodocau",
+        databaseURL: "https://bingodocau-default-rtdb.firebaseio.com"
     };
 
-    function gerarGrade() {
-        const grade = document.getElementById("grade");
-        grade.innerHTML = "";
-        let n = 1;
-        letrasCustom.forEach(l => {
-            const row = document.createElement("div");
-            row.className = "grid-bingo mb-1";
-            const label = document.createElement("div");
-            label.className = "flex items-center justify-center bg-slate-700 text-yellow-500 font-black text-[10px] md:text-sm h-6 md:h-8 rounded";
-            label.innerText = l;
-            row.appendChild(label);
-            for (let i = 0; i < 15; i++) {
-                const d = document.createElement("div");
-                d.id = `n${n}`;
-                d.className = "flex items-center justify-center border border-slate-700 text-slate-600 text-[10px] md:text-sm h-6 md:h-8 bg-slate-900 rounded";
-                d.innerText = n;
-                row.appendChild(d);
-                n++;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const rtdb = getDatabase(app);
+
+    let bingoId = null;
+    let vozAtiva = false;
+    let ultimaBolaAnunciada = "";
+    let ultimoAlertaQuantidade = 0;
+    let letrasAtuais = ["B","I","N","G","O"];
+
+    function falar(t) { 
+        if(!vozAtiva) return;
+        window.speechSynthesis.cancel(); 
+        const m = new SpeechSynthesisUtterance(t); 
+        m.lang = 'pt-BR'; 
+        window.speechSynthesis.speak(m); 
+    }
+
+    async function init() {
+        const conf = await getDoc(doc(db, "configuracoes", "vendas"));
+        if (!conf.exists()) return;
+        bingoId = conf.data().bingoAtivo;
+
+        onSnapshot(doc(db, "bingos", "bingo_" + bingoId), (snap) => {
+            if (snap.exists()) {
+                const d = snap.data();
+                document.getElementById("nomeBingo").innerText = d.nome || "BINGO";
+                document.getElementById("local").innerText = d.local || "---";
+                document.getElementById("data").innerText = d.data || "--/--/--";
+                
+                const novasLetras = d.letras ? (Array.isArray(d.letras) ? d.letras : d.letras.split("")) : ["B","I","N","G","O"];
+                if (JSON.stringify(novasLetras) !== JSON.stringify(letrasAtuais)) {
+                    letrasAtuais = novasLetras;
+                    montarGrade();
+                }
             }
-            grade.appendChild(row);
+        });
+
+        // MONITORAMENTO COM RESET AUTOMÁTICO
+        onValue(ref(rtdb, 'live'), (snapshot) => {
+            const dados = snapshot.val();
+            if (dados) {
+                atualizarInterface(dados);
+            } else {
+                // Limpa o telão instantaneamente ao detectar o Reset no banco
+                document.getElementById("contador").innerText = "00";
+                document.getElementById("ultima").innerText = "--";
+                document.getElementById("quase").innerHTML = "";
+                document.getElementById("ganhadores").innerHTML = "";
+                document.getElementById("painelGanhador").classList.add("hidden");
+                document.querySelectorAll('[id^="n"]').forEach(el => el.classList.remove("marcado"));
+                ultimaBolaAnunciada = "";
+                ultimoAlertaQuantidade = 0;
+            }
         });
     }
 
-    onValue(ref(rtdb, 'live'), (snapshot) => {
-        const dados = snapshot.val();
-        if (!dados) return;
+    function montarGrade() {
+        const grade = document.getElementById("grade");
+        grade.innerHTML = "";
+        letrasAtuais.forEach((letra, colIndex) => {
+            const lDiv = document.createElement("div");
+            lDiv.className = "bg-slate-700 h-7 md:h-9 flex items-center justify-center rounded font-black text-green-500 text-[10px] md:text-sm border border-slate-600";
+            lDiv.innerText = letra;
+            grade.appendChild(lDiv);
 
-        document.getElementById("nomeBingo").innerText = dados.nome;
-        document.getElementById("local").innerText = dados.local;
-        document.getElementById("data").innerText = dados.data;
-        document.getElementById("contador").innerText = (dados.sorteados || []).length.toString().padStart(2, '0');
-        document.getElementById("ultima").innerText = dados.ultima;
+            for (let n = (colIndex * 15) + 1; n <= (colIndex * 15) + 15; n++) {
+                const nDiv = document.createElement("div");
+                nDiv.id = `n${n}`;
+                nDiv.className = "bg-slate-900/50 h-7 md:h-9 flex items-center justify-center rounded font-bold text-slate-600 text-[9px] md:text-xs border border-slate-700";
+                nDiv.innerText = n;
+                grade.appendChild(nDiv);
+            }
+        });
+    }
 
-        // Lógica de Voz: Só fala se a bola mudou
+    function atualizarInterface(dados) {
+        const qtdSorteados = dados.sorteados ? dados.sorteados.length : 0;
+        document.getElementById("contador").innerText = qtdSorteados.toString().padStart(2, '0');
+        document.getElementById("ultima").innerText = dados.ultima || "--";
+
         if (dados.ultima && dados.ultima !== "--" && dados.ultima !== ultimaBolaAnunciada) {
             ultimaBolaAnunciada = dados.ultima;
-            // Transforma "B-10" em "B 10" para a voz ficar natural
             falar(dados.ultima.replace("-", " "));
+        }
+
+        const alertas = [40, 50, 60, 70];
+        if (alertas.includes(qtdSorteados) && qtdSorteados !== ultimoAlertaQuantidade) {
+            ultimoAlertaQuantidade = qtdSorteados;
+            setTimeout(() => { falar(`Atenção, já foram sorteadas ${qtdSorteados} bolas.`); }, 2000);
         }
 
         document.querySelectorAll('[id^="n"]').forEach(el => el.classList.remove("marcado"));
@@ -148,13 +195,30 @@
         `).join("");
 
         document.getElementById("quase").innerHTML = (dados.armadas || []).map(a => `
-            <span class="bg-red-600 text-white px-2 py-1 rounded shadow-sm">#${a}</span>
+            <span class="bg-red-600 text-white px-2 py-1 rounded shadow-sm font-bold text-[10px]">#${a}</span>
         `).join("");
 
-        document.getElementById("txtGanhador").classList.toggle("hidden", !dados.temGanhador);
-    });
+        const painelG = document.getElementById("painelGanhador");
+        if (dados.ganhadores && dados.ganhadores.length > 0) {
+            const ultimoG = dados.ganhadores[dados.ganhadores.length - 1];
+            if (ultimoG.totalBolas === qtdSorteados) {
+                painelG.classList.remove("hidden");
+            } else {
+                painelG.classList.add("hidden");
+            }
+        } else {
+            painelG.classList.add("hidden");
+        }
+    }
 
-    gerarGrade();
+    document.getElementById("btnAtivarSom").onclick = (e) => {
+        vozAtiva = !vozAtiva;
+        e.currentTarget.innerText = vozAtiva ? "🔊" : "🔇";
+        e.currentTarget.classList.toggle("bg-green-600", vozAtiva);
+        e.currentTarget.classList.toggle("bg-red-600", !vozAtiva);
+    };
+
+    init();
 </script>
 </body>
 </html>
