@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteio Online v17 - Administrativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f4f7f9; }
+        .num-bola { border: 1px solid #ddd; background: #fff; height: 35px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.75rem; }
+        .num-bola.marcado { background-color: #f59e0b; color: white; border-color: #d97706; transform: scale(1.05); }
+        .letra-col { background: #1e293b; color: #f59e0b; font-weight: 900; height: 35px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+        .alerta-armada { border: 4px solid #ef4444 !important; animation: pulse 1s infinite; }
+        .alerta-ganhador { border: 4px solid #16a34a !important; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; } }
+        .lista-scroll { max-height: 300px; overflow-y: auto; }
+        #overlay-login { position: fixed; inset: 0; background: #1e293b; z-index: 100; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body class="bg-gray-100 p-2 md:p-4 font-sans">
+
+    <div id="overlay-login">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center w-80">
+            <h2 class="text-xl font-black mb-4 uppercase">Acesso Restrito</h2>
+            <input type="password" id="inputSenha" placeholder="Digite a senha" class="w-full p-3 border rounded-xl mb-4 text-center outline-none focus:ring-2 focus:ring-orange-500">
+            <button id="btnLogin" class="bg-orange-500 text-white w-full py-3 rounded-xl font-black hover:bg-orange-600 transition-all">ENTRAR</button>
+        </div>
+    </div>
+
+    <div id="conteudo-principal" class="max-w-6xl mx-auto bg-white p-5 rounded-2xl shadow-xl border-t-8 border-orange-500 opacity-0 transition-opacity duration-500">
+        <div class="flex flex-wrap justify-between items-center mb-4 pb-4 border-b gap-4">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="bg-slate-800 text-white px-2 py-0.5 rounded text-[10px] font-black">BINGO Nº <span id="idBingoTxt">--</span></span>
+                    <span id="statusConexao" class="flex items-center gap-1 text-blue-600 font-bold text-[10px] uppercase">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></span> Sincronizando...
+                    </span>
+                </div>
+                <h1 id="nomeBingo" class="text-2xl font-black text-gray-800 uppercase italic leading-none">BINGO PROFISSIONAL</h1>
+                <p class="text-gray-400 font-bold text-[10px] mt-2 uppercase tracking-widest">
+                    📅 <span id="displayData">--/--/----</span> | 📍 <span id="displayLocal">---</span>
+                </p>
+            </div>
+            <div class="bg-slate-100 px-6 py-3 rounded-2xl text-center border border-slate-200">
+                <p id="qtdBolas" class="text-3xl font-black leading-none text-slate-700">00 bolas</p>
+            </div>
+            <button id="btnResetar" class="bg-red-50 text-red-600 border border-red-100 hover:bg-red-600 hover:text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all">🔄 Reiniciar</button>
+        </div>
+
+        <div class="flex flex-wrap justify-between items-center mb-6 bg-slate-50 p-3 rounded-xl gap-4 border border-slate-100">
+            <div class="flex gap-4 text-[10px] font-black uppercase text-gray-600">
+                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="somentePagas" class="accent-orange-500"> Somente Pagas</label>
+                <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" id="incluirLivres" class="accent-orange-500"> Incluir Livres</label>
+            </div>
+            <div class="flex gap-2">
+                <button id="btnSom" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">🔊 Voz: OFF</button>
+                <button id="btnAvisos" class="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">📢 Alertas: OFF</button>
+                <button id="btnMovimento" class="bg-amber-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">📳 Movimento: OFF</button>
+                <button id="btnSalvar" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">💾 Relatório</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2">
+                <div id="painelSorteio" class="bg-white p-6 rounded-2xl border-2 border-slate-100 text-center mb-6 relative min-h-[350px] flex flex-col justify-center">
+                    <div id="displayStatusGanhador" class="mb-4">
+                        <div id="txtStatus" class="font-black text-xl text-slate-300 uppercase italic">Pronto para Iniciar</div>
+                        <div id="destaqueGanhador" class="text-green-700 font-black text-2xl uppercase hidden"></div>
+                    </div>
+                    <div id="ultima" class="text-[10rem] font-black text-orange-600 leading-none mb-8">--</div>
+                    <div class="flex justify-center gap-3">
+                        <button id="btnSortear" class="bg-orange-500 hover:bg-orange-600 text-white font-black py-5 px-16 rounded-2xl text-3xl shadow-lg transition-all active:scale-95">🎲 SORTEAR</button>
+                        <button id="btnRepetir" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-black py-5 px-8 rounded-2xl text-3xl transition-all">🔊</button>
+                    </div>
+                </div>
+                <div id="grade" class="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200"></div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-red-50 border-2 border-red-100 rounded-2xl p-4">
+                    <h3 class="font-black text-red-700 uppercase text-xs mb-3 flex justify-between items-center">🔥 Cartelas Armadas <span id="numArmadas" class="bg-red-600 text-white px-2 rounded-full text-[10px]">0</span></h3>
+                    <div id="quase" class="lista-scroll space-y-1"></div>
+                </div>
+                <div class="bg-green-50 border-2 border-green-100 rounded-2xl p-4">
+                    <h3 class="font-black text-green-700 uppercase text-xs mb-3">🎊 Ganhadores</h3>
+                    <div id="listaGanhadores" class="space-y-2 lista-scroll"></div>
+                </div>
+                <div id="boxPremios" class="bg-white border-2 border-orange-100 rounded-2xl p-4 shadow-sm">
+                    <h3 class="font-black text-gray-700 uppercase text-xs mb-3 border-b pb-2">🏆 Prêmios</h3>
+                    <div id="displayPremios" class="text-[11px] text-gray-500 font-bold italic whitespace-pre-line leading-relaxed">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyD0PhZe0AuMTA14W8vzsfn4evxBBLzh4sw", authDomain: "bingodocau.firebaseapp.com", projectId: "bingodocau", databaseURL: "https://bingodocau-default-rtdb.firebaseio.com" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const rtdb = getDatabase(app);
+
+        // --- CONFIGURAÇÃO DE SEGURANÇA ---
+        const SENHA_ACESSO = "1234"; // MUDE ESTA SENHA ANTES DE SUBIR PARA O GITHUB!
+        
+        document.getElementById("btnLogin").onclick = () => {
+            if(document.getElementById("inputSenha").value === SENHA_ACESSO) {
+                document.getElementById("overlay-login").style.display = "none";
+                document.getElementById("conteudo-principal").classList.remove("opacity-0");
+                init();
+            } else {
+                alert("Senha Incorreta!");
+            }
+        };
+
+        let cartelas = [], sorteados = [], bolasOrdem = [], bingoId = null, somBolas = false, somAvisos = false;
+        let letrasCustom = ["B","I","N","G","O"], ultimaBolaTxt = "--", ganhadoresLista = [], cartelasArmadasFinal = [];
+        let movimentoAtivo = false;
+        let ultimoMovimento = 0;
+
+        function construirInterface() {
+            const grade = document.getElementById("grade");
+            grade.innerHTML = "";
+            letrasCustom.forEach((letra, i) => {
+                const row = document.createElement("div");
+                row.style.display = "grid"; 
+                row.style.gridTemplateColumns = "40px repeat(15, 1fr)"; 
+                row.style.gap = "4px"; row.className = "mb-1";
+                const lDiv = document.createElement("div"); lDiv.className = "letra-col"; lDiv.innerText = letra;
+                row.appendChild(lDiv);
+                for (let n = (i * 15) + 1; n <= (i * 15) + 15; n++) {
+                    const nDiv = document.createElement("div"); nDiv.id = `n${n}`;
+                    nDiv.className = "num-bola"; nDiv.innerText = n; row.appendChild(nDiv);
+                }
+                grade.appendChild(row);
+            });
+            sorteados.forEach(n => document.getElementById(`n${n}`)?.classList.add("marcado"));
+        }
+
+        async function init() {
+            construirInterface();
+            try {
+                const conf = await getDoc(doc(db, "configuracoes", "vendas"));
+                if (conf.exists()) {
+                    bingoId = conf.data().bingoAtivo;
+                    document.getElementById("idBingoTxt").innerText = bingoId;
+                    
+                    const snapBingo = await getDoc(doc(db, "bingos", "bingo_" + bingoId));
+                    if (snapBingo.exists()) {
+                        const d = snapBingo.data();
+                        document.getElementById("nomeBingo").innerText = d.nome || "BINGO";
+                        document.getElementById("displayData").innerText = d.data || "--";
+                        document.getElementById("displayLocal").innerText = d.local || "--";
+                        document.getElementById("displayPremios").innerText = d.premios || "--";
+                        if (d.letras) {
+                            letrasCustom = Array.isArray(d.letras) ? d.letras : d.letras.split("");
+                            construirInterface(); 
+                        }
+                    }
+
+                    const snapCartelas = await getDocs(collection(db, "bingos", "bingo_" + bingoId, "cartelas"));
+                    cartelas = snapCartelas.docs.map(doc => {
+                        const c = doc.data();
+                        return { ...c, status: (c.status || "livre").toLowerCase(), nums: [...(c.b||[]), ...(c.i||[]), ...(c.n_col||[]), ...(c.g||[]), ...(c.o||[])] };
+                    });
+                    
+                    // Recuperar estado atual se o sorteio já começou (Realtime Database)
+                    onValue(ref(rtdb, 'live'), (snapshot) => {
+                        const data = snapshot.val();
+                        if(data && data.bingoId === bingoId && sorteados.length === 0 && Array.isArray(data.sorteados) && data.sorteados.length > 0) {
+                            sorteados = data.sorteados;
+                            bolasOrdem = data.bolasOrdem || [];
+                            ganhadoresLista = data.ganhadores || [];
+                            ultimaBolaTxt = data.ultima;
+                            document.getElementById("ultima").innerText = ultimaBolaTxt;
+                            document.getElementById("qtdBolas").innerText = String(sorteados.length).padStart(2, '0') + " bolas";
+                            construirInterface();
+                            verificar("", 0); // Revalida status visuais
+                        }
+                    }, { onlyOnce: true });
+
+                    document.getElementById("statusConexao").innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full"></span> Online (RTDB)';
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById("statusConexao").innerHTML = '<span class="w-2 h-2 bg-red-400 rounded-full"></span> Erro Firebase';
+            }
+        }
+
+        function falar(t) { window.speechSynthesis.cancel(); const msg = new SpeechSynthesisUtterance(t); msg.lang = 'pt-BR'; window.speechSynthesis.speak(msg); }
+
+        function sortear() {
+            const disponiveis = Array.from({length: 75}, (_, i) => i + 1).filter(x => !sorteados.includes(x));
+            if (disponiveis.length === 0) return alert("Fim!");
+            
+            const n = disponiveis[Math.floor(Math.random() * disponiveis.length)];
+            const letra = letrasCustom[Math.floor((n - 1) / 15)];
+            
+            sorteados.push(n);
+            bolasOrdem.push(`${letra}${n}`);
+            ultimaBolaTxt = `${letra}-${n}`;
+            
+            document.getElementById("ultima").innerText = ultimaBolaTxt;
+            document.getElementById("qtdBolas").innerText = String(sorteados.length).padStart(2, '0') + " bolas";
+            document.getElementById(`n${n}`).classList.add("marcado");
+
+            if (somBolas) falar(letra + " " + n);
+            if (somAvisos && [40, 50, 60, 70].includes(sorteados.length)) {
+                setTimeout(() => falar(`${sorteados.length} bolas chamadas`), 1800);
+            }
+
+            verificar(letra, n);
+            atualizarNuvem();
+        }
+
+        function verificar(letra, n) {
+            const fPagas = document.getElementById("somentePagas").checked;
+            const fLivres = document.getElementById("incluirLivres").checked;
+            const ativas = cartelas.filter(c => {
+                if (!fLivres && (c.status === "livre" || c.status === "disponivel")) return false;
+                if (fPagas && c.status !== "paga") return false;
+                return true;
+            });
+
+            let armadasNum = 0;
+            const quaseDiv = document.getElementById("quase"); quaseDiv.innerHTML = "";
+            cartelasArmadasFinal = []; 
+
+            ativas.forEach(c => {
+                const acertos = c.nums.filter(x => sorteados.includes(x)).length;
+                const nomeDisplay = c.comprador ? c.comprador.toUpperCase() : "CARTELA LIVRE";
+
+                if (acertos === 24) {
+                    armadasNum++;
+                    cartelasArmadasFinal.push({n: c.n, nome: nomeDisplay});
+                    quaseDiv.innerHTML += `<div class="bg-white border-l-2 border-red-500 px-2 py-1 flex justify-between items-center"><span class="font-black text-red-600 text-[10px]">${c.n}</span><span class="text-[9px] font-bold text-gray-400 uppercase truncate ml-2">${nomeDisplay}</span></div>`;
+                }
+                if (acertos === 25 && !ganhadoresLista.some(g => g.cartela === c.n)) {
+                    const ordem = (ganhadoresLista.length > 0 && ganhadoresLista[ganhadoresLista.length-1].totalBolas === sorteados.length) ? ganhadoresLista[ganhadoresLista.length-1].lugar : ganhadoresLista.length + 1;
+                    ganhadoresLista.push({ lugar: ordem, bola: `${letra}-${n}`, cartela: c.n, nome: nomeDisplay, totalBolas: sorteados.length });
+                }
+            });
+
+            document.getElementById("listaGanhadores").innerHTML = ganhadoresLista.map(g => `<div class="bg-white p-2 rounded-lg border-l-4 border-green-500 shadow-sm"><p class="text-[9px] font-black text-green-800 uppercase">${g.lugar}º Lugar | Cartela ${g.cartela}</p><p class="text-[11px] font-medium text-gray-500 uppercase mt-0.5">${g.nome}</p></div>`).join("");
+
+            const txtS = document.getElementById("txtStatus");
+            const destaqueG = document.getElementById("destaqueGanhador");
+            const painel = document.getElementById("painelSorteio");
+            painel.classList.remove("alerta-armada", "alerta-ganhador");
+
+            if (ganhadoresLista.length > 0) {
+                painel.classList.add("alerta-ganhador");
+                txtS.classList.add("hidden"); 
+                destaqueG.classList.remove("hidden");
+                destaqueG.innerHTML = ganhadoresLista.map(g => `${g.lugar}º ${g.nome}`).join(" - ");
+            } else if (armadasNum > 0) {
+                painel.classList.add("alerta-armada");
+                txtS.classList.remove("hidden"); destaqueG.classList.add("hidden");
+                txtS.innerText = "⚠️ CARTELA ARMADA! ⚠️"; txtS.className = "font-black text-xl text-red-600";
+            } else {
+                txtS.classList.remove("hidden"); destaqueG.classList.add("hidden");
+                txtS.innerText = (sorteados.length > 0) ? "Sorteio em Andamento" : "Pronto para Iniciar"; 
+                txtS.className = "font-black text-xl text-slate-300 italic";
+            }
+            document.getElementById("numArmadas").innerText = armadasNum;
+        }
+
+        function ativarMovimento() {
+            if (movimentoAtivo) return;
+
+            if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
+                DeviceMotionEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === "granted") {
+                            iniciarDetectorMovimento();
+                        } else {
+                            alert("Permissão de movimento negada.");
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Erro ao solicitar permissão:", err);
+                        alert("Não foi possível ativar o movimento.");
+                    });
+            } else {
+                iniciarDetectorMovimento();
+            }
+        }
+
+        function iniciarDetectorMovimento() {
+
+            if (!window.DeviceMotionEvent) {
+                alert("Seu dispositivo não suporta sensor de movimento.");
+                return;
+            }
+
+            movimentoAtivo = true;
+
+            const btn = document.getElementById("btnMovimento");
+            btn.innerText = "📳 Movimento: ON";
+            btn.classList.remove("bg-amber-500");
+            btn.classList.add("bg-green-600");
+
+            window.addEventListener("devicemotion", detectarSacudida);
+
+            alert("Movimento ativado! Agora basta SACUDIR o celular para sortear.");
+        }
+
+        function desativarMovimento() {
+            movimentoAtivo = false;
+
+            const btn = document.getElementById("btnMovimento");
+            btn.innerText = "📳 Movimento: OFF";
+            btn.classList.remove("bg-green-600");
+            btn.classList.add("bg-amber-500");
+
+            window.removeEventListener("devicemotion", detectarSacudida);
+        }
+
+        function detectarSacudida(event) {
+            if (!movimentoAtivo) return;
+
+            const acc = event.accelerationIncludingGravity || event.acceleration;
+
+            if (!acc) return;
+
+            const x = Math.abs(acc.x || 0);
+            const y = Math.abs(acc.y || 0);
+            const z = Math.abs(acc.z || 0);
+
+            const intensidade = x + y + z;
+            const agora = Date.now();
+
+            // Sensibilidade ajustada para celulares
+            if (intensidade > 50 && (agora - ultimoMovimento > 1800)) {
+                ultimoMovimento = agora;
+
+                // Pequeno feedback visual
+                const painel = document.getElementById("painelSorteio");
+                painel.style.transform = "scale(1.02)";
+
+                setTimeout(() => {
+                    painel.style.transform = "scale(1)";
+                }, 200);
+
+                sortear();
+            }
+        }
+
+
+        async function atualizarNuvem() {
+            const payload = {
+                bingoId: bingoId,
+                nome: document.getElementById("nomeBingo").innerText,
+                local: document.getElementById("displayLocal").innerText,
+                data: document.getElementById("displayData").innerText,
+                ultima: ultimaBolaTxt, 
+                sorteados: sorteados, 
+                bolasOrdem: bolasOrdem,
+                ganhadores: ganhadoresLista,
+                armadas: cartelasArmadasFinal.map(a => a.n),
+                temGanhador: ganhadoresLista.length > 0,
+                timestamp: Date.now()
+            };
+            
+            // Salva Localmente
+            localStorage.setItem('bingo_live_update', JSON.stringify(payload));
+            // Salva na Nuvem (Firebase Realtime Database)
+            try {
+                await set(ref(rtdb, 'live'), payload);
+            } catch (e) { console.error("Erro Nuvem:", e); }
+        }
+
+        document.getElementById("btnSortear").onclick = sortear;
+        document.getElementById("btnSom").onclick = (e) => { somBolas = !somBolas; e.target.innerText = `🔊 Voz: ${somBolas?'ON':'OFF'}`; e.target.classList.toggle("bg-green-600", somBolas); };
+        document.getElementById("btnAvisos").onclick = (e) => { somAvisos = !somAvisos; e.target.innerText = `📢 Alertas: ${somAvisos?'ON':'OFF'}`; e.target.classList.toggle("bg-green-600", somAvisos); };
+        document.getElementById("btnRepetir").onclick = () => falar(ultimaBolaTxt.replace("-", " "));
+
+        document.getElementById("btnMovimento").onclick = () => {
+            if (movimentoAtivo) {
+                desativarMovimento();
+            } else {
+                ativarMovimento();
+            }
+        };
+        
+        document.getElementById("btnResetar").onclick = async () => {
+            if(confirm("Deseja zerar o sorteio atual na nuvem e local?")) {
+                await set(ref(rtdb, 'live'), null);
+                localStorage.removeItem('bingo_live_update');
+                location.reload();
+            }
+        };
+
+        document.getElementById("btnSalvar").onclick = () => {
+            const dataH = new Date().toLocaleString('pt-BR');
+            let t = `==========================================\n      RELATÓRIO BINGO Nº ${bingoId || '--'}\n==========================================\n`;
+            t += `BINGO: ${document.getElementById("nomeBingo").innerText}\nDATA: ${document.getElementById("displayData").innerText}\nLOCAL: ${document.getElementById("displayLocal").innerText}\n\n`;
+            t += `PREMIAÇÃO:\n${document.getElementById("displayPremios").innerText}\n\n`;
+            t += `BOLAS SORTEADAS (${sorteados.length}):\n${bolasOrdem.join(" - ")}\n\n`;
+            t += `🏆 GANHADORES:\n`;
+            ganhadoresLista.forEach(g => t += `${g.lugar}º LUGAR: Cartela #${g.cartela} - ${g.nome} (Bola ${g.bola})\n`);
+            t += `\n🔥 CARTELAS ARMADAS NO FINAL:\n`;
+            if(cartelasArmadasFinal.length === 0) t += "Nenhuma.\n";
+            else cartelasArmadasFinal.forEach(a => t += `Cartela #${a.n} - ${a.nome}\n`);
+            
+            const blob = new Blob([t], {type: "text/plain"});
+            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); 
+            a.download = `Relatorio_Bingo_${bingoId || 'Local'}.txt`; a.click();
+        };
+    </script>
+</body>
+</html>
