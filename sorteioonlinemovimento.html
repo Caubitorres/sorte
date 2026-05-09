@@ -167,20 +167,28 @@
                         return { ...c, status: (c.status || "livre").toLowerCase(), nums: [...(c.b||[]), ...(c.i||[]), ...(c.n_col||[]), ...(c.g||[]), ...(c.o||[])] };
                     });
                     
-                    // Recuperar estado atual se o sorteio já começou (Realtime Database)
+                    // SINCRONIZAÇÃO REALTIME ENTRE CELULAR / NOTEBOOK / TELÃO
                     onValue(ref(rtdb, 'live'), (snapshot) => {
                         const data = snapshot.val();
-                        if(data && data.bingoId === bingoId && sorteados.length === 0 && Array.isArray(data.sorteados) && data.sorteados.length > 0) {
-                            sorteados = data.sorteados;
-                            bolasOrdem = data.bolasOrdem || [];
-                            ganhadoresLista = data.ganhadores || [];
-                            ultimaBolaTxt = data.ultima;
-                            document.getElementById("ultima").innerText = ultimaBolaTxt;
-                            document.getElementById("qtdBolas").innerText = String(sorteados.length).padStart(2, '0') + " bolas";
-                            construirInterface();
-                            verificar("", 0); // Revalida status visuais
-                        }
-                    }, { onlyOnce: true });
+
+                        if(!data) return;
+
+                        if(data.bingoId !== bingoId) return;
+
+                        sorteados = Array.isArray(data.sorteados) ? data.sorteados : [];
+                        bolasOrdem = data.bolasOrdem || [];
+                        ganhadoresLista = data.ganhadores || [];
+                        ultimaBolaTxt = data.ultima || "--";
+
+                        document.getElementById("ultima").innerText = ultimaBolaTxt;
+
+                        document.getElementById("qtdBolas").innerText =
+                            String(sorteados.length).padStart(2, '0') + " bolas";
+
+                        construirInterface();
+
+                        verificar("", 0);
+                    });
 
                     document.getElementById("statusConexao").innerHTML = '<span class="w-2 h-2 bg-green-500 rounded-full"></span> Online (RTDB)';
                 }
@@ -207,7 +215,7 @@
             document.getElementById("qtdBolas").innerText = String(sorteados.length).padStart(2, '0') + " bolas";
             document.getElementById(`n${n}`).classList.add("marcado");
 
-            if (somBolas) falar(letra + " " + n);
+            if (somBolas && document.hasFocus()) falar(letra + " " + n);
             if (somAvisos && [40, 50, 60, 70].includes(sorteados.length)) {
                 setTimeout(() => falar(`${sorteados.length} bolas chamadas`), 1800);
             }
@@ -334,7 +342,7 @@
             const agora = Date.now();
 
             // Sensibilidade ajustada para celulares
-            if (intensidade > 50 && (agora - ultimoMovimento > 1800)) {
+            if (intensidade > 60 && (agora - ultimoMovimento > 3000)) {
                 ultimoMovimento = agora;
 
                 // Pequeno feedback visual
