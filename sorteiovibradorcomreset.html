@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteio Online v17 - Shake Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f4f7f9; }
+        .num-bola { border: 1px solid #ddd; background: #fff; height: 35px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.75rem; }
+        .num-bola.marcado { background-color: #f59e0b; color: white; border-color: #d97706; transform: scale(1.05); }
+        .letra-col { background: #1e293b; color: #f59e0b; font-weight: 900; height: 35px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+        #overlay-login { position: fixed; inset: 0; background: #1e293b; z-index: 999; display: flex; align-items: center; justify-content: center; }
+        .girar-bola { animation: spin 0.5s ease-out; }
+        @keyframes spin { from { transform: rotate(0deg) scale(0.5); opacity: 0; } to { transform: rotate(360deg) scale(1); opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-100 p-2 md:p-4 font-sans">
+
+    <div id="overlay-login">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center w-80">
+            <h2 class="text-xl font-black mb-4 uppercase">Acesso Administrativo</h2>
+            <input type="password" id="inputSenha" placeholder="Senha" class="w-full p-3 border rounded-xl mb-4 text-center outline-none focus:ring-2 focus:ring-orange-500">
+            <button id="btnLogin" class="bg-orange-500 text-white w-full py-3 rounded-xl font-black">ENTRAR E ATIVAR SENSOR</button>
+        </div>
+    </div>
+
+    <div id="conteudo-principal" style="display: none;" class="max-w-6xl mx-auto bg-white p-5 rounded-2xl shadow-xl border-t-8 border-orange-500">
+        <div class="flex flex-wrap justify-between items-center mb-4 border-b pb-4">
+            <div>
+                <h1 id="nomeBingo" class="text-2xl font-black text-gray-800 uppercase italic">BINGO PRO</h1>
+                <p id="sensorStatus" class="text-[10px] text-green-600 font-bold uppercase tracking-tighter">● Sensor de Movimento Pronto</p>
+            </div>
+            <div class="bg-slate-100 px-6 py-3 rounded-2xl text-center border">
+                <p id="qtdBolas" class="text-3xl font-black text-slate-700">00 bolas</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 text-center">
+                <div id="painelSorteio" class="bg-white p-6 rounded-2xl border-2 border-slate-100 min-h-[380px] flex flex-col justify-center items-center">
+                    <div id="txtStatus" class="font-black text-xl text-slate-300 uppercase mb-4">SACUDA O APARELHO</div>
+                    <div id="ultima" class="text-[10rem] font-black text-orange-600 leading-none mb-8">--</div>
+                    <button id="btnSortear" class="bg-slate-800 text-white font-black py-4 px-10 rounded-2xl shadow-lg active:scale-95">OU CLIQUE PARA SORTEAR</button>
+                </div>
+                <div id="grade" class="mt-6 space-y-1.5 bg-slate-50 p-3 rounded-xl border"></div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-red-50 border-2 border-red-100 rounded-2xl p-4">
+                    <h3 class="font-black text-red-700 text-xs mb-3">🔥 ARMADAS: <span id="numArmadas">0</span></h3>
+                    <div id="quase" class="max-h-40 overflow-y-auto space-y-1"></div>
+                </div>
+                <div class="bg-green-50 border-2 border-green-100 rounded-2xl p-4">
+                    <h3 class="font-black text-green-700 text-xs mb-3">🎊 GANHADORES</h3>
+                    <div id="listaGanhadores" class="max-h-40 overflow-y-auto space-y-1"></div>
+                </div>
+                <button id="btnSom" class="bg-blue-600 text-white w-full py-2 rounded-lg text-[10px] font-black uppercase">🔊 Voz: OFF</button>
+
+                <button id="btnReset" class="bg-red-600 text-white w-full py-2 rounded-lg text-[10px] font-black uppercase mt-2">
+                    🗑 RESETAR SORTEIO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyD0PhZe0AuMTA14W8vzsfn4evxBBLzh4sw", authDomain: "bingodocau.firebaseapp.com", projectId: "bingodocau", databaseURL: "https://bingodocau-default-rtdb.firebaseio.com" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const rtdb = getDatabase(app);
+
+        const SENHA_CORRETA = "1234";
+        let cartelas = [], sorteados = [], bingoId = null, somBolas = false;
+        let letrasCustom = ["B","I","N","G","O"], ultimaBolaTxt = "--", ganhadoresLista = [];
+        
+        // Bloqueio para não sortear várias vezes no mesmo movimento
+        let sorteandoAgora = false;
+
+        document.getElementById("btnLogin").onclick = () => {
+            if(document.getElementById("inputSenha").value === SENHA_CORRETA) {
+                document.getElementById("overlay-login").style.display = "none";
+                document.getElementById("conteudo-principal").style.display = "block";
+                ativarSensores(); // Ativa após o clique humano
+                init();
+            } else { alert("Senha incorreta!"); }
+        };
+
+        async function init() {
+            const conf = await getDoc(doc(db, "configuracoes", "vendas"));
+            if (conf.exists()) {
+                bingoId = conf.data().bingoAtivo;
+                const snapBingo = await getDoc(doc(db, "bingos", "bingo_" + bingoId));
+                if (snapBingo.exists()) {
+                    const d = snapBingo.data();
+                    document.getElementById("nomeBingo").innerText = d.nome;
+                    if (d.letras) letrasCustom = Array.isArray(d.letras) ? d.letras : d.letras.split("");
+                }
+                gerarGrade();
+                const snapCartelas = await getDocs(collection(db, "bingos", "bingo_" + bingoId, "cartelas"));
+                cartelas = snapCartelas.docs.map(doc => {
+                    const c = doc.data();
+                    return { ...c, status: (c.status || "livre").toLowerCase(), nums: [...(c.b||[]), ...(c.i||[]), ...(c.n_col||[]), ...(c.g||[]), ...(c.o||[])] };
+                });
+                onValue(ref(rtdb, 'live'), (snapshot) => {
+                    const data = snapshot.val();
+                    if(data && data.bingoId === bingoId) {
+                        sorteados = data.sorteados || [];
+                        ganhadoresLista = data.ganhadores || [];
+                        ultimaBolaTxt = data.ultima || "--";
+                        atualizarUI();
+                    }
+                });
+            }
+        }
+
+        function gerarGrade() {
+            const grade = document.getElementById("grade");
+            grade.innerHTML = "";
+            letrasCustom.forEach((letra, i) => {
+                const row = document.createElement("div");
+                row.className = "flex gap-1 mb-1";
+                row.innerHTML = `<div class="letra-col w-10">${letra}</div>`;
+                for (let n = (i * 15) + 1; n <= (i * 15) + 15; n++) {
+                    row.innerHTML += `<div id="n${n}" class="num-bola flex-1">${n}</div>`;
+                }
+                grade.appendChild(row);
+            });
+        }
+
+        function atualizarUI() {
+            document.getElementById("ultima").innerText = ultimaBolaTxt;
+            document.getElementById("qtdBolas").innerText = String(sorteados.length).padStart(2, '0') + " bolas";
+            document.querySelectorAll('.num-bola').forEach(el => el.classList.remove('marcado'));
+            sorteados.forEach(n => document.getElementById(`n${n}`)?.classList.add("marcado"));
+            verificarLogica();
+        }
+
+        function sortear() {
+            if (sorteandoAgora) return; 
+            const disponiveis = Array.from({length: 75}, (_, i) => i + 1).filter(x => !sorteados.includes(x));
+            if (disponiveis.length === 0) return;
+
+            sorteandoAgora = true; // Bloqueia novos sorteios por 2 segundos
+
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+            const n = disponiveis[Math.floor(Math.random() * disponiveis.length)];
+            const letra = letrasCustom[Math.floor((n - 1) / 15)];
+            
+            sorteados.push(n);
+            ultimaBolaTxt = `${letra}-${n}`;
+            
+            const displayUltima = document.getElementById("ultima");
+            displayUltima.classList.remove("girar-bola");
+            void displayUltima.offsetWidth;
+            displayUltima.classList.add("girar-bola");
+
+            if (somBolas) {
+                window.speechSynthesis.cancel();
+                const msg = new SpeechSynthesisUtterance(letra + " " + n);
+                msg.lang = 'pt-BR';
+                window.speechSynthesis.speak(msg);
+            }
+
+            atualizarNuvem();
+
+            // Libera para o próximo sorteio após 2 segundos (tempo do sacolejo acabar)
+            setTimeout(() => { sorteandoAgora = false; }, 2000);
+        }
+
+        async function atualizarNuvem() {
+            set(ref(rtdb, 'live'), { bingoId, ultima: ultimaBolaTxt, sorteados, ganhadores: ganhadoresLista, timestamp: Date.now() });
+        }
+
+        function verificarLogica() {
+            const ativas = cartelas.filter(c => c.status === "paga");
+            let armadasNum = 0;
+            const quaseDiv = document.getElementById("quase"); quaseDiv.innerHTML = "";
+            ativas.forEach(c => {
+                const acertos = c.nums.filter(x => sorteados.includes(x)).length;
+                if (acertos === 24) {
+                    armadasNum++;
+                    quaseDiv.innerHTML += `<div class="bg-white p-1 text-[10px] border-b font-bold">#${c.n} - ${c.comprador || '---'}</div>`;
+                }
+                if (acertos === 25 && !ganhadoresLista.some(g => g.cartela === c.n)) {
+                    ganhadoresLista.push({ lugar: ganhadoresLista.length + 1, bola: ultimaBolaTxt, cartela: c.n, nome: c.comprador || '---' });
+                }
+            });
+            document.getElementById("numArmadas").innerText = armadasNum;
+            document.getElementById("listaGanhadores").innerHTML = ganhadoresLista.map(g => `<div class="bg-white p-2 rounded border-l-4 border-green-500 text-[10px] font-bold">${g.lugar}º - #${g.cartela}</div>`).join("");
+        }
+
+        // --- LÓGICA DE MOVIMENTO REFINADA ---
+        function ativarSensores() {
+            let lastX = 0, lastY = 0, lastZ = 0;
+            let sensibilidade = 25; // Aumentei para precisar de um movimento mais brusco
+
+            if (window.DeviceMotionEvent) {
+                window.addEventListener('devicemotion', (event) => {
+                    let acc = event.accelerationIncludingGravity;
+                    if(!acc.x) return;
+
+                    let deltaX = Math.abs(acc.x - lastX);
+                    let deltaY = Math.abs(acc.y - lastY);
+                    let deltaZ = Math.abs(acc.z - lastZ);
+
+                    // Se o movimento for maior que a sensibilidade e não estivermos num intervalo de bloqueio
+                    if ((deltaX > sensibilidade || deltaY > sensibilidade || deltaZ > sensibilidade) && !sorteandoAgora) {
+                        sortear();
+                    }
+
+                    lastX = acc.x; lastY = acc.y; lastZ = acc.z;
+                });
+            } else {
+                document.getElementById("sensorStatus").innerText = "X Sensor não suportado";
+                document.getElementById("sensorStatus").className = "text-[10px] text-red-500 font-bold";
+            }
+        }
+
+        document.getElementById("btnSortear").onclick = sortear;
+
+        document.getElementById("btnSom").onclick = (e) => {
+            somBolas = !somBolas;
+            e.target.innerText = `🔊 Voz: ${somBolas ? 'ON' : 'OFF'}`;
+        };
+
+        // RESET SINCRONIZADO COM TELÃO
+        document.getElementById("btnReset").onclick = async () => {
+
+            const senha = prompt("Digite a senha para resetar:");
+
+            if (senha !== SENHA_CORRETA) {
+                alert("Senha incorreta!");
+                return;
+            }
+
+            const confirmar = confirm("Tem certeza que deseja RESETAR o sorteio?");
+
+            if (!confirmar) return;
+
+            // Limpa memória local
+            sorteados = [];
+            ganhadoresLista = [];
+            ultimaBolaTxt = "--";
+
+            // Atualiza interface
+            atualizarUI();
+
+            // Sincroniza com telão e outros dispositivos
+            await set(ref(rtdb, 'live'), {
+                bingoId,
+                ultima: "--",
+                sorteados: [],
+                ganhadores: [],
+                timestamp: Date.now()
+            });
+
+            alert("Sorteio resetado com sucesso!");
+        };
+    </script>
+</body>
+</html>
