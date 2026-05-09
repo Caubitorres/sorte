@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TELÃO ONLINE - BINGO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .marcado {
+            background-color: #22c55e !important;
+            color: white !important;
+            font-weight: bold;
+            transform: scale(1.1);
+            transition: all 0.3s;
+        }
+        .grid-bingo {
+            display: grid;
+            grid-template-columns: repeat(16, minmax(0, 1fr));
+            gap: 2px;
+        }
+        @media (min-width: 768px) { .bola-gigante { font-size: 12rem; } }
+        @media (max-width: 767px) { .bola-gigante { font-size: 6rem; } }
+
+        .vibrar-tela {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+            border-color: #eab308 !important;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        .btn-som-mini {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            z-index: 100;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-sans">
+
+<div class="min-h-screen flex flex-col p-2 md:p-4">
+    <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl shadow-2xl mb-3 border-b-4 border-slate-700">
+        <div>
+            <h1 id="nomeBingo" class="text-xl md:text-3xl font-black text-yellow-500 uppercase tracking-widest">CARREGANDO...</h1>
+            <p class="text-[10px] md:text-xs text-slate-400 font-bold uppercase">
+                <span id="local">---</span> | <span id="data">--/--/--</span>
+            </p>
+        </div>
+        <div class="text-right">
+            <div id="contador" class="text-2xl md:text-4xl font-black text-white">00</div>
+            <div class="text-[10px] text-slate-400 uppercase font-bold">Bolas</div>
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-4 flex-1">
+        <div class="lg:w-1/2 flex flex-col gap-4">
+            <div id="blocoUltima" class="bg-slate-800 rounded-3xl p-6 flex flex-col items-center justify-center border-4 border-slate-700 shadow-inner relative min-h-[250px]">
+                <div class="text-sm md:text-xl font-black text-slate-500 uppercase absolute top-4">Última Bola</div>
+                <div id="ultima" class="bola-gigante font-black text-white drop-shadow-2xl">--</div>
+                <div id="painelGanhador" class="hidden bg-green-600 px-6 py-2 rounded-full text-lg md:text-2xl font-black absolute bottom-5 shadow-lg">🏆 TEMOS GANHADOR!</div>
+            </div>
+            
+            <div class="bg-red-900/30 border-2 border-red-700 p-4 rounded-2xl shadow-lg">
+                <h3 class="text-red-500 font-black text-center uppercase text-sm mb-2 italic">🔥 Cartelas Armadas!</h3>
+                <div id="quase" class="flex flex-wrap justify-center gap-2 text-xs md:text-sm font-bold"></div>
+            </div>
+        </div>
+
+        <div class="lg:w-1/2 flex flex-col gap-4">
+            <div class="bg-slate-800 p-3 rounded-2xl border-2 border-slate-700"><div id="grade"></div></div>
+            <div class="bg-slate-800 p-3 rounded-2xl border-2 border-slate-700 flex-1 min-h-[150px]">
+                <h3 class="text-yellow-500 font-black text-sm mb-2 uppercase italic">🏆 Ganhadores</h3>
+                <div class="overflow-y-auto max-h-[200px]">
+                    <table class="w-full text-left text-[10px] md:text-xs">
+                        <tbody id="ganhadores" class="text-green-400 font-bold"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button id="btnAtivarSom" class="btn-som-mini bg-red-600 text-white shadow-xl">🔇</button>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD0PhZe0AuMTA14W8vzsfn4evxBBLzh4sw",
+        authDomain: "bingodocau.firebaseapp.com",
+        projectId: "bingodocau",
+        databaseURL: "https://bingodocau-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const rtdb = getDatabase(app);
+
+    let bingoId = null;
+    let vozAtiva = false;
+    let ultimaBolaAnunciada = "";
+    let letrasCustom = ["B","I","N","G","O"];
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function somTremido() {
+        if (!vozAtiva) return;
+        const duration = 0.4; 
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square'; 
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime); 
+        for (let i = 0; i < duration; i += 0.05) {
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime + i);
+            gain.gain.setValueAtTime(0.01, audioCtx.currentTime + i + 0.025);
+        }
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function falar(texto) {
+        if (!vozAtiva) return;
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(texto);
+        msg.lang = "pt-BR";
+        window.speechSynthesis.speak(msg);
+    }
+
+    function gerarGrade() {
+        const grade = document.getElementById("grade");
+        grade.innerHTML = "";
+        let n = 1;
+        letrasCustom.forEach(l => {
+            const row = document.createElement("div");
+            row.className = "grid-bingo mb-1";
+            const label = document.createElement("div");
+            label.className = "flex items-center justify-center bg-slate-700 text-yellow-500 font-black text-[10px] md:text-sm h-6 md:h-8 rounded";
+            label.innerText = l;
+            row.appendChild(label);
+            for (let i = 0; i < 15; i++) {
+                const d = document.createElement("div");
+                d.id = `n${n}`;
+                d.className = "flex items-center justify-center border border-slate-700 text-slate-600 text-[10px] md:text-sm h-6 md:h-8 bg-slate-900 rounded";
+                d.innerText = n;
+                row.appendChild(d);
+                n++;
+            }
+            grade.appendChild(row);
+        });
+    }
+
+    async function init() {
+        const conf = await getDoc(doc(db, "configuracoes", "vendas"));
+        if (!conf.exists()) return;
+        bingoId = conf.data().bingoAtivo;
+
+        onSnapshot(doc(db, "bingos", "bingo_" + bingoId), (snap) => {
+            if (snap.exists()) {
+                const d = snap.data();
+                document.getElementById("nomeBingo").innerText = d.nome || "BINGO";
+                document.getElementById("local").innerText = d.local || "---";
+                document.getElementById("data").innerText = d.data || "--/--/--";
+                letrasCustom = d.letras ? (Array.isArray(d.letras) ? d.letras : d.letras.split("")) : ["B","I","N","G","O"];
+                gerarGrade();
+            }
+        });
+
+        onValue(ref(rtdb, "live"), (snapshot) => {
+            const dados = snapshot.val();
+            if (dados) atualizarInterface(dados);
+        });
+    }
+
+    function atualizarInterface(dados) {
+        const qtdSorteados = dados.sorteados ? dados.sorteados.length : 0;
+        document.getElementById("contador").innerText = qtdSorteados.toString().padStart(2, "0");
+        document.getElementById("ultima").innerText = dados.ultima || "--";
+
+        if (dados.ultima && dados.ultima !== "--" && dados.ultima !== ultimaBolaAnunciada) {
+            ultimaBolaAnunciada = dados.ultima;
+            const bloco = document.getElementById("blocoUltima");
+            bloco.classList.remove("vibrar-tela");
+            void bloco.offsetWidth; 
+            bloco.classList.add("vibrar-tela");
+
+            somTremido();
+            setTimeout(() => falar(dados.ultima.replace("-", " ")), 450);
+
+            // ALERTAS (40, 50, 60, 70)
+            if ([40, 50, 60, 70].includes(qtdSorteados)) {
+                setTimeout(() => falar(`Atenção: ${qtdSorteados} bolas sorteadas!`), 2500);
+            }
+        }
+
+        // GRADE
+        document.querySelectorAll('[id^="n"]').forEach(el => el.classList.remove("marcado"));
+        if (dados.sorteados) {
+            dados.sorteados.forEach(n => {
+                const el = document.getElementById(`n${n}`);
+                if (el) el.classList.add("marcado");
+            });
+        }
+
+        // GANHADORES (IGUAL AO SEU ORIGINAL)
+        document.getElementById("ganhadores").innerHTML = (dados.ganhadores || []).map(g => `
+            <tr class="border-b border-slate-700">
+                <td class="py-1">${g.lugar}º</td>
+                <td class="py-1 px-2">CART. ${g.cartela}</td>
+                <td class="py-1 uppercase">${g.nome}</td>
+            </tr>
+        `).join("");
+
+        // ARMADAS
+        document.getElementById("quase").innerHTML = (dados.armadas || []).map(a => `
+            <span class="bg-red-600 text-white px-2 py-1 rounded shadow-sm">#${a}</span>
+        `).join("");
+
+        // PAINEL GANHADOR
+        const painel = document.getElementById("painelGanhador");
+        if (dados.ganhadores && dados.ganhadores.length > 0) {
+            const ultimoG = dados.ganhadores[dados.ganhadores.length - 1];
+            if (ultimoG.totalBolas === qtdSorteados) painel.classList.remove("hidden");
+            else painel.classList.add("hidden");
+        } else {
+            painel.classList.add("hidden");
+        }
+    }
+
+    document.getElementById("btnAtivarSom").onclick = (e) => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        vozAtiva = !vozAtiva;
+        e.currentTarget.innerText = vozAtiva ? "🔊" : "🔇";
+        e.currentTarget.classList.toggle("bg-green-600", vozAtiva);
+        e.currentTarget.classList.toggle("bg-red-600", !vozAtiva);
+    };
+
+    gerarGrade();
+    init();
+</script>
+</body>
+</html>
