@@ -368,7 +368,7 @@
                 sorteados: sorteados, 
                 bolasOrdem: bolasOrdem,
                 ganhadores: ganhadoresLista,
-                armadas: cartelasArmadasFinal.map(a => a.n),
+                armadas: cartelasArmadasFinal, // Envia o objeto completo {n: cartela, nome: comprador}
                 temGanhador: ganhadoresLista.length > 0,
                 timestamp: Date.now()
             };
