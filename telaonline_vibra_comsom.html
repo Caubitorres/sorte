@@ -107,6 +107,23 @@
         window.speechSynthesis.speak(msg);
     }
 
+
+        function montarTextoBola(letra, numero) {
+            const especiais = {
+                10: "dirrombo, 10",
+                20: "dirrombo, 20",
+                30: "dirrombo, 30",
+                40: "dirrombo, 40",
+                50: "dirrombo, 50",
+                60: "dirrombo, 60",
+                70: "dirrombo, 70"
+            };
+
+            const numeroFalado = especiais[numero] || numero;
+            return `Letra ${letra}, ${numeroFalado}`;
+        }
+
+
     function gerarGrade() {
         const grade = document.getElementById("grade");
         grade.innerHTML = "";
@@ -164,7 +181,10 @@
             void bloco.offsetWidth; 
             bloco.classList.add("vibrar-tela");
             somTremido();
-            setTimeout(() => falar(dados.ultima.replace("-", " ")), 450);
+            setTimeout(() => {
+                const [letra, numero] = dados.ultima.split("-");
+                falar(montarTextoBola(letra, Number(numero)));
+            }, 450);
         }
 
         // GRADE
