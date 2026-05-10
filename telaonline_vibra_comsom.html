@@ -6,45 +6,13 @@
     <title>TELÃO ONLINE - BINGO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .marcado {
-            background-color: #22c55e !important;
-            color: white !important;
-            font-weight: bold;
-            transform: scale(1.1);
-            transition: all 0.3s;
-        }
-        .grid-bingo {
-            display: grid;
-            grid-template-columns: repeat(16, minmax(0, 1fr));
-            gap: 2px;
-        }
+        .marcado { background-color: #22c55e !important; color: white !important; font-weight: bold; transform: scale(1.1); transition: all 0.3s; }
+        .grid-bingo { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 2px; }
         @media (min-width: 768px) { .bola-gigante { font-size: 12rem; } }
         @media (max-width: 767px) { .bola-gigante { font-size: 6rem; } }
-
-        .vibrar-tela {
-            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-            border-color: #eab308 !important;
-        }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-2px, 0, 0); }
-            20%, 80% { transform: translate3d(4px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-            40%, 60% { transform: translate3d(6px, 0, 0); }
-        }
-
-        .btn-som-mini {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            z-index: 100;
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            font-size: 20px;
-        }
+        .vibrar-tela { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; border-color: #eab308 !important; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
+        .btn-som-mini { position: fixed; bottom: 15px; right: 15px; z-index: 100; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 20px; }
     </style>
 </head>
 <body class="bg-slate-900 text-white font-sans">
@@ -53,10 +21,7 @@
     <div class="flex justify-between items-center bg-slate-800 p-3 rounded-xl shadow-2xl mb-3 border-b-4 border-slate-700">
         <div>
             <h1 id="nomeBingo" class="text-xl md:text-3xl font-black text-yellow-500 uppercase tracking-widest">CARREGANDO...</h1>
-            <p class="text-[10px] md:text-xs text-slate-400 font-bold uppercase">
-                <span id="local">---</span> |
-                <span id="data">--/--/--</span>
-            </p>
+            <p class="text-[10px] md:text-xs text-slate-400 font-bold uppercase"><span id="local">---</span> | <span id="data">--/--/--</span></p>
         </div>
         <div class="text-right">
             <div id="contador" class="text-2xl md:text-4xl font-black text-white">00</div>
@@ -66,7 +31,6 @@
 
     <div class="flex flex-col lg:flex-row gap-4 flex-1">
         <div class="lg:w-1/2 flex flex-col gap-4">
-    
             <div id="blocoUltima" class="bg-slate-800 rounded-3xl p-6 flex flex-col items-center justify-center border-4 border-slate-700 shadow-inner relative min-h-[250px]">
                 <div class="text-sm md:text-xl font-black text-slate-500 uppercase absolute top-4">Última Bola</div>
                 <div id="ultima" class="bola-gigante font-black text-white drop-shadow-2xl">--</div>
@@ -74,8 +38,10 @@
             </div>
             
             <div class="bg-red-900/30 border-2 border-red-700 p-4 rounded-2xl shadow-lg">
-                <h3 class="text-red-500 font-black text-center uppercase text-sm mb-2 italic">🔥 Cartelas Armadas!</h3>
-                <div id="quase" class="flex flex-wrap justify-center gap-2 text-xs md:text-sm font-bold"></div>
+                <h3 class="text-red-500 font-black text-center uppercase text-sm mb-3 italic">
+                    🔥 Cartelas Armadas (<span id="totalArmadas">0</span>)
+                </h3>
+                <div id="quase" class="flex flex-wrap justify-center gap-3 text-xs md:text-sm font-bold pt-2"></div>
             </div>
         </div>
 
@@ -197,12 +163,8 @@
             bloco.classList.remove("vibrar-tela");
             void bloco.offsetWidth; 
             bloco.classList.add("vibrar-tela");
-
             somTremido();
             setTimeout(() => falar(dados.ultima.replace("-", " ")), 450);
-            if ([40, 50, 60, 70].includes(qtdSorteados)) {
-                setTimeout(() => falar(`Atenção: ${qtdSorteados} bolas sorteadas!`), 2500);
-            }
         }
 
         // GRADE
@@ -223,12 +185,15 @@
             </tr>
         `).join("");
 
-        // ARMADAS (ATUALIZADO COM NOME)
-        document.getElementById("quase").innerHTML = (dados.armadas || []).map(a => {
-            const num = a.n || a; // Se for objeto pega a.n, se não pega o valor direto
+        // ARMADAS (CONTADOR NO TÍTULO E LAYOUT LIMPO)
+        const listaArmadas = dados.armadas || [];
+        document.getElementById("totalArmadas").innerText = listaArmadas.length;
+        document.getElementById("quase").innerHTML = listaArmadas.map(a => {
+            const num = a.n || a; 
             const nome = a.nome || "LIVRE";
+
             return `
-                <div class="flex flex-col items-center bg-red-700 text-white px-3 py-1 rounded shadow-md min-w-[90px] border border-red-500">
+                <div class="flex flex-col items-center bg-red-700 text-white px-3 py-1 rounded shadow-md min-w-[100px] border border-red-500">
                     <span class="text-lg font-black leading-none">#${num}</span>
                     <span class="text-[9px] uppercase font-bold truncate w-full text-center border-t border-red-400 mt-1 pt-1">
                         ${nome}
