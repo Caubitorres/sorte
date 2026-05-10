@@ -200,6 +200,22 @@
 
         function falar(t) { window.speechSynthesis.cancel(); const msg = new SpeechSynthesisUtterance(t); msg.lang = 'pt-BR'; window.speechSynthesis.speak(msg); }
 
+        function montarTextoBola(letra, numero) {
+            const especiais = {
+                10: "dirrombo, 10",
+                20: "dirrombo, 20",
+                30: "dirrombo, 30",
+                40: "dirrombo, 40",
+                50: "dirrombo, 50",
+                60: "dirrombo, 60",
+                70: "dirrombo, 70"
+            };
+
+            const numeroFalado = especiais[numero] || numero;
+            return `Letra ${letra}, ${numeroFalado}`;
+        }
+
+
         function sortear() {
             const disponiveis = Array.from({length: 75}, (_, i) => i + 1).filter(x => !sorteados.includes(x));
             if (disponiveis.length === 0) return alert("Fim!");
@@ -215,7 +231,7 @@
             document.getElementById("qtdBolas").innerText = String(sorteados.length).padStart(2, '0') + " bolas";
             document.getElementById(`n${n}`).classList.add("marcado");
 
-            if (somBolas && document.hasFocus()) falar(letra + " " + n);
+            if (somBolas && document.hasFocus()) falar(montarTextoBola(letra, n));
             if (somAvisos && [40, 50, 60, 70].includes(sorteados.length)) {
                 setTimeout(() => falar(`${sorteados.length} bolas chamadas`), 1800);
             }
@@ -384,7 +400,12 @@
         document.getElementById("btnSortear").onclick = sortear;
         document.getElementById("btnSom").onclick = (e) => { somBolas = !somBolas; e.target.innerText = `🔊 Voz: ${somBolas?'ON':'OFF'}`; e.target.classList.toggle("bg-green-600", somBolas); };
         document.getElementById("btnAvisos").onclick = (e) => { somAvisos = !somAvisos; e.target.innerText = `📢 Alertas: ${somAvisos?'ON':'OFF'}`; e.target.classList.toggle("bg-green-600", somAvisos); };
-        document.getElementById("btnRepetir").onclick = () => falar(ultimaBolaTxt.replace("-", " "));
+        document.getElementById("btnRepetir").onclick = () => {
+            if (ultimaBolaTxt.includes("-")) {
+                const [letra, numero] = ultimaBolaTxt.split("-");
+                falar(montarTextoBola(letra, Number(numero)));
+            }
+        };
 
         document.getElementById("btnMovimento").onclick = () => {
             if (movimentoAtivo) {
