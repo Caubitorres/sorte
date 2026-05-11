@@ -8,10 +8,7 @@
     
     <style>
         @media print {
-            /* Oculta elementos de interface */
             .no-print { display: none !important; }
-            
-            /* Reset total do corpo para evitar espaços extras */
             body { 
                 background: white !important; 
                 margin: 0 !important; 
@@ -19,36 +16,29 @@
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact;
             }
-
-            /* Configuração da página - Remove cabeçalhos e rodapés automáticos do navegador */
             @page { 
                 size: A4; 
                 margin: 0 !important; 
             }
-
-            /* Definição estrita da folha A4 */
             .folha-a4 { 
                 width: 21cm !important;
-                height: 29.6cm !important; /* 1mm menor para segurança contra quebra de página precoce */
+                height: 29.6cm !important;
                 padding: 1.2cm !important;
                 margin: 0 auto !important;
                 page-break-after: always !important;
                 page-break-inside: avoid !important;
-                overflow: hidden !important; /* Impede que qualquer pixel "vaze" e crie nova folha */
+                overflow: hidden !important;
                 box-sizing: border-box !important;
                 display: flex !important;
                 flex-direction: column !important;
                 position: relative !important;
             }
-
-            /* REMOVE a quebra de página na última folha */
             .folha-a4:last-child { 
                 page-break-after: auto !important;
                 margin-bottom: 0 !important;
             }
         }
 
-        /* Estilos para visualização em tela */
         @media screen {
             body { background: #e2e8f0; padding: 20px; }
             .folha-a4 { 
@@ -64,7 +54,6 @@
             }
         }
 
-        }
         .folha-a4 { background: white; width: 21cm; height: 29.7cm; padding: 1.2cm; margin: 0 auto; display: flex; flex-direction: column; box-sizing: border-box; color: black; }
         
         .header-container { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 8px; }
@@ -74,8 +63,19 @@
         .box-numero .num { font-size: 46px; font-weight: 900; line-height: 1; padding: 5px; }
         .box-numero .status-label { background: #000; color: #fff; font-size: 14px; padding: 4px; font-weight: bold; text-transform: uppercase; }
         
-        .secao-venda-cliente { border-top: 1px dashed #000; border-bottom: 2px solid #000; padding: 6px 0; margin-top: 5px; display: flex; justify-content: space-between; font-weight: 900; font-size: 14px; text-transform: uppercase; }
-        
+        .secao-venda-cliente { 
+            border-top: 2px solid #000; 
+            border-bottom: 2px solid #000; 
+            padding: 4px 8px; 
+            margin-top: 5px; 
+            display: flex; 
+            justify-content: space-between; 
+            font-weight: 900; 
+            font-size: 19px; 
+            text-transform: uppercase; 
+            background-color: #f3f3f3;
+        }
+
         .grade-bingo-layout { border: 2px solid #000; display: grid; grid-template-columns: repeat(5, 1fr); width: 100%; }
         .celula { border: 1px solid #000; display: flex; align-items: center; justify-content: center; font-weight: 400; line-height: 1; }
         .letra-topo { background: #f0f0f0; border-bottom: 3px solid #000; font-weight: 900 !important; }
@@ -141,7 +141,6 @@
             const letras = b.letras.split("");
             const statusText = c.status === 'paga' ? 'PAGA' : 'RESERVADA';
 
-            // Ajuste da máscara de data: AAAA-MM-DD para DD/MM/AAAA
             const dataFormatada = b.data && b.data.includes('-') 
                 ? b.data.split('-').reverse().join('/') 
                 : (b.data || "00/00/0000");
@@ -180,7 +179,7 @@
                 
                 <div class="secao-venda-cliente">
                     <span>COMPRADOR: ${c.comprador || "---"}</span>
-                    <span>WHATSAPP: ${c.whatsapp || "---"}</span>
+                    <span>ZAP: ${c.whatsapp || "---"}</span>
                 </div>
 
                 <div class="flex-grow flex flex-col justify-center gap-2">
