@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin V3 - Gerenciador Profissional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-100 p-4 font-sans">
+
+    <div id="authOverlay" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+            <div class="bg-gradient-to-r from-blue-700 to-indigo-700 p-8 text-white">
+                <h2 class="text-3xl font-black uppercase tracking-tight">🔐 Painel Administrativo</h2>
+                <p class="text-sm mt-2 text-blue-100">Autentique-se com sua conta Google autorizada para acessar o gerenciamento completo dos bingos.</p>
+            </div>
+
+            <div class="p-8">
+                <div class="flex justify-center mb-6">
+                    <div class="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center shadow-inner">
+                        <span class="text-5xl">🎯</span>
+                    </div>
+                </div>
+
+                <button id="btnGoogleLogin" class="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition-all rounded-2xl py-4 font-black text-slate-700 shadow-sm">
+                    <svg class="w-6 h-6" viewBox="0 0 48 48">
+                        <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.659 32.657 29.243 36 24 36c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.27 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+                        <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 13 24 13c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.27 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+                        <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.222 0-9.627-3.327-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+                        <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-1.058 2.997-3.056 5.453-5.684 7.07l.003-.002 6.19 5.238C35.374 39.64 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+                    </svg>
+                    Entrar com Google
+                </button>
+
+                <p class="text-xs text-center text-slate-400 mt-6 uppercase font-bold">
+                    Acesso protegido com Firebase Authentication
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="max-w-5xl mx-auto bg-white p-8 rounded-2xl shadow-2xl border-t-8 border-blue-700">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-black text-gray-800 uppercase tracking-tighter">⚙️ Gestão de Bingos</h1>
+                <div id="statusAtivoGlobal" class="mt-2 inline-block bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-bold uppercase shadow-sm">
+                    Bingo Ativo: ...
+                </div>
+            </div>
+
+            <div class="text-right flex items-center gap-4">
+                <div id="userInfo" class="hidden items-center gap-3 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-2">
+                    <img id="userAvatar" src="" class="w-12 h-12 rounded-full border-2 border-white shadow-md">
+                    <div class="text-left">
+                        <div id="userName" class="text-sm font-black text-slate-800"></div>
+                        <div id="userEmail" class="text-[10px] text-slate-500 font-bold"></div>
+                    </div>
+                    <button id="btnLogout" class="bg-red-500 hover:bg-red-600 text-white text-xs font-black px-4 py-2 rounded-xl uppercase">
+                        Sair
+                    </button>
+                </div>
+
+                <div>
+                    <span class="block text-xs font-bold text-gray-400 uppercase">Status do Sistema</span>
+                    <span class="text-green-500 font-bold flex items-center gap-1 justify-end italic text-[10px]">● Conectado ao Firebase</span>
+                    <div id="ultimoBingoInfo" class="text-[10px] font-black text-blue-600 uppercase mt-1">Sincronizando...</div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="bg-slate-50 p-6 rounded-xl mb-8 border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+            <div>
+                <label class="block text-xs font-black text-slate-500 mb-1 uppercase">Nº do Bingo</label>
+                <input type="text" id="bingoId" readonly class="w-full text-3xl font-black border-2 border-slate-300 bg-slate-200 rounded-lg p-3 outline-none" placeholder="AUTO">
+                <button id="btnHabilitarBusca" class="text-xs text-blue-600 font-bold hover:underline mt-2">🔍 Editar bingo existente</button>
+            </div>
+            <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button id="btnCarregar" class="bg-slate-800 text-white font-bold py-4 rounded-lg hover:bg-black uppercase text-sm">Carregar Dados</button>
+                <button id="btnAtivar" class="bg-purple-600 text-white font-bold py-4 rounded-lg hover:bg-purple-700 uppercase text-sm">⭐ Deixar Ativo</button>
+                <button onclick="location.reload()" class="bg-white border-2 border-slate-300 text-slate-600 font-bold py-4 rounded-lg hover:bg-slate-100 uppercase text-sm">Novo / Limpar</button>
+            </div>
+        </div>
+
+        <div id="progressContainer" class="hidden mb-8 bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <div class="flex justify-between items-center mb-2"><span id="statusTexto" class="text-xs font-black text-blue-700 uppercase">Importando Cartelas...</span><span id="progressPercent" class="text-xs font-black text-blue-700">0%</span></div>
+            <div class="w-full bg-blue-200 rounded-full h-4"><div id="progressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-bold text-gray-700 mb-1">Nome do Evento</label>
+                <input type="text" id="nomeBingo" class="w-full border-2 p-3 rounded-lg outline-none focus:border-blue-600">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1 uppercase">Status do Bingo</label>
+                <select id="statusBingo" class="w-full border-2 p-3 rounded-lg bg-white font-bold text-sm h-[52px]">
+                    <option value="rascunho">📝 Rascunho</option>
+                    <option value="aberto">🟢 Aberto</option>
+                    <option value="andamento">🟡 Em Andamento</option>
+                    <option value="encerrado">🔴 Encerrado</option>
+                </select>
+            </div>
+
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">Letras da Cartela</label><input type="text" id="letrasBingo" placeholder="BINGO" class="w-full border-2 p-3 rounded-lg uppercase"></div>
+            <div><label class="block text-sm font-bold text-gray-700 mb-1">Local</label><input type="text" id="localBingo" class="w-full border-2 p-3 rounded-lg"></div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="w-full"><label class="block text-[10px] font-bold text-gray-400 uppercase">Data</label><input type="date" id="dataBingo" class="w-full border-2 p-3 rounded-lg"></div>
+                <div class="w-full"><label class="block text-[10px] font-bold text-gray-400 uppercase">Hora</label><input type="time" id="horaBingo" class="w-full border-2 p-3 rounded-lg"></div>
+            </div>
+            
+            <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="w-full"><label class="block text-xs font-bold text-gray-400 uppercase">Valor Cartela</label><input type="number" step="0.01" id="valorCartela" class="w-full border-2 border-green-200 p-3 rounded-lg text-green-700 font-black text-xl" placeholder="0.00"></div>
+                    <div class="w-full"><label class="block text-xs font-bold text-gray-400 uppercase">Chave PIX</label><input type="text" id="pixBingo" class="w-full border-2 p-3 rounded-lg" placeholder="PIX"></div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-orange-700 uppercase">Qtd. Chamadas Impressão</label>
+                    <select id="qtdChamadas" class="w-full border-2 border-orange-100 p-3 rounded-lg bg-orange-50 font-bold h-[52px]">
+                        <option value="1">Apenas 1ª Chamada</option>
+                        <option value="2">1ª e 2ª Chamadas</option>
+                        <option value="3">1ª, 2ª e 3ª Chamadas</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 bg-white p-6 rounded-xl border-2 border-slate-100 shadow-sm">
+            <h3 class="text-lg font-black text-slate-800 uppercase mb-4 flex items-center gap-2">🏆 Premiação Configurada</h3>
+            <div id="listaPremios" class="space-y-3"></div>
+            <button id="addPremio" type="button" class="mt-4 text-blue-600 font-bold text-xs uppercase hover:underline">+ Adicionar Linha de Prêmio</button>
+        </div>
+
+        <div class="mt-8 space-y-4">
+            <label class="block text-sm font-bold text-gray-700 uppercase">Dados Adicionais / Rodapé da Cartela</label>
+            <input type="text" id="textoRodape" class="w-full border-2 p-3 rounded-lg text-sm italic" placeholder="Ex: Proibido para menores de 18 anos.">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" id="responsavel" class="border-2 p-3 rounded-lg text-sm" placeholder="Nome do Responsável">
+                <input type="tel" id="telefone" class="border-2 p-3 rounded-lg text-sm" placeholder="Telefone de Contato">
+            </div>
+        </div>
+
+        <div class="mt-10 p-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div>
+                <h3 class="font-black text-blue-900 mb-3 uppercase text-sm italic">📥 Gestão de Cartelas</h3>
+                <input type="file" id="excelInput" accept=".xlsx, .xls" class="mb-4 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-6 file:rounded-full file:border-0 file:bg-blue-600 file:text-white file:font-bold">
+                <button id="btnExcluirCartelas" class="w-full bg-red-100 text-red-700 font-bold py-2 rounded-lg hover:bg-red-200 text-xs uppercase border border-red-200">🗑️ Limpar Cartelas do Banco</button>
+            </div>
+            <div class="flex flex-col gap-3">
+                <h3 class="font-black text-blue-900 mb-1 uppercase text-sm italic text-right">💾 Segurança de Dados</h3>
+                <button id="btnBackupLocal" class="bg-amber-500 text-white font-black py-3 rounded-xl hover:bg-amber-600 text-xs uppercase tracking-widest">💾 Gerar Backup JSON</button>
+                <label class="bg-indigo-600 text-white font-black py-3 rounded-xl hover:bg-indigo-700 text-xs uppercase tracking-widest text-center cursor-pointer">📂 Restaurar Backup<input type="file" id="importBackup" class="hidden" accept=".json"></label>
+            </div>
+        </div>
+
+        <button id="btnSalvar" class="w-full mt-10 bg-green-600 text-white font-black py-6 rounded-2xl text-2xl hover:bg-green-700 shadow-2xl transition-all uppercase">Salvar Configurações no Firebase</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+
+        // FIRESTORE RULES SEGURAS (referência):
+        // rules_version = '2';
+        // service cloud.firestore {
+        //   match /databases/{database}/documents {
+        //     match /bingos/{document=**} {
+        //       allow read: if true;
+        //       allow write: if request.auth != null;
+        //     }
+        //
+        //     match /configuracoes/{document=**} {
+        //       allow read: if true;
+        //       allow write: if request.auth != null;
+        //     }
+        //   }
+        // }
+
+        const firebaseConfig = { apiKey: "AIzaSyBV_no8knw1rZVmjK72w-v6C2_U8yyqJ7w", authDomain: "bingoprofcau.firebaseapp.com", projectId: "bingoprofcau", storageBucket: "bingoprofcau.firebasestorage.app", messagingSenderId: "928854695998", appId: "1:928854695998:web:40c01b45db3086eeaa716f" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        const authOverlay = document.getElementById('authOverlay');
+        const btnGoogleLogin = document.getElementById('btnGoogleLogin');
+        const btnLogout = document.getElementById('btnLogout');
+        const userInfo = document.getElementById('userInfo');
+        const userAvatar = document.getElementById('userAvatar');
+        const userName = document.getElementById('userName');
+        const userEmail = document.getElementById('userEmail');
+
+        function bloquearPainel(bloqueado = true) {
+            document.body.style.overflow = bloqueado ? 'hidden' : 'auto';
+            authOverlay.style.display = bloqueado ? 'flex' : 'none';
+        }
+
+        async function loginGoogle() {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                Swal.fire("Erro de autenticação", error.message, "error");
+            }
+        }
+
+        async function logoutSistema() {
+            try {
+                await signOut(auth);
+                Swal.fire("Sessão encerrada", "Logout realizado com sucesso.", "success");
+            } catch (error) {
+                Swal.fire("Erro", error.message, "error");
+            }
+        }
+
+        btnGoogleLogin.addEventListener('click', loginGoogle);
+        btnLogout.addEventListener('click', logoutSistema);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                bloquearPainel(false);
+
+                userInfo.classList.remove('hidden');
+                userInfo.classList.add('flex');
+
+                userAvatar.src = user.photoURL || "https://ui-avatars.com/api/?name=Admin";
+                userName.innerText = user.displayName || "Administrador";
+                userEmail.innerText = user.email || "";
+
+                console.log("ADMIN autenticado:", user.email);
+            } else {
+                bloquearPainel(true);
+
+                userInfo.classList.add('hidden');
+                userInfo.classList.remove('flex');
+            }
+        });
+
+
+        // --- ATUALIZAÇÃO DO ÚLTIMO ID (ANTI-TRAVAMENTO) ---
+        async function atualizarUltimoBingoUI() {
+            const label = document.getElementById('ultimoBingoInfo');
+            try {
+                // Tenta buscar ordenado (pode falhar se o índice estiver sendo excluído no console)
+                const q = query(collection(db, "bingos"), orderBy("id_numerico", "desc"), limit(1));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    label.innerText = "Último Bingo: Nº " + snap.docs[0].data().id_numerico;
+                } else {
+                    label.innerText = "Nenhum Bingo Criado";
+                }
+            } catch (e) {
+                // PLANO B: Se o índice falhar, busca manual simples
+                const snap = await getDocs(collection(db, "bingos"));
+                let max = 0;
+                snap.forEach(d => { if(d.data().id_numerico > max) max = d.data().id_numerico; });
+                label.innerText = max > 0 ? "Último Bingo: Nº " + max : "Sistema Pronto";
+            }
+        }
+        atualizarUltimoBingoUI();
+
+        // --- PREMIOS ---
+        function adicionarLinhaPremio(desc = "", tipo = "cartela_cheia") {
+            const lista = document.getElementById('listaPremios');
+            const div = document.createElement('div');
+            div.className = "grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded-lg border border-slate-200 premio-item";
+            div.innerHTML = `<span class="col-span-2 text-xs font-bold text-slate-500">${lista.children.length + 1}º</span><input type="text" value="${desc}" placeholder="Prêmio" class="col-span-6 p-2 rounded border text-sm premio-nome"><select class="col-span-3 p-2 rounded border text-xs font-bold premio-tipo"><option value="cartela_cheia" \${tipo === 'cartela_cheia' ? 'selected' : ''}>Cartela Cheia</option><option value="linha" \${tipo === 'linha' ? 'selected' : ''}>Linha</option><option value="coluna" \${tipo === 'coluna' ? 'selected' : ''}>Coluna</option></select><button type="button" class="col-span-1 text-red-500 font-bold btn-remover">×</button>`;
+            div.querySelector('.btn-remover').onclick = () => div.remove();
+            lista.appendChild(div);
+        }
+        adicionarLinhaPremio();
+        document.getElementById('addPremio').onclick = () => adicionarLinhaPremio();
+
+        // --- SALVAR ---
+        async function salvarBingo() {
+            const btn = document.getElementById('btnSalvar');
+            let id = document.getElementById('bingoId').value;
+            if(!document.getElementById('nomeBingo').value) return Swal.fire("Atenção", "Preencha o Nome do Evento", "warning");
+            
+            btn.disabled = true; btn.innerText = "⏳ SALVANDO...";
+            try {
+                if (!id || id === "AUTO") {
+                    const snap = await getDocs(collection(db, "bingos"));
+                    let max = 0; snap.forEach(d => { if(d.data().id_numerico > max) max = d.data().id_numerico; });
+                    id = (max + 1).toString();
+                }
+                const premios = Array.from(document.querySelectorAll('.premio-item')).map((it, idx) => ({ ordem: idx+1, descricao: it.querySelector('.premio-nome').value, tipoBatida: it.querySelector('.premio-tipo').value }));
+                
+                await setDoc(doc(db, "bingos", "bingo_" + id), {
+                    id_numerico: parseInt(id), 
+                    nome: document.getElementById('nomeBingo').value, 
+                    status: document.getElementById('statusBingo').value, 
+                    letras: (document.getElementById('letrasBingo').value || "BINGO").toUpperCase(), 
+                    local: document.getElementById('localBingo').value, 
+                    data: document.getElementById('dataBingo').value, 
+                    hora: document.getElementById('horaBingo').value, 
+                    valor: document.getElementById('valorCartela').value, 
+                    pix: document.getElementById('pixBingo').value, 
+                    premios, 
+                    rodape: document.getElementById('textoRodape').value, 
+                    responsavel: document.getElementById('responsavel').value, 
+                    telefone: document.getElementById('telefone').value, 
+                    qtdChamadas: document.getElementById('qtdChamadas').value, 
+                    dataCriacao: serverTimestamp()
+                }, { merge: true });
+
+                const file = document.getElementById('excelInput').files[0];
+                if(file) await processarExcel(file, id);
+                else Swal.fire("Sucesso", "Configurações do Bingo " + id + " salvas!", "success");
+                atualizarUltimoBingoUI();
+            } catch (e) { Swal.fire("Erro ao Salvar", e.message, "error"); }
+            finally { btn.disabled = false; btn.innerText = "Salvar Configurações no Firebase"; }
+        }
+
+        async function processarExcel(file, idB) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                    document.getElementById('progressContainer').classList.remove('hidden');
+                    for (let i = 0; i < json.length; i += 400) {
+                        const batch = writeBatch(db);
+                        json.slice(i, i + 400).forEach(c => { batch.set(doc(db, "bingos", "bingo_" + idB, "cartelas", String(c.N)), { n: c.N, b: [c.b1,c.b2,c.b3,c.b4,c.b5], i: [c.i1,c.i2,c.i3,c.i4,c.i5], n_col: [c.n1,c.n2,c.n3,c.n4,c.n5], g: [c.g1,c.g2,c.g3,c.g4,c.g5], o: [c.o1,c.o2,c.o3,c.o4,c.o5], status: "livre" }); });
+                        await batch.commit();
+                        let p = Math.round(((i+400)/json.length)*100); 
+                        document.getElementById('progressBar').style.width = Math.min(p, 100) + "%"; 
+                        document.getElementById('progressPercent').innerText = Math.min(p, 100) + "%";
+                    }
+                    Swal.fire("Sucesso", "Cartelas Importadas!", "success"); 
+                    document.getElementById('progressContainer').classList.add('hidden'); 
+                    resolve();
+                }; reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // --- CARREGAR DADOS ---
+        document.getElementById('btnCarregar').onclick = async () => {
+            const id = document.getElementById('bingoId').value;
+            if(!id || id === "AUTO") return Swal.fire("Info", "Digite o número de um bingo existente", "info");
+            const snap = await getDoc(doc(db, "bingos", "bingo_" + id));
+            if(snap.exists()){
+                const d = snap.data();
+                document.getElementById('nomeBingo').value = d.nome || "";
+                document.getElementById('letrasBingo').value = d.letras || "";
+                document.getElementById('localBingo').value = d.local || "";
+                document.getElementById('dataBingo').value = d.data || "";
+                document.getElementById('horaBingo').value = d.hora || "";
+                document.getElementById('valorCartela').value = d.valor || "";
+                document.getElementById('pixBingo').value = d.pix || "";
+                document.getElementById('statusBingo').value = d.status || "rascunho";
+                document.getElementById('textoRodape').value = d.rodape || "";
+                document.getElementById('responsavel').value = d.responsavel || "";
+                document.getElementById('telefone').value = d.telefone || "";
+                document.getElementById('qtdChamadas').value = d.qtdChamadas || "1";
+                document.getElementById('listaPremios').innerHTML = "";
+                if(d.premios) d.premios.forEach(p => adicionarLinhaPremio(p.descricao, p.tipoBatida));
+                Swal.fire("Carregado!", "Dados do Bingo " + id + " preenchidos.", "success");
+            } else {
+                Swal.fire("Não encontrado", "Bingo " + id + " não existe no banco.", "error");
+            }
+        };
+
+        // --- EXCLUIR CARTELAS ---
+        document.getElementById('btnExcluirCartelas').onclick = async () => {
+            const id = document.getElementById('bingoId').value; if(!id || id === "AUTO") return;
+            const conf = await Swal.fire({ title: 'Apagar Cartelas?', text: "Isso removerá todas as cartelas do Bingo " + id + " mas manterá as configurações.", icon: 'warning', showCancelButton: true });
+            if(conf.isConfirmed) {
+                Swal.fire({ title: 'Limpando banco...', didOpen: () => Swal.showLoading() });
+                const snap = await getDocs(collection(db, "bingos", "bingo_" + id, "cartelas"));
+                const batch = writeBatch(db); snap.forEach(d => batch.delete(d.ref)); await batch.commit();
+                Swal.fire("Limpo!", "Cartelas removidas com sucesso.", "success");
+            }
+        };
+
+        // --- BACKUPS ---
+        document.getElementById('btnBackupLocal').onclick = () => {
+            const d = { 
+                nome: document.getElementById('nomeBingo').value, 
+                letras: document.getElementById('letrasBingo').value, 
+                local: document.getElementById('localBingo').value,
+                premios: Array.from(document.querySelectorAll('.premio-item')).map(it => ({ desc: it.querySelector('.premio-nome').value, tipo: it.querySelector('.premio-tipo').value })) 
+            };
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(d)], {type: 'application/json'})); a.download = `backup_bingo.json`; a.click();
+        };
+
+        document.getElementById('importBackup').onchange = (e) => {
+            const reader = new FileReader(); reader.onload = (ev) => {
+                const d = JSON.parse(ev.target.result); 
+                document.getElementById('nomeBingo').value = d.nome || ""; 
+                document.getElementById('letrasBingo').value = d.letras || "BINGO";
+                document.getElementById('localBingo').value = d.local || "";
+                document.getElementById('listaPremios').innerHTML = ""; 
+                if(d.premios) d.premios.forEach(p => adicionarLinhaPremio(p.desc, p.tipo));
+                Swal.fire("Backup Restaurado", "Não esqueça de clicar em SALVAR para persistir os dados.", "success");
+            }; reader.readAsText(e.target.files[0]);
+        };
+
+        // ESCUTADOR DE STATUS ATIVO
+        onSnapshot(doc(db, "configuracoes", "vendas"), snap => { if(snap.exists()) document.getElementById('statusAtivoGlobal').innerText = "Bingo Ativo: " + snap.data().bingoAtivo; });
+        
+        document.getElementById('btnAtivar').onclick = async () => {
+            const id = document.getElementById('bingoId').value; if(!id || id === "AUTO") return;
+            await setDoc(doc(db, "configuracoes", "vendas"), { bingoAtivo: id }, { merge: true });
+            Swal.fire("Ativado!", "O Bingo " + id + " agora é o bingo oficial para os jogadores.", "success");
+        };
+
+        document.getElementById('btnHabilitarBusca').onclick = () => { const b = document.getElementById('bingoId'); b.readOnly = false; b.classList.remove('bg-slate-200'); b.value = ""; b.focus(); };
+        document.getElementById('btnSalvar').onclick = salvarBingo;
+    </script>
+</body>
+</html>
