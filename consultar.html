@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validador de Cartelas - Bingo Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4 font-sans">
+
+    <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 p-6 text-center">
+        <div class="mb-6">
+            <span class="bg-indigo-600/20 text-indigo-400 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                Sistema de Auditoria
+            </span>
+            <h1 class="text-2xl font-black tracking-tight mt-2 text-slate-100">VALIDADOR BINGO PRO</h1>
+            <p class="text-slate-400 text-sm mt-1">Verificação de autenticidade em tempo real</p>
+        </div>
+
+        <div id="loader" class="py-12 flex flex-col items-center justify-center gap-3">
+            <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-slate-400 text-sm font-medium">Buscando dados no Firebase...</p>
+        </div>
+
+        <div id="resultado" class="hidden">
+            <div id="statusBox" class="rounded-xl p-6 mb-6 border transition-all duration-300">
+                <div id="statusIcon" class="text-5xl mb-2">⏳</div>
+                <h2 id="statusTexto" class="text-3xl font-black uppercase tracking-wide">Verificando</h2>
+            </div>
+
+            <div class="bg-slate-850 border border-slate-700 rounded-xl p-4 text-left space-y-3 text-sm">
+                <div class="flex justify-between border-b border-slate-700 pb-2">
+                    <span class="text-slate-400 font-medium">Bingo ID:</span>
+                    <span id="detalheBingo" class="font-bold text-slate-200">---</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-700 pb-2">
+                    <span class="text-slate-400 font-medium">Cartela Nº:</span>
+                    <span id="detalheCartela" class="font-bold text-xl text-indigo-400">---</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-700 pb-2">
+                    <span class="text-slate-400 font-medium">Comprador:</span>
+                    <span id="detalheComprador" class="font-bold text-slate-200 uppercase">---</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400 font-medium">WhatsApp/Zap:</span>
+                    <span id="detalheZap" class="font-bold text-slate-200">---</span>
+                </div>
+            </div>
+
+            <button onclick="window.close()" class="mt-6 w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 rounded-xl transition-all text-sm uppercase tracking-wider">
+                Fechar Verificação
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Importação nativa do Firebase SDK v10
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Configuração idêntica ao seu ecossistema atual
+        const firebaseConfig = {
+          apiKey: "AIzaSyDfRcdka1HBccxWSvmFP8fimnDU6Pwow9k",
+          authDomain: "bingoprof01.firebaseapp.com",
+          projectId: "bingoprof01",
+          storageBucket: "bingoprof01.firebasestorage.app",
+          messagingSenderId: "168409241400",
+          appId: "1:168409241400:web:e784dba90334ec35ae53cd"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function validarCartela() {
+            const loader = document.getElementById('loader');
+            const resultado = document.getElementById('resultado');
+            
+            const statusBox = document.getElementById('statusBox');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusTexto = document.getElementById('statusTexto');
+
+            // Elementos de detalhes
+            const detalheBingo = document.getElementById('detalheBingo');
+            const detalheCartela = document.getElementById('detalheCartela');
+            const detalheComprador = document.getElementById('detalheComprador');
+            const detalheZap = document.getElementById('detalheZap');
+
+            // 1. Pega os parâmetros passados pelo QR Code na URL (?id=XXX&cartela=YYY)
+            const params = new URLSearchParams(window.location.search);
+            const idBingo = String(params.get('id') || "").replace(/bingo_/gi, '').trim();
+            const numCartela = params.get('cartela');
+
+            if (!idBingo || !numCartela) {
+                mostrarErro("URL Inválida", "Faltam parâmetros de leitura.");
+                return;
+            }
+
+            try {
+                // 2. Faz a consulta em tempo real direto na subcoleção de cartelas do Firebase
+                const cartelaRef = doc(db, "bingos", "bingo_" + idBingo, "cartelas", String(numCartela));
+                const cartelaSnap = await getDoc(cartelaRef);
+
+                loader.classList.add('hidden');
+                resultado.classList.remove('hidden');
+
+                if (cartelaSnap.exists()) {
+                    const dados = cartelaSnap.data();
+                    const statusAtual = String(dados.status || "").toLowerCase().trim();
+
+                    // Preenche a ficha técnica da cartela na tela
+                    detalheBingo.innerText = `#${idBingo}`;
+                    detalheCartela.innerText = numCartela;
+                    detalheComprador.innerText = dados.comprador || "Não Informado";
+                    detalheZap.innerText = dados.whatsapp || "Não Informado";
+
+                    // 3. Estiliza a tela dinamicamente baseando-se no Status Real da Gestão
+                    if (statusAtual === 'paga') {
+                        statusBox.className = "rounded-xl p-6 mb-6 border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/5";
+                        statusIcon.innerText = "✅";
+                        statusTexto.innerText = "Cartela Paga";
+                    } else if (statusAtual === 'reservada') {
+                        statusBox.className = "rounded-xl p-6 mb-6 border bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-lg shadow-amber-500/5";
+                        statusIcon.innerText = "⚠️";
+                        statusTexto.innerText = "Reservada";
+                    } else {
+                        statusBox.className = "rounded-xl p-6 mb-6 border bg-slate-700/30 border-slate-600 text-slate-300";
+                        statusIcon.innerText = "❔";
+                        statusTexto.innerText = dados.status || "Pendente";
+                    }
+
+                } else {
+                    mostrarErro("Não Encontrada", `A cartela nº ${numCartela} não existe neste bingo.`);
+                }
+            } catch (error) {
+                console.error(error);
+                mostrarErro("Erro de Conexão", "Falha ao consultar o banco de dados.");
+            }
+        }
+
+        function mostrarErro(titulo, subtitulo) {
+            document.getElementById('loader').classList.add('hidden');
+            const resultado = document.getElementById('resultado');
+            resultado.classList.remove('hidden');
+
+            const statusBox = document.getElementById('statusBox');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusTexto = document.getElementById('statusTexto');
+
+            statusBox.className = "rounded-xl p-6 mb-6 border bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-lg shadow-rose-500/5";
+            statusIcon.innerText = "❌";
+            statusTexto.innerText = titulo;
+            
+            document.getElementById('detalheBingo').innerText = "Erro";
+            document.getElementById('detalheCartela').innerText = "---";
+            document.getElementById('detalheComprador').innerText = subtitulo;
+            document.getElementById('detalheZap').innerText = "---";
+        }
+
+        // Executa a validação assim que a página abre
+        validarCartela();
+    </script>
+</body>
+</html>
