@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Impressão em Lote - Bingo Pro V4.4</title>
+    <title>Impressão em Lote - Bingo Pro V5.0 (Ajuste de Margens)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
@@ -56,21 +56,30 @@
 
         .folha-a4 { background: white; width: 21cm; height: 29.7cm; padding: 1.2cm; margin: 0 auto; display: flex; flex-direction: column; box-sizing: border-box; color: black; }
         
-        .header-container { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #000; padding-bottom: 8px; }
+        .header-container { display: flex; justify-content: space-between; align-items: stretch; border-bottom: 4px solid #000; padding-bottom: 14px; }
         .info-evento { display: flex; flex-direction: column; flex-grow: 1; }
-        .box-numero { border: 4px solid #000; text-align: center; min-width: 145px; margin-left: 15px; }
-        .box-numero .label { font-size: 12px; border-bottom: 2px solid #000; padding: 2px; font-weight: bold; }
-        .box-numero .num { font-size: 46px; font-weight: 900; line-height: 1; padding: 5px; }
-        .box-numero .status-label { background: #000; color: #fff; font-size: 14px; padding: 4px; font-weight: bold; text-transform: uppercase; }
+        
+        .box-numero-retangular { 
+            border: 2px solid #000; 
+            text-align: center; 
+            width: 135px; 
+            margin-left: 20px; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+        .box-numero-retangular .label { font-size: 11px; border-bottom: 2px solid #000; padding: 4px; font-weight: 900; letter-spacing: 0.05em; }
+        .box-numero-retangular .num { font-size: 40px; font-weight: 900; line-height: 1; padding: 4px 0; }
+        .box-numero-retangular .status-label { background: #000; color: #fff; font-size: 13px; padding: 5px; font-weight: 900; text-transform: uppercase; }
         
         .secao-venda-cliente { 
             border-top: 2px solid #000; 
             border-bottom: 2px solid #000; 
-            padding: 4px 8px; 
-            margin-top: 5px; 
+            padding: 6px 10px; 
+            margin-top: 8px; 
             display: flex; 
             justify-content: space-between; 
-            font-weight: 900; 
             font-size: 19px; 
             text-transform: uppercase; 
             background-color: #f3f3f3;
@@ -81,11 +90,12 @@
         .letra-topo { background: #f0f0f0; border-bottom: 3px solid #000; font-weight: 900 !important; }
 
         [data-chamadas="1"] .celula { height: 105px; font-size: 75px; }
-        [data-chamadas="2"] .celula { height: 58px; font-size: 42px; }
+        [data-chamadas="2"] .celula { height: 50px; font-size: 38px; }
+        [data-chamadas="2"] .letra-topo { height: 44px; }
         [data-chamadas="3"] .celula { height: 48px; font-size: 38px; }
         
         .wrapper-chamada { display: flex; flex-direction: column; align-items: center; width: 100%; }
-        .titulo-chamada-selo { background: #000; color: #fff; padding: 3px 25px; font-size: 12px; font-weight: 900; text-transform: uppercase; border-radius: 5px 5px 0 0; width: fit-content; margin-top: 4px; }
+        .titulo-chamada-selo { background: #000; color: #fff; padding: 4px 28px; font-size: 13px; font-weight: 900; text-transform: uppercase; border-radius: 5px 5px 0 0; width: fit-content; margin-top: 4px; }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
@@ -100,57 +110,95 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyD0PhZe0AuMTA14W8vzsfn4evxBBLzh4sw",
-            authDomain: "bingodocau.firebaseapp.com",
-            projectId: "bingodocau",
-            storageBucket: "bingodocau.firebasestorage.app",
-            messagingSenderId: "1052598479472",
-            appId: "1:1052598479472:web:a0b2477b5cdbe9528ce2b5"
-        };
+       const firebaseConfig = {
+  apiKey: "AIzaSyB1bQdY2gf_H0iMLDHpUV8QndHKAL0pBrw",
+  authDomain: "bingoprof02.firebaseapp.com",
+  projectId: "bingoprof02",
+  storageBucket: "bingoprof02.firebasestorage.app",
+  messagingSenderId: "755685896288",
+  appId: "1:755685896288:web:5fa9b3befec5d2bdb59305"
+};
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
         async function carregarLote() {
             const params = new URLSearchParams(window.location.search);
-            const idB = params.get('id');
+            const idB = String(params.get('id') || "").replace(/bingo_/gi, '').trim();
+            if(!idB) return;
+
             const zapFiltro = (params.get('whats') || "").replace(/\D/g, "");
-            if(!idB || !zapFiltro) return;
+            const inicioFiltro = parseInt(params.get('inicio')) || 0;
+            const fimFiltro = parseInt(params.get('fim')) || Infinity;
+            const statusFiltro = params.get('status') || "todos";
 
             const bSnap = await getDoc(doc(db, "bingos", "bingo_" + idB));
-            const cSnap = await getDocs(collection(db, "bingos", "bingo_" + idB, "cartelas"));
+            const cSnap = await getDocs(query(collection(db, "cartelas_publicas"), where("bingoId", "==", Number(idB))));
 
             if(bSnap.exists()) {
                 const bingo = bSnap.data();
                 let cartelas = [];
+                
                 cSnap.forEach(doc => {
                     const c = doc.data();
-                    if((c.whatsapp || "").replace(/\D/g, "") === zapFiltro) cartelas.push({ id: doc.id, ...c });
+                    const numCartela = Number(c.n);
+                    const zapCartela = (c.whatsapp || c.whatsappComprador || "").replace(/\D/g, "");
+
+                    if (zapFiltro) {
+                        if (zapCartela === zapFiltro) cartelas.push({ id: doc.id, ...c });
+                    } else {
+                        const passaNumero = numCartela >= inicioFiltro && numCartela <= fimFiltro;
+                        const passaStatus = statusFiltro === 'todos' || c.status === statusFiltro;
+                        if (passaNumero && passaStatus) cartelas.push({ id: doc.id, ...c });
+                    }
                 });
+                
                 cartelas.sort((a, b) => Number(a.n) - Number(b.n));
+                
                 const renderArea = document.getElementById('renderArea');
-                cartelas.forEach(c => renderArea.innerHTML += criarTemplate(bingo, c));
+                renderArea.innerHTML = "";
+
+                if (cartelas.length === 0) {
+                    renderArea.innerHTML = `
+                        <div class="no-print max-w-2xl mx-auto bg-white p-8 rounded-xl shadow text-center">
+                            <h2 class="text-xl font-black text-red-600 mb-2">Nenhuma cartela encontrada para impressão</h2>
+                            <p class="text-sm text-gray-600">Confira se o WhatsApp digitado é o mesmo usado na reserva ou se as cartelas estão salvas em cartelas_publicas.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                cartelas.forEach(c => {
+                    renderArea.innerHTML += criarTemplate(bingo, c, idB);
+                });
             }
         }
 
-        function criarTemplate(b, c) {
+        function criarTemplate(b, c, idB) {
             const qtd = parseInt(b.qtdChamadas || "1");
-            const letras = b.letras.split("");
-            const statusText = c.status === 'paga' ? 'PAGA' : 'RESERVADA';
+            const letras = (b.letras || "BINGO").split("");
+            
+            // Tratamento do status para exibir dinamicamente o texto correto
+            let statusText = 'LIVRE';
+            if (c.status === 'paga') statusText = 'PAGA';
+            if (c.status === 'reservada') statusText = 'RESERVADA';
+            if (c.status === 'livres') statusText = 'LIVRE';
+            
+            const todasDezenas = [];
+            for(let i=0; i<5; i++) todasDezenas.push(c.b[i], c.i[i], c.n_col[i], c.g[i], c.o[i]);
 
             const dataFormatada = b.data && b.data.includes('-') 
                 ? b.data.split('-').reverse().join('/') 
-                : (b.data || "00/00/0000");
+                : (b.data || "_____/_____/_______");
 
             const gradeHtml = (titulo, isHalf = false) => `
                 <div class="wrapper-chamada ${isHalf ? 'flex-1' : 'w-full'}">
                     <div class="titulo-chamada-selo">${titulo}</div>
                     <div class="grade-bingo-layout">
                         ${letras.map(l => `<div class="celula letra-topo">${l}</div>`).join("")}
-                        ${[...c.b, ...c.i, ...c.n_col, ...c.g, ...c.o].map(n => `<div class="celula">${n}</div>`).join("")}
+                        ${todasDezenas.map(n => `<div class="celula">${n}</div>`).join("")}
                     </div>
                 </div>`;
 
@@ -161,28 +209,49 @@
             return `
             <div class="folha-a4" data-chamadas="${qtd}">
                 <div class="header-container">
-                    <div class="info-evento">
-                        <h1 class="text-5xl font-black uppercase leading-none mb-1">${b.nome}</h1>
-                        <div class="text-[14px] font-bold uppercase tracking-tight">LOCAL: ${b.local}</div>
-                        <div class="text-[14px] font-bold uppercase tracking-tight mt-0.5">
-                            DATA: ${dataFormatada} ÀS ${b.hora} | VALOR: R$ ${b.valor}
+                    <div class="info-evento justify-between">
+                        <div class="text-center bg-gray-50 border-2 border-black rounded-xl px-4 py-2 w-full shadow-sm">
+                            <h1 class="text-[44px] font-black uppercase leading-none tracking-tight text-black break-words">
+                                ${b.nome}
+                            </h1>
+                        </div>
+                        
+                        <div class="flex flex-col gap-1.5 mt-3 pl-1">
+                            <div class="text-[18px] uppercase text-gray-950 leading-tight">
+                                <span class="font-black">LOCAL:</span> <span class="font-medium">${b.local || "____________________________________________"}</span>
+                            </div>
+                            <div class="text-[18px] uppercase text-gray-950 leading-tight">
+                                <span class="font-black">DATA:</span> <span class="font-medium">${dataFormatada} ÀS ${b.hora || "____:____"}h.</span> 
+                                <span class="mx-3 font-black text-gray-400">|</span> 
+                                <span class="font-black">VALOR:</span> <span class="font-medium">R$ ${Number(b.valor || 0).toFixed(2).replace('.', ',')}</span>
+                            </div>
+                            <div class="text-[18px] uppercase text-gray-950 leading-tight">
+                                <span class="font-black">BINGO Nº:</span> <span class="font-medium">${idB}</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="box-numero">
+
+                    <div class="box-numero-retangular rounded-xl">
                         <div class="label">CARTELA Nº</div>
                         <div class="num">${c.n}</div>
                         <div class="status-label">${statusText}</div>
                     </div>
                 </div>
                 
-                <div class="text-[16px] font-extrabold uppercase mt-2 border-l-8 border-black pl-3 py-0.5">PRÊMIOS: ${b.premios || "---"}</div>
+                <div class="text-[20px] uppercase mt-2.5 pl-1 py-0.5 leading-tight">
+                    <span class="font-black">PRÊMIOS:</span> <span class="font-medium">${
+                        Array.isArray(b.premios)
+                        ? b.premios.map(p => `${p.ordem || ''}º ${p.descricao || ''}`).join(' | ')
+                        : (b.premios || "---")
+                    }</span>
+                </div>
                 
                 <div class="secao-venda-cliente">
-                    <span>COMPRADOR: ${c.comprador || "---"}</span>
-                    <span>ZAP: ${c.whatsapp || "---"}</span>
+                    <span><span class="font-black">COMPRADOR:</span> <span class="font-medium">${c.nomeComprador || c.comprador || ""}</span></span>
+                    <span><span class="font-black">ZAP:</span> <span class="font-medium">${c.whatsapp || c.whatsappComprador || "____________"}</span></span>
                 </div>
 
-                <div class="flex-grow flex flex-col justify-center gap-2">
+                <div class="flex-grow flex flex-col justify-center ${qtd == 2 ? 'gap-1' : 'gap-2'}">
                     ${corpo}
                 </div>
 
