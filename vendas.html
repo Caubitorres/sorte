@@ -7,12 +7,15 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { background: #f1f5f9; }
-        .cartela-item { transition: all 0.2s; cursor: pointer; height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 20px; font-weight: 700; border: 2px solid #eee; background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.04); }
-        .cartela-item.livre { border-color: #22c55e; color: #16a34a; background: linear-gradient(to bottom, #ffffff, #f0fdf4); }
-        .cartela-item.selecionada { background: linear-gradient(to right, #2563eb, #4f46e5) !important; color: white !important; border-color: #1d4ed8 !important; transform: scale(1.05); z-index: 10; }
-        .cartela-item.reservada { background-color: #f59e0b !important; color: white !important; border: none; cursor: not-allowed; }
-        .cartela-item.paga, .cartela-item.vendida { background-color: #ef4444 !important; color: white !important; border: none; cursor: not-allowed; }
+        body { 
+            background: radial-gradient(circle at top, #e0ecff 0%, #f8fafc 45%, #eef2f7 100%);
+            min-height: 100vh;
+        }
+        .cartela-item { transition: all 0.22s ease; cursor: pointer; height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 22px; font-weight: 800; border: 1.5px solid #e5e7eb; background: rgba(255,255,255,0.96); box-shadow: 0 10px 24px rgba(15,23,42,0.06); }
+        .cartela-item.livre { border-color: #86efac; color: #15803d; background: linear-gradient(to bottom, #ffffff, #f0fdf4); }
+        .cartela-item.selecionada { background: linear-gradient(135deg, #2563eb, #7c3aed) !important; color: white !important; border-color: #1d4ed8 !important; transform: scale(1.05); z-index: 10; }
+        .cartela-item.reservada { background: linear-gradient(135deg, #f59e0b, #d97706) !important; color: white !important; border: none; cursor: not-allowed; }
+        .cartela-item.paga, .cartela-item.vendida { background: linear-gradient(135deg, #ef4444, #b91c1c) !important; color: white !important; border: none; cursor: not-allowed; }
         
         .cartela-item.minha-cartela { 
             background-color: #8b5cf6 !important; 
@@ -20,11 +23,188 @@
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
         }
 
-        #gradeCartelas { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 10px; }
+        .cartela-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(15,23,42,0.10);
+        }
+
+        .cartela-item.selecionada:hover,
+        .cartela-item.reservada:hover,
+        .cartela-item.paga:hover,
+        .cartela-item.vendida:hover {
+            transform: scale(1.04);
+        }
+
+        #gradeCartelas { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 12px; }
         #loading { position: fixed; inset: 0; background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.04); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .hidden { display: none; }
-        .secao-titulo { font-size: 16px; color: #222; border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 15px; text-transform: uppercase; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
-    </style>
+        .secao-titulo { font-size: 15px; color: #0f172a; border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 15px; text-transform: uppercase; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
+
+        @media (max-width: 640px) {
+            body { padding-left: 6px; padding-right: 6px; }
+            #gradeCartelas { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 8px; }
+            .cartela-item { height: 58px; border-radius: 18px; font-size: 14px; }
+            #txtNomeBingo { font-size: 2rem; }
+            .secao-titulo { font-size: 13px; align-items: flex-start; gap: 10px; }
+            .secao-titulo .flex { flex-wrap: wrap; justify-content: flex-end; }
+            #carrinho { padding: 16px; }
+            #listaDezenasContainer { max-height: 160px; }
+            #controlesCarrinho { align-items: stretch; }
+            #btnConfirmar { width: 100%; padding-top: 14px; padding-bottom: 14px; }
+            #txtTotal { font-size: 1.55rem; }
+        }
+
+        input {
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+        }
+
+        button {
+            transition: all 0.2s ease;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .cartela-item.livre::after {
+            content: "livre";
+            font-size: 8px;
+            text-transform: uppercase;
+            margin-top: 1px;
+            opacity: .65;
+            letter-spacing: .04em;
+        }
+
+        .cartela-item.selecionada::after,
+        .cartela-item.reservada::after,
+        .cartela-item.paga::after,
+        .cartela-item.vendida::after {
+            content: "";
+            display: none;
+        }
+
+
+        .info-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            padding: 7px 12px;
+            box-shadow: 0 6px 16px rgba(15,23,42,.05);
+            font-size: 12px;
+            font-weight: 800;
+            color: #334155;
+        }
+
+        .premios-box {
+            background: linear-gradient(135deg, #fff7ed, #ffffff);
+            border: 1px solid #fed7aa;
+            border-radius: 18px;
+            padding: 10px 14px;
+            box-shadow: 0 8px 20px rgba(251,146,60,.08);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 11px;
+            border-radius: 999px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1d4ed8;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        @media (max-width: 640px) {
+            header {
+                padding: 14px !important;
+                margin-bottom: 18px !important;
+            }
+
+            #txtNomeBingo {
+                font-size: 1.85rem !important;
+                line-height: 1.05 !important;
+                margin-bottom: 8px !important;
+            }
+
+            .info-chip {
+                flex: 1 1 calc(50% - 6px);
+                justify-content: center;
+                font-size: 10px;
+                padding: 6px 8px;
+                min-height: 34px;
+                white-space: nowrap;
+            }
+
+            .status-pill {
+                font-size: 10px;
+                padding: 5px 10px;
+            }
+
+            .premios-box {
+                margin-top: 10px !important;
+                padding: 8px 10px;
+                font-size: 11px;
+                max-height: 58px;
+                overflow-y: auto;
+            }
+        }
+
+    
+
+        @media (max-width: 640px) {
+
+            #txtLocal {
+                max-width: 95%;
+                line-height: 1.2;
+            }
+
+            .status-pill {
+                font-size: 10px;
+                padding: 5px 10px;
+            }
+
+            .premios-box {
+                margin-top: 10px !important;
+                padding: 8px 10px;
+                font-size: 11px;
+                max-height: 58px;
+                overflow-y: auto;
+            }
+        }
+
+
+
+        @media (max-width: 640px) {
+            header {
+                padding: 13px !important;
+                margin-bottom: 16px !important;
+            }
+
+            header .max-w-2xl {
+                font-size: 12px !important;
+                line-height: 1.4 !important;
+                padding-left: 4px;
+                padding-right: 4px;
+            }
+
+            .premios-box {
+                margin-top: 8px !important;
+                padding: 7px 9px !important;
+                font-size: 11px !important;
+                line-height: 1.25 !important;
+            }
+        }
+
+</style>
 </head>
 <body class="pb-40 font-sans">
 
@@ -33,60 +213,77 @@
         <p class="text-[10px] font-bold text-gray-400 uppercase text-center">Sincronizando dados...</p>
     </div>
 
-    <div class="max-w-4xl mx-auto p-4 bg-white mt-6 rounded-[40px] shadow-2xl border border-slate-100">
-        <header class="text-center mb-8 pb-6 border-b border-slate-100">
-            <h1 id="txtNomeBingo" class="text-4xl font-black text-slate-800 mb-2 tracking-tight uppercase">BINGO</h1>
-            <div class="text-[13px] text-gray-600 leading-relaxed font-medium">
-                <p>
-                    LOCAL: <span id="txtLocal" class="text-black font-bold uppercase">CARREGANDO...</span> | 
-                    DATA: <span id="txtData" class="text-black font-bold">--/--/----</span> | 
-                    HORA: <span id="txtHora" class="text-black font-bold">--:--</span>
-                </p>
-                <p class="mt-1">
-                    VALOR: <span class="text-green-600 font-bold">R$ <span id="txtValor">0,00</span></span>
-                </p>
-                <p class="mt-1">
-                    PRÊMIOS: <span id="txtPremios" class="text-black font-bold">CARREGANDO...</span>
-                </p>
-                <p class="mt-1">
-                    BINGO Nº: <span id="txtNumeroBingo" class="text-black font-bold">--</span> | 
-                    STATUS: <span id="txtStatusBingo" class="font-bold text-blue-600 uppercase">CARREGANDO...</span>
-                </p>
+    <div class="max-w-4xl mx-auto p-5 md:p-7 bg-white/95 backdrop-blur mt-6 rounded-[34px] shadow-2xl border border-white/80">
+        <header class="text-center mb-6 pb-6 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white rounded-[28px] p-6 shadow-sm">
+            <h1 id="txtNomeBingo" class="text-3xl md:text-5xl font-black text-slate-900 mb-2 tracking-tight uppercase leading-tight">BINGO</h1>
+            
+            
+            <div class="mt-4 max-w-2xl mx-auto text-left text-[13px] md:text-[14px] font-bold text-slate-700 leading-relaxed space-y-1.5 px-1">
+
+                <div>
+                    <span class="font-black text-slate-500 uppercase">Data:</span>
+                    <span id="txtData" class="text-slate-900 font-black">--/--/----</span>
+                    <span class="mx-2 text-slate-300">|</span>
+                    <span class="font-black text-slate-500 uppercase">Hora:</span>
+                    <span id="txtHora" class="text-slate-900 font-black">--:--</span>
+                </div>
+
+                <div>
+                    <span class="font-black text-slate-500 uppercase">Local:</span>
+                    <span id="txtLocal" class="text-slate-900 font-black uppercase">CARREGANDO...</span>
+                </div>
+
+                <div>
+                    <span class="font-black text-slate-500 uppercase">Bingo:</span>
+                    <span id="txtNumeroBingo" class="text-slate-900 font-black">--</span>
+                    <span class="px-1 text-slate-500">-</span>
+                    <span id="txtStatusBingo" class="text-slate-900 font-black uppercase">CARREGANDO...</span>
+                </div>
+
+                <div>
+                    <span class="font-black text-emerald-700 uppercase">Valor da cartela:</span>
+                    <span class="font-black text-emerald-800">R$ <span id="txtValor">0,00</span></span>
+                </div>
+
+            </div>
+
+<div class="premios-box mt-3 text-[13px] text-slate-700 leading-snug text-center">
+                <span class="font-black text-orange-700 uppercase">🏆 Prêmios:</span>
+                <span id="txtPremios" class="text-slate-900 font-black">CARREGANDO...</span>
             </div>
         </header>
 
         <div class="secao-titulo">
             <span>1. Identificação</span>
             <div class="flex gap-2">
-                <button onclick="verMinhasCartelas()" class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-500 px-3 py-1.5 rounded font-bold transition-all">
+                <button onclick="verMinhasCartelas()" class="text-[10px] bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg font-black transition-all shadow-sm">
                     🔍 VER MINHAS CARTELAS
                 </button>
-                <button onclick="limparDados()" class="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-500 px-3 py-1.5 rounded font-bold transition-all">
+                <button onclick="limparDados()" class="text-[10px] bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1.5 rounded-lg font-black transition-all shadow-sm">
                     ✕ LIMPAR
                 </button>
             </div>
         </div>
 
-        <section id="sessaoUsuario" class="bg-slate-50 p-6 rounded-3xl border border-slate-200 mb-8">
+        <section id="sessaoUsuario" class="bg-gradient-to-br from-slate-50 to-white p-6 rounded-3xl border border-slate-200 mb-8 shadow-sm">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-1">
-                    <input type="text" id="compNome" placeholder="Nome e Sobrenome" class="p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-semibold">
+                    <input type="text" id="compNome" placeholder="Nome e Sobrenome" class="p-4 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-semibold shadow-sm">
                 </div>
                 <div class="flex flex-col gap-1">
-                    <input type="tel" id="compZap" placeholder="WhatsApp (84) 99999-9999" class="p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-semibold">
+                    <input type="tel" id="compZap" placeholder="WhatsApp (84) 99999-9999" class="p-4 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-semibold shadow-sm">
                 </div>
             </div>
         </section>
+<div class="secao-titulo"><span>2. Escolha sua Cartela</span></div>
 
-        <div class="secao-titulo"><span>2. Escolha sua Cartela</span></div>
-
-        <div class="flex flex-wrap justify-between items-center p-5 bg-slate-50 border border-slate-200 rounded-3xl mb-6 shadow-sm">
-            <div class="flex gap-4 text-xs font-bold uppercase">
+        <div class="flex flex-wrap justify-between items-center p-5 bg-white border border-slate-200 rounded-3xl mb-6 shadow-md shadow-slate-100">
+            <div class="flex flex-wrap gap-3 text-xs font-black uppercase">
                 <span class="text-green-600">Livres: <span id="totalLivres">0</span></span>
                 <span class="text-yellow-600">Reserv.: <span id="totalReservadas">0</span></span>
                 <span class="text-red-600">Pagas: <span id="totalPagas">0</span></span>
             </div>
-            <div class="flex gap-4 text-[10px] text-gray-500 font-bold uppercase">
+            <div class="flex flex-wrap gap-3 text-[10px] text-slate-500 font-black uppercase">
                 <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-full border-2 border-green-500"></div> Livre</div>
                 <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-full bg-yellow-500"></div> Reservada</div>
                 <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded-full bg-red-500"></div> Paga</div>
@@ -97,11 +294,11 @@
         <div id="gradeCartelas" class="mb-10"></div>
     </div>
 
-    <div id="carrinho" class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-6 shadow-[0_-15px_35px_rgba(0,0,0,0.08)] transform translate-y-full transition-transform duration-300 z-50 rounded-t-[40px] border-x">
+    <div id="carrinho" class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 p-5 md:p-6 shadow-[0_-18px_40px_rgba(15,23,42,0.14)] transform translate-y-full transition-transform duration-300 z-50 rounded-t-[34px] border-x">
         <div class="max-w-4xl mx-auto">
-            <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
-                <h3 class="font-bold text-gray-800 uppercase text-sm tracking-wider" id="tituloCarrinho">Resumo do Pedido</h3>
-                <button onclick="document.getElementById('carrinho').classList.add('translate-y-full')" class="text-xs text-gray-400 hover:text-red-500 font-bold uppercase transition-colors">Fechar ✕</button>
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+                <h3 class="font-black text-slate-800 uppercase text-sm tracking-wider" id="tituloCarrinho">Resumo do Pedido</h3>
+                <button onclick="document.getElementById('carrinho').classList.add('translate-y-full')" class="text-xs text-gray-400 hover:text-red-500 font-black uppercase transition-colors bg-slate-50 px-3 py-1.5 rounded-lg">Fechar ✕</button>
             </div>
 
             <div id="etapaReserva">
@@ -112,7 +309,7 @@
                         <p id="txtQuantResumo" class="text-[10px] font-bold uppercase text-gray-400">0 CARTELAS SELECIONADAS</p>
                         <p id="txtTotal" class="text-2xl font-black text-green-600">R$ 0,00</p>
                     </div>
-                    <button id="btnConfirmar" class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-95 text-white font-bold px-10 py-4 rounded-xl text-sm uppercase transition-all active:scale-95 shadow-xl shadow-blue-100">
+                    <button id="btnConfirmar" class="w-full sm:w-auto bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 hover:opacity-95 text-white font-bold px-10 py-4 rounded-xl text-sm uppercase transition-all active:scale-95 shadow-xl shadow-blue-100">
                         RESERVAR AGORA
                     </button>
                 </div>
@@ -134,16 +331,16 @@
                 </div>
 
                 <div class="flex flex-col gap-3">
-                    <button id="btnCopiarPix" class="bg-gray-50 border border-gray-200 p-4 rounded-xl text-xs font-mono flex justify-between items-center hover:bg-gray-100 transition-colors">
+                    <button id="btnCopiarPix" class="bg-white border border-slate-200 p-4 rounded-2xl text-xs font-mono flex justify-between items-center hover:bg-slate-50 transition-colors shadow-sm">
                         <span id="chavePixTexto" class="truncate mr-4 text-gray-600 font-bold">CARREGANDO...</span>
                         <span class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-[10px] font-black uppercase">Copiar PIX</span>
                     </button>
 
-                    <button id="btnWhatsConfirmar" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl text-sm uppercase flex items-center justify-center gap-2 shadow-lg shadow-green-100 transition-all">
+                    <button id="btnWhatsConfirmar" class="bg-gradient-to-r from-green-600 to-emerald-700 hover:opacity-95 text-white font-black py-4 rounded-2xl text-sm uppercase flex items-center justify-center gap-2 shadow-lg shadow-green-100 transition-all">
                         ENVIAR COMPROVANTE
                     </button>
 
-                    <button onclick="location.reload()" class="bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold py-3 rounded-xl text-[10px] uppercase tracking-widest transition-all">
+                    <button onclick="location.reload()" class="bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all">
                         Finalizar e Voltar
                     </button>
                 </div>
@@ -186,6 +383,25 @@ let dadosBingo = {};
 let bloqueado = false;
 let todasCartelasDados = [];
 let unsubscribeCartelas = null;
+
+function normalizarBingoId(valor) {
+    if (valor === null || valor === undefined) return null;
+    const texto = String(valor).trim();
+    if (!texto) return null;
+    const numero = texto.replace(/^bingo_/i, '');
+    const convertido = Number(numero);
+    return Number.isFinite(convertido) && convertido > 0 ? convertido : null;
+}
+
+function docIdBingo(id) {
+    const numero = normalizarBingoId(id);
+    return numero ? `bingo_${numero}` : null;
+}
+
+function docIdCartela(id, n) {
+    const numero = normalizarBingoId(id);
+    return numero ? `bingo_${numero}_cartela_${Number(n)}` : null;
+}
 
 // --- FUNÇÃO PARA MASCARAR O NOME (Ex: "João Silva" -> "João S.") ---
 function mascararNome(nomeCompleto) {
@@ -286,15 +502,15 @@ function gerarPixCopiaECola(chave, nome, cidade, valor, idBingo) {
 function traduzirStatus(status) {
     switch ((status || '').toLowerCase()) {
         case 'aberto':
-            return '🟢 VENDAS ABERTAS';
+            return 'VENDAS ABERTAS';
         case 'andamento':
-            return '🟡 EM ANDAMENTO';
+            return 'EM ANDAMENTO';
         case 'encerrado':
-            return '🔴 ENCERRADO';
+            return 'ENCERRADO';
         case 'rascunho':
-            return '⚪ RASCUNHO';
+            return 'RASCUNHO';
         default:
-            return '🟢 VENDAS ABERTAS';
+            return 'VENDAS ABERTAS';
     }
 }
 
@@ -315,6 +531,7 @@ window.limparDados = () => {
     if (confirm('Deseja limpar seu nome e WhatsApp salvos?')) {
         localStorage.removeItem('user_nome');
         localStorage.removeItem('user_zap');
+        localStorage.removeItem('reserva_id');
         document.getElementById('compNome').value = '';
         document.getElementById('compZap').value = '';
         document.querySelectorAll('.minha-cartela').forEach(el => el.classList.remove('minha-cartela'));
@@ -378,7 +595,7 @@ window.verMinhasCartelas = async () => {
             const numCartela = String(c.n).padStart(2,'0');
 
             container.innerHTML += `
-                <div class="bg-gray-50 p-3 rounded-lg border-l-4 border-purple-500">
+                <div class="bg-gray-50 p-3 rounded-xl border-l-4 border-purple-500 shadow-sm">
                     <div class="text-purple-700 font-black text-[12px] mb-1">
                         Cartela ${numCartela}
                         <span class="text-[10px] text-gray-400">(${(c.status || '').toUpperCase()})</span>
@@ -418,19 +635,20 @@ async function init() {
         const idViaLink = urlParams.get('id');
 
         if (idViaLink) {
-            bingoId = Number(idViaLink);
+            bingoId = normalizarBingoId(idViaLink);
         } else {
             const configSnap = await getDoc(doc(db, 'configuracoes', 'vendas'));
             if (configSnap.exists()) {
-                bingoId = Number(configSnap.data().bingoAtivo);
+                bingoId = normalizarBingoId(configSnap.data().bingoAtivo);
             }
         }
 
-        if (!bingoId) throw new Error('Nenhum bingo definido');
+        if (!bingoId) throw new Error('Nenhum bingo definido em configuracoes/vendas.bingoAtivo ou no link ?id=');
 
-        const bingoDoc = await getDoc(doc(db, 'bingos', `bingo_${bingoId}`));
+        const idDocBingo = docIdBingo(bingoId);
+        const bingoDoc = await getDoc(doc(db, 'bingos', idDocBingo));
         if (!bingoDoc.exists()) {
-            throw new Error('Bingo não encontrado');
+            throw new Error(`Bingo não encontrado em bingos/${idDocBingo}`);
         }
 
         dadosBingo = bingoDoc.data();
@@ -454,7 +672,7 @@ async function init() {
     } catch (e) {
         console.error(e);
         document.getElementById('loading').style.display = 'none';
-        alert('Erro ao carregar o bingo.');
+        alert('Erro ao carregar o bingo: ' + (e.message || e));
     }
 }
 
@@ -496,12 +714,14 @@ function carregarCartelas() {
             const ocupada = ['reservada', 'vendida', 'paga'].includes(status);
 
             div.className = `cartela-item ${ocupada ? status : 'livre'}`;
+            div.dataset.whatsapp = (c.whatsapp || c.whatsappComprador || '').replace(/\D/g, '');
 
             if (ocupada) {
                 // EXIBE O NOME MASCARADO (EX: JOÃO S.) CASO EXISTA NO BANCO, SENÃO EXIBE O STATUS
                 let textoExibicao = status.toUpperCase();
-                if (c.nomeComprador) {
-                    textoExibicao = mascararNome(c.nomeComprador);
+                const nomeExibicao = c.nomeComprador || c.comprador || '';
+                if (nomeExibicao) {
+                    textoExibicao = mascararNome(nomeExibicao);
                 }
 
                 div.innerHTML = `
@@ -568,7 +788,7 @@ function renderCarrinho() {
             const numCartela = String(c.n).padStart(2,'0');
 
             container.innerHTML += `
-                <div class="bg-blue-50 p-2 rounded-lg border border-blue-100 text-[12px] leading-relaxed break-words">
+                <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 text-[12px] leading-relaxed break-words shadow-sm">
                     <span class="text-blue-800 font-black">
                         Cartela ${numCartela} -
                     </span>
@@ -599,7 +819,7 @@ document.getElementById('btnConfirmar').onclick = async () => {
 
             // --- FASE 1: APENAS LEITURAS ---
             for (const c of selecionadas) {
-                const ref = doc(db, 'cartelas_publicas', `bingo_${bingoId}_cartela_${c.n}`);
+                const ref = doc(db, 'cartelas_publicas', docIdCartela(bingoId, c.n));
                 const snap = await transaction.get(ref);
 
                 if (!snap.exists()) {
@@ -618,7 +838,10 @@ document.getElementById('btnConfirmar').onclick = async () => {
             for (const ref of referencias) {
                 transaction.update(ref, {
                     status: 'reservada',
-                    nomeComprador: nome, // SALVA O NOME DO COMPRADOR NA CARTELA PÚBLICA
+                    nomeComprador: nome,
+                    comprador: nome,
+                    whatsapp: zap.replace(/\D/g, ''),
+                    whatsappComprador: zap.replace(/\D/g, ''),
                     dataReserva: serverTimestamp()
                 });
             }
@@ -626,6 +849,16 @@ document.getElementById('btnConfirmar').onclick = async () => {
 
         localStorage.setItem('user_nome', nome);
         localStorage.setItem('user_zap', zap);
+
+        const reservaRef = await addDoc(collection(db, 'reservas_privadas'), {
+            bingoId: Number(bingoId),
+            nomeComprador: nome,
+            whatsapp: zap.replace(/\D/g, ''),
+            cartelas: selecionadas.map(c => Number(c.n)),
+            status: 'reservada',
+            dataReserva: serverTimestamp()
+        });
+        localStorage.setItem('reserva_id', reservaRef.id);
 
         const totalCalculado = selecionadas.length * valorUnitario;
 
@@ -730,7 +963,6 @@ document.getElementById('btnCopiarPix').onclick = () => {
 document.getElementById('btnWhatsConfirmar').onclick = () => {
     const nome = document.getElementById('compNome').value;
     const cartelas = selecionadas.map(c => c.n).join(', ');
-    const reservaId = localStorage.getItem('reserva_id') || '';
 
     const valorTotal = (selecionadas.length * valorUnitario).toLocaleString('pt-BR', {
         style: 'currency',
@@ -744,26 +976,30 @@ document.getElementById('btnWhatsConfirmar').onclick = () => {
         numLimpo = '55' + numLimpo;
     }
 
+    const numeroBingoFormatado = String(bingoId).padStart(2, '0');
+    const nomeBingo = dadosBingo.nome || 'Bingo';
+
     let msg = '';
 
     if (valorUnitario === 0) {
 
-        msg = `Olá! Realizei a minha inscrição gratuita no bingo *${dadosBingo.nome}*.
+        msg = `Olá! Realizei a minha inscrição gratuita.
 
 👤 *Nome:* ${nome}
-🎟️ *Cartelas:* ${cartelas}
+🎟️ *Bingo:* ${numeroBingoFormatado} - ${nomeBingo}
+📋 *Cartelas:* ${cartelas}
 
-Confirme minha vaga!`;
+Pode confirmar minha vaga?`;
 
     } else {
 
-        msg = `Olá! Acabei de reservar cartelas no *${dadosBingo.nome}*.
+        msg = `Olá! Acabei de reservar cartelas no BINGO Nº ${numeroBingoFormatado} - ${nomeBingo.toUpperCase()}.
 
-👤 *Nome:* ${nome}
-🎟️ *Cartelas:* ${cartelas}
-💰 *Total:* ${valorTotal}
+👤 Nome: ${nome}
+🎟️ Cartelas: ${cartelas}
+💰 Total: ${valorTotal}
 
-Vou te mandar o comprovante!\n🆔 Reserva: ${reservaId}`;
+Vou te mandar o comprovante!`;
     }
 
     window.open(`https://wa.me/${numLimpo}?text=${encodeURIComponent(msg)}`);
