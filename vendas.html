@@ -187,25 +187,6 @@ let bloqueado = false;
 let todasCartelasDados = [];
 let unsubscribeCartelas = null;
 
-function normalizarBingoId(valor) {
-    if (valor === null || valor === undefined) return null;
-    const texto = String(valor).trim();
-    if (!texto) return null;
-    const numero = texto.replace(/^bingo_/i, '');
-    const convertido = Number(numero);
-    return Number.isFinite(convertido) && convertido > 0 ? convertido : null;
-}
-
-function docIdBingo(id) {
-    const numero = normalizarBingoId(id);
-    return numero ? `bingo_${numero}` : null;
-}
-
-function docIdCartela(id, n) {
-    const numero = normalizarBingoId(id);
-    return numero ? `bingo_${numero}_cartela_${Number(n)}` : null;
-}
-
 // --- FUNÇÃO PARA MASCARAR O NOME (Ex: "João Silva" -> "João S.") ---
 function mascararNome(nomeCompleto) {
     if (!nomeCompleto) return "";
@@ -341,6 +322,7 @@ window.limparDados = () => {
     }
 };
 
+
 window.verMinhasCartelas = async () => {
     const zapDigitado = document.getElementById('compZap').value;
     const zapSalvo = localStorage.getItem('user_zap');
@@ -351,29 +333,23 @@ window.verMinhasCartelas = async () => {
         return;
     }
 
-    const reservaId = localStorage.getItem('reserva_id');
-    if (!reservaId) {
-        alert('Nenhuma reserva encontrada neste aparelho.');
-        return;
-    }
+    const cartelasEncontradas = todasCartelasDados.filter(c => {
+        const zapCartela = (c.whatsapp || c.whatsappComprador || '').replace(/\D/g, '');
 
-    const reservaSnap = await getDoc(doc(db, 'reservas_privadas', reservaId));
-
-    if (!reservaSnap.exists()) {
-        alert('Reserva não encontrada.');
-        return;
-    }
-
-    const dadosReserva = reservaSnap.data();
-
-    const cartelasEncontradas = todasCartelasDados.filter(c =>
-        (dadosReserva.cartelas || []).includes(c.n)
-    );
+        return (
+            Number(c.bingoId) === Number(bingoId) &&
+            zapCartela === zapParaBusca
+        );
+    });
 
     if (cartelasEncontradas.length > 0) {
+
         document.querySelectorAll('.cartela-item').forEach(div => {
-            if (div.dataset.whatsapp === zapParaBusca) div.classList.add('minha-cartela');
-            else div.classList.remove('minha-cartela');
+            if (div.dataset.whatsapp === zapParaBusca) {
+                div.classList.add('minha-cartela');
+            } else {
+                div.classList.remove('minha-cartela');
+            }
         });
 
         const container = document.getElementById('listaDezenasContainer');
@@ -394,7 +370,10 @@ window.verMinhasCartelas = async () => {
 
         controles.classList.add('hidden');
 
-        cartelasEncontradas.sort((a,b) => Number(a.n) - Number(b.n)).forEach(c => {
+        cartelasEncontradas
+            .sort((a,b) => Number(a.n) - Number(b.n))
+            .forEach(c => {
+
             const dezenas = [...c.b, ...c.i, ...c.n_col, ...c.g, ...c.o].join(' ');
             const numCartela = String(c.n).padStart(2,'0');
 
@@ -412,6 +391,7 @@ window.verMinhasCartelas = async () => {
         });
 
         cart.classList.remove('translate-y-full');
+
     } else {
         alert('Nenhuma cartela encontrada para este número.');
     }
@@ -438,20 +418,19 @@ async function init() {
         const idViaLink = urlParams.get('id');
 
         if (idViaLink) {
-            bingoId = normalizarBingoId(idViaLink);
+            bingoId = Number(idViaLink);
         } else {
             const configSnap = await getDoc(doc(db, 'configuracoes', 'vendas'));
             if (configSnap.exists()) {
-                bingoId = normalizarBingoId(configSnap.data().bingoAtivo);
+                bingoId = Number(configSnap.data().bingoAtivo);
             }
         }
 
-        if (!bingoId) throw new Error('Nenhum bingo definido em configuracoes/vendas.bingoAtivo ou no link ?id=');
+        if (!bingoId) throw new Error('Nenhum bingo definido');
 
-        const idDocBingo = docIdBingo(bingoId);
-        const bingoDoc = await getDoc(doc(db, 'bingos', idDocBingo));
+        const bingoDoc = await getDoc(doc(db, 'bingos', `bingo_${bingoId}`));
         if (!bingoDoc.exists()) {
-            throw new Error(`Bingo não encontrado em bingos/${idDocBingo}`);
+            throw new Error('Bingo não encontrado');
         }
 
         dadosBingo = bingoDoc.data();
@@ -475,7 +454,7 @@ async function init() {
     } catch (e) {
         console.error(e);
         document.getElementById('loading').style.display = 'none';
-        alert('Erro ao carregar o bingo: ' + (e.message || e));
+        alert('Erro ao carregar o bingo.');
     }
 }
 
@@ -517,7 +496,6 @@ function carregarCartelas() {
             const ocupada = ['reservada', 'vendida', 'paga'].includes(status);
 
             div.className = `cartela-item ${ocupada ? status : 'livre'}`;
-            div.dataset.whatsapp = (c.whatsapp || '').replace(/\D/g, '');
 
             if (ocupada) {
                 // EXIBE O NOME MASCARADO (EX: JOÃO S.) CASO EXISTA NO BANCO, SENÃO EXIBE O STATUS
@@ -621,7 +599,7 @@ document.getElementById('btnConfirmar').onclick = async () => {
 
             // --- FASE 1: APENAS LEITURAS ---
             for (const c of selecionadas) {
-                const ref = doc(db, 'cartelas_publicas', docIdCartela(bingoId, c.n));
+                const ref = doc(db, 'cartelas_publicas', `bingo_${bingoId}_cartela_${c.n}`);
                 const snap = await transaction.get(ref);
 
                 if (!snap.exists()) {
@@ -640,10 +618,7 @@ document.getElementById('btnConfirmar').onclick = async () => {
             for (const ref of referencias) {
                 transaction.update(ref, {
                     status: 'reservada',
-                    nomeComprador: nome,
-                    comprador: nome,
-                    whatsapp: zap.replace(/\D/g, ''),
-                    whatsappComprador: zap.replace(/\D/g, ''),
+                    nomeComprador: nome, // SALVA O NOME DO COMPRADOR NA CARTELA PÚBLICA
                     dataReserva: serverTimestamp()
                 });
             }
@@ -651,16 +626,6 @@ document.getElementById('btnConfirmar').onclick = async () => {
 
         localStorage.setItem('user_nome', nome);
         localStorage.setItem('user_zap', zap);
-
-        const reservaRef = await addDoc(collection(db, 'reservas_privadas'), {
-            bingoId: Number(bingoId),
-            nomeComprador: nome,
-            whatsapp: zap.replace(/\D/g, ''),
-            cartelas: selecionadas.map(c => Number(c.n)),
-            status: 'reservada',
-            dataReserva: serverTimestamp()
-        });
-        localStorage.setItem('reserva_id', reservaRef.id);
 
         const totalCalculado = selecionadas.length * valorUnitario;
 
@@ -788,7 +753,7 @@ document.getElementById('btnWhatsConfirmar').onclick = () => {
 👤 *Nome:* ${nome}
 🎟️ *Cartelas:* ${cartelas}
 
-Pode confirmar minha vaga?`;
+Confirme minha vaga!`;
 
     } else {
 
