@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -6,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Venda de Cartelas - Bingo Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { background-color: #f4f7f9; }
-        .cartela-item { transition: all 0.2s; cursor: pointer; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; font-weight: 700; border: 2px solid #eee; background: white; }
-        .cartela-item.livre { border-color: #22c55e; color: #22c55e; }
-        .cartela-item.selecionada { background-color: #7dd3fc !important; color: #0369a1 !important; border-color: #0ea5e9 !important; transform: scale(1.05); z-index: 10; }
+        body { background: #f1f5f9; }
+        .cartela-item { transition: all 0.2s; cursor: pointer; height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 20px; font-weight: 700; border: 2px solid #eee; background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.04); }
+        .cartela-item.livre { border-color: #22c55e; color: #16a34a; background: linear-gradient(to bottom, #ffffff, #f0fdf4); }
+        .cartela-item.selecionada { background: linear-gradient(to right, #2563eb, #4f46e5) !important; color: white !important; border-color: #1d4ed8 !important; transform: scale(1.05); z-index: 10; }
         .cartela-item.reservada { background-color: #f59e0b !important; color: white !important; border: none; cursor: not-allowed; }
         .cartela-item.paga, .cartela-item.vendida { background-color: #ef4444 !important; color: white !important; border: none; cursor: not-allowed; }
         
@@ -21,31 +21,36 @@
         }
 
         #gradeCartelas { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 10px; }
-        #loading { position: fixed; inset: 0; background: white; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #loading { position: fixed; inset: 0; background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.04); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .hidden { display: none; }
-        .secao-titulo { font-size: 16px; color: #222; border-left: 4px solid #333; padding-left: 10px; margin-bottom: 15px; text-transform: uppercase; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
+        .secao-titulo { font-size: 16px; color: #222; border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 15px; text-transform: uppercase; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
     </style>
 </head>
 <body class="pb-40 font-sans">
 
     <div id="loading">
         <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600 mb-2"></div>
-        <p class="text-[10px] font-bold text-gray-400 uppercase text-center">Sincronizando Dados...</p>
+        <p class="text-[10px] font-bold text-gray-400 uppercase text-center">Sincronizando dados...</p>
     </div>
 
-    <div class="max-w-4xl mx-auto p-4 bg-white mt-6 rounded-xl shadow-sm border border-gray-100">
-        <!-- Cabeçalho Estilo "Vendas" -->
-        <header class="text-center mb-8 pb-6 border-b-2 border-gray-50">
-            <h1 id="txtNomeBingo" class="text-3xl font-black text-gray-800 mb-2 tracking-tight uppercase">BINGO</h1>
+    <div class="max-w-4xl mx-auto p-4 bg-white mt-6 rounded-[40px] shadow-2xl border border-slate-100">
+        <header class="text-center mb-8 pb-6 border-b border-slate-100">
+            <h1 id="txtNomeBingo" class="text-4xl font-black text-slate-800 mb-2 tracking-tight uppercase">BINGO</h1>
             <div class="text-[13px] text-gray-600 leading-relaxed font-medium">
                 <p>
-                    DATA: <span id="txtData" class="text-black font-bold">--/--/----</span> | 
                     LOCAL: <span id="txtLocal" class="text-black font-bold uppercase">CARREGANDO...</span> | 
+                    DATA: <span id="txtData" class="text-black font-bold">--/--/----</span> | 
                     HORA: <span id="txtHora" class="text-black font-bold">--:--</span>
                 </p>
                 <p class="mt-1">
-                    VALOR: <span class="text-green-600 font-bold">R$ <span id="txtValor">0,00</span></span> | 
+                    VALOR: <span class="text-green-600 font-bold">R$ <span id="txtValor">0,00</span></span>
+                </p>
+                <p class="mt-1">
                     PRÊMIOS: <span id="txtPremios" class="text-black font-bold">CARREGANDO...</span>
+                </p>
+                <p class="mt-1">
+                    BINGO Nº: <span id="txtNumeroBingo" class="text-black font-bold">--</span> | 
+                    STATUS: <span id="txtStatusBingo" class="font-bold text-blue-600 uppercase">CARREGANDO...</span>
                 </p>
             </div>
         </header>
@@ -61,8 +66,8 @@
                 </button>
             </div>
         </div>
-        
-        <section id="sessaoUsuario" class="bg-[#fafafa] p-5 rounded-lg border border-gray-200 mb-8">
+
+        <section id="sessaoUsuario" class="bg-slate-50 p-6 rounded-3xl border border-slate-200 mb-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="flex flex-col gap-1">
                     <input type="text" id="compNome" placeholder="Nome e Sobrenome" class="p-3 border border-gray-300 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm font-semibold">
@@ -75,8 +80,7 @@
 
         <div class="secao-titulo"><span>2. Escolha sua Cartela</span></div>
 
-        <!-- Painel de Status Estilo "Vendas" -->
-        <div class="flex flex-wrap justify-between items-center p-4 bg-white border border-gray-200 rounded-lg mb-6 shadow-sm">
+        <div class="flex flex-wrap justify-between items-center p-5 bg-slate-50 border border-slate-200 rounded-3xl mb-6 shadow-sm">
             <div class="flex gap-4 text-xs font-bold uppercase">
                 <span class="text-green-600">Livres: <span id="totalLivres">0</span></span>
                 <span class="text-yellow-600">Reserv.: <span id="totalReservadas">0</span></span>
@@ -93,292 +97,716 @@
         <div id="gradeCartelas" class="mb-10"></div>
     </div>
 
-    <!-- CARRINHO -->
-    <div id="carrinho" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 shadow-[0_-10px_25px_rgba(0,0,0,0.05)] transform translate-y-full transition-transform duration-300 z-50 rounded-t-3xl border-x">
+    <div id="carrinho" class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-6 shadow-[0_-15px_35px_rgba(0,0,0,0.08)] transform translate-y-full transition-transform duration-300 z-50 rounded-t-[40px] border-x">
         <div class="max-w-4xl mx-auto">
             <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
                 <h3 class="font-bold text-gray-800 uppercase text-sm tracking-wider" id="tituloCarrinho">Resumo do Pedido</h3>
                 <button onclick="document.getElementById('carrinho').classList.add('translate-y-full')" class="text-xs text-gray-400 hover:text-red-500 font-bold uppercase transition-colors">Fechar ✕</button>
             </div>
-            
+
             <div id="etapaReserva">
                 <div id="listaDezenasContainer" class="max-h-32 overflow-y-auto mb-4 text-[12px] space-y-2"></div>
+
                 <div id="controlesCarrinho" class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
                     <div class="text-center sm:text-left">
                         <p id="txtQuantResumo" class="text-[10px] font-bold uppercase text-gray-400">0 CARTELAS SELECIONADAS</p>
                         <p id="txtTotal" class="text-2xl font-black text-green-600">R$ 0,00</p>
                     </div>
-                    <button id="btnConfirmar" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold px-10 py-4 rounded-xl text-sm uppercase transition-all active:scale-95 shadow-md shadow-blue-100">RESERVAR AGORA</button>
+                    <button id="btnConfirmar" class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-95 text-white font-bold px-10 py-4 rounded-xl text-sm uppercase transition-all active:scale-95 shadow-xl shadow-blue-100">
+                        RESERVAR AGORA
+                    </button>
                 </div>
             </div>
 
             <div id="etapaPagamento" class="hidden">
-                <div class="text-center mb-6">
+                <div class="text-center mb-4">
                     <p class="text-blue-600 font-black text-base uppercase">Reserva Confirmada!</p>
-                    <p class="text-[11px] text-gray-400 font-bold uppercase mt-1">Realize o pagamento para validar suas cartelas</p>
-                    <div class="mt-4 py-3 px-6 bg-green-50 rounded-xl inline-block border border-green-100">
+                    <p id="subtituloPagamento" class="text-[11px] text-gray-400 font-bold uppercase mt-1">Realize o pagamento para validar suas cartelas</p>
+                    <div class="mt-3 py-2 px-5 bg-green-50 rounded-xl inline-block border border-green-100">
                         <span class="text-[10px] text-green-700 uppercase font-bold">Total a Pagar:</span>
                         <span id="txtTotalFinal" class="text-2xl font-black text-green-600 ml-2">R$ 0,00</span>
                     </div>
                 </div>
+
+                <div id="boxQrCode" class="flex flex-col items-center justify-center p-3 bg-slate-50 border border-slate-200 rounded-2xl mb-3">
+                    <p class="text-[10px] font-black text-slate-500 uppercase mb-2">Escaneie o QR Code para Pagar:</p>
+                    <div id="qrcode" class="p-2 bg-white rounded-lg border border-gray-100 shadow-sm"></div>
+                </div>
+
                 <div class="flex flex-col gap-3">
                     <button id="btnCopiarPix" class="bg-gray-50 border border-gray-200 p-4 rounded-xl text-xs font-mono flex justify-between items-center hover:bg-gray-100 transition-colors">
                         <span id="chavePixTexto" class="truncate mr-4 text-gray-600 font-bold">CARREGANDO...</span>
                         <span class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-[10px] font-black uppercase">Copiar PIX</span>
                     </button>
+
                     <button id="btnWhatsConfirmar" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl text-sm uppercase flex items-center justify-center gap-2 shadow-lg shadow-green-100 transition-all">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .004 5.412.001 12.049a11.82 11.82 0 001.592 5.95L0 24l6.192-1.623a11.808 11.808 0 005.854 1.543h.005c6.637 0 12.046-5.412 12.049-12.05a11.83 11.83 0 00-3.483-8.52z"/></svg>
                         ENVIAR COMPROVANTE
                     </button>
-                    <button onclick="location.reload()" class="bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold py-3 rounded-xl text-[10px] uppercase tracking-widest transition-all">Finalizar e Voltar</button>
+
+                    <button onclick="location.reload()" class="bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold py-3 rounded-xl text-[10px] uppercase tracking-widest transition-all">
+                        Finalizar e Voltar
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+    getFirestore,
+    doc,
+    getDoc,
+    collection,
+    onSnapshot,
+    runTransaction,
+    addDoc,
+    query,
+    where,
+    getDocs,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyD0PhZe0AuMTA14W8vzsfn4evxBBLzh4sw",
-            authDomain: "bingodocau.firebaseapp.com",
-            projectId: "bingodocau",
-            storageBucket: "bingodocau.firebasestorage.app",
-            messagingSenderId: "1052598479472",
-            appId: "1:1052598479472:web:a0b2477b5cdbe9528ce2b5"
-        };
+const firebaseConfig = {
+    apiKey: "AIzaSyB1bQdY2gf_H0iMLDHpUV8QndHKAL0pBrw",
+    authDomain: "bingoprof02.firebaseapp.com",
+    projectId: "bingoprof02",
+    storageBucket: "bingoprof02.firebasestorage.app",
+    messagingSenderId: "755685896288",
+    appId: "1:755685896288:web:5fa9b3befec5d2bdb59305"
+};
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        let bingoId = null; let valorUnitario = 0; let selecionadas = []; let dadosBingo = {}; let bloqueado = false;
-        let todasCartelasDados = [];
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-        window.imprimirLote = () => {
-            const zapDigitado = document.getElementById('compZap').value;
-            const zapSalvo = localStorage.getItem('user_zap');
-            const zapParaBusca = (zapDigitado || zapSalvo || "").replace(/\D/g, "");
+let bingoId = null;
+let valorUnitario = 0;
+let selecionadas = [];
+let dadosBingo = {};
+let bloqueado = false;
+let todasCartelasDados = [];
+let unsubscribeCartelas = null;
 
-            if (zapParaBusca && bingoId) {
-                const url = `cartela_impressao.html?id=${bingoId}&whats=${zapParaBusca}`;
-                window.open(url, '_blank');
-            } else {
-                alert("Erro ao identificar dados para impressão.");
-            }
-        };
+function normalizarBingoId(valor) {
+    if (valor === null || valor === undefined) return null;
+    const texto = String(valor).trim();
+    if (!texto) return null;
+    const numero = texto.replace(/^bingo_/i, '');
+    const convertido = Number(numero);
+    return Number.isFinite(convertido) && convertido > 0 ? convertido : null;
+}
 
-        window.limparDados = () => {
-            if(confirm("Deseja limpar seu nome e WhatsApp salvos?")) {
-                localStorage.removeItem('user_nome');
-                localStorage.removeItem('user_zap');
-                document.getElementById('compNome').value = "";
-                document.getElementById('compZap').value = "";
-                document.querySelectorAll('.minha-cartela').forEach(el => el.classList.remove('minha-cartela'));
-                document.getElementById('carrinho').classList.add('translate-y-full');
-            }
-        };
+function docIdBingo(id) {
+    const numero = normalizarBingoId(id);
+    return numero ? `bingo_${numero}` : null;
+}
 
-        window.verMinhasCartelas = () => {
-            const zapDigitado = document.getElementById('compZap').value;
-            const zapSalvo = localStorage.getItem('user_zap');
-            const zapParaBusca = (zapDigitado || zapSalvo || "").replace(/\D/g, "");
+function docIdCartela(id, n) {
+    const numero = normalizarBingoId(id);
+    return numero ? `bingo_${numero}_cartela_${Number(n)}` : null;
+}
 
-            if (zapParaBusca.length < 8) {
-                alert("Por favor, digite seu número de WhatsApp primeiro!");
-                return;
-            }
+// --- FUNÇÃO PARA MASCARAR O NOME (Ex: "João Silva" -> "João S.") ---
+function mascararNome(nomeCompleto) {
+    if (!nomeCompleto) return "";
+    const partes = nomeCompleto.trim().split(/\s+/);
+    if (partes.length === 1) return partes[0];
+    
+    const primeiroNome = partes[0];
+    const sobrenome = partes[partes.length - 1];
+    const inicialSobrenome = sobrenome.charAt(0).toUpperCase();
+    
+    return `${primeiroNome} ${inicialSobrenome}.`;
+}
 
-            const cartelasEncontradas = todasCartelasDados.filter(c => 
-                c.whatsapp && c.whatsapp.replace(/\D/g, "") === zapParaBusca
-            );
+// --- FUNÇÃO CRC16 ---
+function calcularCRC16(str) {
+    let crc = 0xFFFF;
+    for (let c = 0; c < str.length; c++) {
+        crc ^= str.charCodeAt(c) << 8;
+        for (let i = 0; i < 8; i++) {
+            if (crc & 0x8000) crc = (crc << 1) ^ 0x1021;
+            else crc = crc << 1;
+        }
+    }
+    return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+}
 
-            if (cartelasEncontradas.length > 0) {
-                document.querySelectorAll('.cartela-item').forEach(div => {
-                    if (div.dataset.whatsapp === zapParaBusca) div.classList.add('minha-cartela');
-                    else div.classList.remove('minha-cartela');
-                });
+// --- FUNÇÃO DE GERAÇÃO ATUALIZADA COM IDENTIFICAÇÃO DINÂMICA DO BINGO ---
+function gerarPixCopiaECola(chave, nome, cidade, valor, idBingo) {
+    let chaveLimpa = String(chave).trim();
+    
+    if (chaveLimpa.includes('@')) {
+        chaveLimpa = chaveLimpa.replace(/\s+/g, '');
+    } 
+    else if (/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(chaveLimpa) || /^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/.test(chaveLimpa)) {
+        chaveLimpa = chaveLimpa.replace(/\D/g, ''); 
+    }
+    else if (/^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/.test(chaveLimpa) || /^\d{10,11}$/.test(chaveLimpa)) {
+        let numApenas = chaveLimpa.replace(/\D/g, '');
+        chaveLimpa = '+55' + numApenas;
+    } 
+    else {
+        chaveLimpa = chaveLimpa.replace(/\s+/g, '');
+    }
 
-                const container = document.getElementById('listaDezenasContainer');
-                const cart = document.getElementById('carrinho');
-                const titulo = document.getElementById('tituloCarrinho');
-                const controles = document.getElementById('controlesCarrinho');
+    const formatarCampo = (id, valorCampo) => {
+        const str = String(valorCampo);
+        const tam = str.length.toString().padStart(2, '0');
+        return `${id}${tam}${str}`;
+    };
 
-                container.innerHTML = "";
-                titulo.innerHTML = `
-                    <div class="flex items-center justify-between w-full">
-                        <span class="text-purple-600 font-black">SUAS CARTELAS</span>
-                        <button onclick="imprimirLote()" class="bg-purple-600 text-white text-[10px] px-4 py-1.5 rounded-lg shadow-md font-black uppercase">
-                            🖨️ IMPRIMIR TODAS
-                        </button>
+    const gui = "br.gov.bcb.pix";
+    const infoConta = formatarCampo("00", gui) + formatarCampo("01", chaveLimpa);
+    
+    let payload = "000201"; 
+    payload += formatarCampo("26", infoConta); 
+    payload += "52040000"; 
+    payload += "5303986";  
+    payload += "5802BR";  
+    
+    if (valor && parseFloat(valor) > 0) {
+        payload += formatarCampo("54", parseFloat(valor).toFixed(2));
+    }
+    
+    const limparStringEstrita = (txt, padraoMaximo, limiteTamanho) => {
+        if (!txt) return padraoMaximo;
+        return String(txt)
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") 
+            .replace(/[^A-Z0-9 ]/gi, "")     
+            .replace(/\s+/g, ' ')            
+            .toUpperCase()
+            .trim()
+            .slice(0, limiteTamanho);        
+    };
+
+    let nomeLimpo = limparStringEstrita(nome, "BINGO PRO", 25);
+    let cidadeLimpa = limparStringEstrita(cidade, "BRASIL", 15);
+    
+    if (nomeLimpo.length < 2) nomeLimpo = "BINGO PRO";
+    if (cidadeLimpa.length < 2) cidadeLimpa = "BRASIL";
+
+    // Formata o ID do Bingo para o padrão aceito no TxID do Banco Central (letras maiúsculas e números apenas)
+    let txIdLimpo = limparStringEstrita(idBingo, "BINGO", 25).replace(/\s+/g, "");
+    if (txIdLimpo.length < 1) txIdLimpo = "BINGO";
+
+    payload += formatarCampo("59", nomeLimpo);
+    payload += formatarCampo("60", cidadeLimpa);
+    
+    // INJEÇÃO DA IDENTIFICAÇÃO DO BINGO NO CAMPO 62 (ID 05 - TxID)
+    payload += formatarCampo("62", formatarCampo("05", txIdLimpo)); 
+    payload += "6304"; 
+
+    const crc = calcularCRC16(payload);
+    return payload + crc;
+}
+
+function traduzirStatus(status) {
+    switch ((status || '').toLowerCase()) {
+        case 'aberto':
+            return '🟢 VENDAS ABERTAS';
+        case 'andamento':
+            return '🟡 EM ANDAMENTO';
+        case 'encerrado':
+            return '🔴 ENCERRADO';
+        case 'rascunho':
+            return '⚪ RASCUNHO';
+        default:
+            return '🟢 VENDAS ABERTAS';
+    }
+}
+
+window.imprimirLote = () => {
+    const zapDigitado = document.getElementById('compZap').value;
+    const zapSalvo = localStorage.getItem('user_zap');
+    const zapParaBusca = (zapDigitado || zapSalvo || '').replace(/\D/g, '');
+
+    if (zapParaBusca && bingoId) {
+        const url = `cartela_impressao.html?id=${bingoId}&whats=${zapParaBusca}`;
+        window.open(url, '_blank');
+    } else {
+        alert('Erro ao identificar dados para impressão.');
+    }
+};
+
+window.limparDados = () => {
+    if (confirm('Deseja limpar seu nome e WhatsApp salvos?')) {
+        localStorage.removeItem('user_nome');
+        localStorage.removeItem('user_zap');
+        document.getElementById('compNome').value = '';
+        document.getElementById('compZap').value = '';
+        document.querySelectorAll('.minha-cartela').forEach(el => el.classList.remove('minha-cartela'));
+        document.getElementById('carrinho').classList.add('translate-y-full');
+    }
+};
+
+window.verMinhasCartelas = async () => {
+    const zapDigitado = document.getElementById('compZap').value;
+    const zapSalvo = localStorage.getItem('user_zap');
+    const zapParaBusca = (zapDigitado || zapSalvo || '').replace(/\D/g, '');
+
+    if (zapParaBusca.length < 8) {
+        alert('Por favor, digite seu número de WhatsApp primeiro!');
+        return;
+    }
+
+    const reservaId = localStorage.getItem('reserva_id');
+    if (!reservaId) {
+        alert('Nenhuma reserva encontrada neste aparelho.');
+        return;
+    }
+
+    const reservaSnap = await getDoc(doc(db, 'reservas_privadas', reservaId));
+
+    if (!reservaSnap.exists()) {
+        alert('Reserva não encontrada.');
+        return;
+    }
+
+    const dadosReserva = reservaSnap.data();
+
+    const cartelasEncontradas = todasCartelasDados.filter(c =>
+        (dadosReserva.cartelas || []).includes(c.n)
+    );
+
+    if (cartelasEncontradas.length > 0) {
+        document.querySelectorAll('.cartela-item').forEach(div => {
+            if (div.dataset.whatsapp === zapParaBusca) div.classList.add('minha-cartela');
+            else div.classList.remove('minha-cartela');
+        });
+
+        const container = document.getElementById('listaDezenasContainer');
+        const cart = document.getElementById('carrinho');
+        const titulo = document.getElementById('tituloCarrinho');
+        const controles = document.getElementById('controlesCarrinho');
+
+        container.innerHTML = '';
+
+        titulo.innerHTML = `
+            <div class="flex items-center justify-between w-full">
+                <span class="text-purple-600 font-black">SUAS CARTELAS</span>
+                <button onclick="imprimirLote()" class="bg-purple-600 text-white text-[10px] px-4 py-1.5 rounded-lg shadow-md font-black uppercase">
+                    🖨️ IMPRIMIR TODAS
+                </button>
+            </div>
+        `;
+
+        controles.classList.add('hidden');
+
+        cartelasEncontradas.sort((a,b) => Number(a.n) - Number(b.n)).forEach(c => {
+            const dezenas = [...c.b, ...c.i, ...c.n_col, ...c.g, ...c.o].join(' ');
+            const numCartela = String(c.n).padStart(2,'0');
+
+            container.innerHTML += `
+                <div class="bg-gray-50 p-3 rounded-lg border-l-4 border-purple-500">
+                    <div class="text-purple-700 font-black text-[12px] mb-1">
+                        Cartela ${numCartela}
+                        <span class="text-[10px] text-gray-400">(${(c.status || '').toUpperCase()})</span>
                     </div>
+                    <div class="text-purple-600 font-mono text-[12px] break-words leading-relaxed">
+                        ${dezenas}
+                    </div>
+                </div>
+            `;
+        });
+
+        cart.classList.remove('translate-y-full');
+    } else {
+        alert('Nenhuma cartela encontrada para este número.');
+    }
+};
+
+function formatarDataBR(dataString) {
+    if (!dataString) return '--/--/----';
+    const partes = dataString.split(/[-/]/);
+    if (partes.length === 3) {
+        if (partes[0].length === 4) {
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+        return `${partes[0].padStart(2, '0')}/${partes[1].padStart(2, '0')}/${partes[2]}`;
+    }
+    return dataString;
+}
+
+async function init() {
+    try {
+        document.getElementById('compNome').value = localStorage.getItem('user_nome') || '';
+        document.getElementById('compZap').value = localStorage.getItem('user_zap') || '';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const idViaLink = urlParams.get('id');
+
+        if (idViaLink) {
+            bingoId = normalizarBingoId(idViaLink);
+        } else {
+            const configSnap = await getDoc(doc(db, 'configuracoes', 'vendas'));
+            if (configSnap.exists()) {
+                bingoId = normalizarBingoId(configSnap.data().bingoAtivo);
+            }
+        }
+
+        if (!bingoId) throw new Error('Nenhum bingo definido em configuracoes/vendas.bingoAtivo ou no link ?id=');
+
+        const idDocBingo = docIdBingo(bingoId);
+        const bingoDoc = await getDoc(doc(db, 'bingos', idDocBingo));
+        if (!bingoDoc.exists()) {
+            throw new Error(`Bingo não encontrado em bingos/${idDocBingo}`);
+        }
+
+        dadosBingo = bingoDoc.data();
+        valorUnitario = parseFloat(dadosBingo.valor) || 0;
+
+        document.getElementById('txtNomeBingo').innerText = dadosBingo.nome || 'BINGO';
+        document.getElementById('txtData').innerText = formatarDataBR(dadosBingo.data);
+        document.getElementById('txtHora').innerText = dadosBingo.hora || '--:--';
+        document.getElementById('txtLocal').innerText = dadosBingo.local || 'NÃO INFORMADO';
+        document.getElementById('txtValor').innerText = valorUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+        document.getElementById('txtPremios').innerText = Array.isArray(dadosBingo.premios)
+            ? dadosBingo.premios.map(p => p.descricao).filter(Boolean).join(' • ')
+            : 'NÃO INFORMADO';
+
+        document.getElementById('txtNumeroBingo').innerText = bingoId;
+        document.getElementById('txtStatusBingo').innerText = traduzirStatus(dadosBingo.status);
+        document.getElementById('chavePixTexto').innerText = dadosBingo.pix || 'NÃO CADASTRADO';
+
+        carregarCartelas();
+    } catch (e) {
+        console.error(e);
+        document.getElementById('loading').style.display = 'none';
+        alert('Erro ao carregar o bingo: ' + (e.message || e));
+    }
+}
+
+function carregarCartelas() {
+    if (unsubscribeCartelas) {
+        unsubscribeCartelas();
+    }
+
+    const ref = query(collection(db, 'cartelas_publicas'), where('bingoId', '==', Number(bingoId)));
+
+    unsubscribeCartelas = onSnapshot(ref, (snap) => {
+        const grade = document.getElementById('gradeCartelas');
+        grade.innerHTML = '';
+
+        todasCartelasDados = [];
+        let totalLivres = 0;
+        let totalReservadas = 0;
+        let totalPagas = 0;
+
+        snap.forEach(d => {
+            const c = d.data();
+            todasCartelasDados.push(c);
+
+            const status = (c.status || 'livre').toLowerCase();
+            if (status === 'reservada') totalReservadas++;
+            else if (status === 'paga' || status === 'vendida') totalPagas++;
+            else totalLivres++;
+        });
+
+        document.getElementById('totalLivres').innerText = totalLivres;
+        document.getElementById('totalReservadas').innerText = totalReservadas;
+        document.getElementById('totalPagas').innerText = totalPagas;
+
+        todasCartelasDados.sort((a,b) => Number(a.n) - Number(b.n));
+
+        todasCartelasDados.forEach(c => {
+            const div = document.createElement('div');
+            const status = (c.status || 'livre').toLowerCase();
+            const ocupada = ['reservada', 'vendida', 'paga'].includes(status);
+
+            div.className = `cartela-item ${ocupada ? status : 'livre'}`;
+            div.dataset.whatsapp = (c.whatsapp || '').replace(/\D/g, '');
+
+            if (ocupada) {
+                // EXIBE O NOME MASCARADO (EX: JOÃO S.) CASO EXISTA NO BANCO, SENÃO EXIBE O STATUS
+                let textoExibicao = status.toUpperCase();
+                if (c.nomeComprador) {
+                    textoExibicao = mascararNome(c.nomeComprador);
+                }
+
+                div.innerHTML = `
+                    <span class="text-[10px] mb-0.5 text-white">${c.n}</span>
+                    <span class="text-[8px] uppercase truncate px-1 font-bold w-full text-center text-white">
+                        ${textoExibicao}
+                    </span>
                 `;
-                controles.classList.add('hidden');
-
-                cartelasEncontradas.sort((a,b) => Number(a.n) - Number(b.n)).forEach(c => {
-                    const dezenas = [...c.b, ...c.i, ...c.n_col, ...c.g, ...c.o].join(" ");
-                    container.innerHTML += `
-                        <div class="bg-gray-50 p-3 rounded-lg border-l-4 border-purple-500">
-                            <b class="text-gray-700">Cartela ${c.n} <span class="text-[10px] text-gray-400">(${c.status.toUpperCase()})</span></b> 
-                            <div class="text-purple-600 font-mono text-[13px] mt-1 tracking-widest">${dezenas}</div>
-                        </div>`;
-                });
-
-                cart.classList.remove('translate-y-full');
             } else {
-                alert("Nenhuma cartela encontrada para este número.");
-            }
-        };
+                div.innerText = c.n;
+                div.onclick = () => {
+                    if (bloqueado) return;
 
-        function formatarDataBR(dataString) {
-            if(!dataString) return "--/--/----";
-            const partes = dataString.split(/[-/]/);
-            if(partes.length === 3) {
-                if(partes[0].length === 4) return `${partes[2]}/${partes[1]}/${partes[0]}`;
-                return `${partes[0].padStart(2, '0')}/${partes[1].padStart(2, '0')}/${partes[2]}`;
-            }
-            return dataString;
-        }
+                    document.getElementById('tituloCarrinho').innerText = 'Resumo do Pedido';
+                    document.getElementById('controlesCarrinho').classList.remove('hidden');
 
-        async function init() {
-            try {
-                document.getElementById('compNome').value = localStorage.getItem('user_nome') || "";
-                document.getElementById('compZap').value = localStorage.getItem('user_zap') || "";
-                const urlParams = new URLSearchParams(window.location.search);
-                let idViaLink = urlParams.get('id');
-                if (idViaLink) { bingoId = idViaLink; } else {
-                    const configSnap = await getDoc(doc(db, "configuracoes", "vendas"));
-                    if (configSnap.exists()) bingoId = configSnap.data().bingoAtivo;
-                }
-                if (bingoId) {
-                    const bSnap = await getDoc(doc(db, "bingos", "bingo_" + bingoId));
-                    if (bSnap.exists()) {
-                        dadosBingo = bSnap.data();
-                        valorUnitario = parseFloat(dadosBingo.valor) || 0;
-                        document.getElementById('txtNomeBingo').innerText = dadosBingo.nome || "BINGO";
-                        document.getElementById('txtData').innerText = formatarDataBR(dadosBingo.data);
-                        document.getElementById('txtHora').innerText = dadosBingo.hora || "--:--";
-                        document.getElementById('txtLocal').innerText = dadosBingo.local || "NÃO INFORMADO";
-                        document.getElementById('txtPremios').innerText = dadosBingo.premios || "NÃO INFORMADO";
-                        document.getElementById('txtValor').innerText = valorUnitario.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-                        document.getElementById('chavePixTexto').innerText = dadosBingo.pix || "NÃO CADASTRADO";
-                        await carregarCartelas();
+                    const i = selecionadas.findIndex(s => s.n === c.n);
+                    if (i > -1) {
+                        selecionadas.splice(i, 1);
+                        div.classList.remove('selecionada');
+                    } else {
+                        selecionadas.push(c);
+                        div.classList.add('selecionada');
                     }
+                    renderCarrinho();
+                };
+            }
+            grade.appendChild(div);
+        });
+
+        document.getElementById('loading').style.display = 'none';
+    }, (error) => {
+        console.error("Erro ao escutar mudanças das cartelas: ", error);
+    });
+}
+
+function renderCarrinho() {
+    const cart = document.getElementById('carrinho');
+    const container = document.getElementById('listaDezenasContainer');
+
+    container.innerHTML = '';
+
+    if (selecionadas.length > 0) {
+        cart.classList.remove('translate-y-full');
+
+        const plural = selecionadas.length > 1 ? 'CARTELAS SELECIONADAS' : 'CARTELA SELECIONADA';
+        document.getElementById('txtQuantResumo').innerText = `${selecionadas.length} ${plural}`;
+
+        const total = selecionadas.length * valorUnitario;
+        if (valorUnitario === 0) {
+            document.getElementById('txtTotal').innerText = 'INSCRIÇÃO GRATUITA';
+        } else {
+            document.getElementById('txtTotal').innerText = total.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+        }
+
+        selecionadas.sort((a,b)=>Number(a.n)-Number(b.n)).forEach(c => {
+            const dezenas = [...c.b, ...c.i, ...c.n_col, ...c.g, ...c.o]
+                .map(n => String(n).padStart(2, '0'))
+                .join(' ');
+
+            const numCartela = String(c.n).padStart(2,'0');
+
+            container.innerHTML += `
+                <div class="bg-blue-50 p-2 rounded-lg border border-blue-100 text-[12px] leading-relaxed break-words">
+                    <span class="text-blue-800 font-black">
+                        Cartela ${numCartela} -
+                    </span>
+                    <span class="text-blue-600 font-mono">
+                        ${dezenas}
+                    </span>
+                </div>
+            `;
+        });
+    } else {
+        cart.classList.add('translate-y-full');
+    }
+}
+
+document.getElementById('btnConfirmar').onclick = async () => {
+    const nome = document.getElementById('compNome').value.trim();
+    const zap = document.getElementById('compZap').value.trim();
+
+    if (!nome || zap.length < 10) {
+        return alert('Preencheu Nome, sobrenome e WhatsApp corretamente?.');
+    }
+
+    document.getElementById('loading').style.display = 'flex';
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const referencias = [];
+
+            // --- FASE 1: APENAS LEITURAS ---
+            for (const c of selecionadas) {
+                const ref = doc(db, 'cartelas_publicas', docIdCartela(bingoId, c.n));
+                const snap = await transaction.get(ref);
+
+                if (!snap.exists()) {
+                    throw new Error(`Cartela ${c.n} não existe.`);
                 }
-            } catch (e) { console.error(e); document.getElementById('loading').style.display = 'none'; }
-        }
 
-        async function carregarCartelas() {
-            const snap = await getDocs(collection(db, "bingos", "bingo_" + bingoId, "cartelas"));
-            const grade = document.getElementById('gradeCartelas');
-            grade.innerHTML = "";
-            todasCartelasDados = []; 
-            let totalLivres = 0, totalReservadas = 0, totalPagas = 0;
-
-            snap.forEach(d => {
-                const c = d.data();
-                todasCartelasDados.push(c);
-                const status = (c.status || 'livre').toLowerCase();
-                if(status === 'reservada') totalReservadas++;
-                else if(status === 'paga' || status === 'vendida') totalPagas++;
-                else totalLivres++;
-            });
-
-            document.getElementById('totalLivres').innerText = totalLivres;
-            document.getElementById('totalReservadas').innerText = totalReservadas;
-            document.getElementById('totalPagas').innerText = totalPagas;
-            todasCartelasDados.sort((a, b) => Number(a.n) - Number(b.n));
-
-            todasCartelasDados.forEach(c => {
-                const div = document.createElement('div');
-                const status = (c.status || 'livre').toLowerCase();
-                const ocupada = ['reservada', 'vendida', 'paga'].includes(status);
-                
-                if(c.whatsapp) div.dataset.whatsapp = c.whatsapp.replace(/\D/g, "");
-                div.className = `cartela-item ${ocupada ? status : 'livre'}`;
-                
-                if (ocupada) {
-                    const partes = (c.comprador || "").split(" ");
-                    const nomeExibir = partes.length > 1 ? `${partes[0]} ${partes[1]}` : partes[0];
-                    div.innerHTML = `<span class="text-[10px] mb-0.5 text-white">${c.n}</span><span class="text-[8px] uppercase truncate px-1 font-bold w-full text-center text-white opacity-100">${nomeExibir}</span>`;
-                } else {
-                    div.innerText = c.n;
-                    div.onclick = () => {
-                        if(bloqueado) return;
-                        document.getElementById('tituloCarrinho').innerText = "Resumo do Pedido";
-                        document.getElementById('controlesCarrinho').classList.remove('hidden');
-
-                        const i = selecionadas.findIndex(s => s.n === c.n);
-                        if (i > -1) { selecionadas.splice(i, 1); div.classList.remove('selecionada'); }
-                        else { selecionadas.push(c); div.classList.add('selecionada'); }
-                        renderCarrinho();
-                    };
+                const dados = snap.data();
+                if ((dados.status || 'livre') !== 'livre') {
+                    throw new Error(`Cartela ${c.n} acabou de ser reservada por outra pessoa.`);
                 }
-                grade.appendChild(div);
-            });
-            document.getElementById('loading').style.display = 'none';
-        }
 
-        function renderCarrinho() {
-            const cart = document.getElementById('carrinho');
-            const container = document.getElementById('listaDezenasContainer');
-            container.innerHTML = "";
-            if (selecionadas.length > 0) {
-                cart.classList.remove('translate-y-full');
-                const plural = selecionadas.length > 1 ? "CARTELAS SELECIONADAS" : "CARTELA SELECIONADA";
-                document.getElementById('txtQuantResumo').innerText = `${selecionadas.length} ${plural}`;
-                const total = selecionadas.length * valorUnitario;
-                document.getElementById('txtTotal').innerText = total.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-                selecionadas.forEach(c => {
-                    const dezenas = [...c.b, ...c.i, ...c.n_col, ...c.g, ...c.o].join(" ");
-                    container.innerHTML += `<div class="bg-blue-50 p-2 rounded-lg border border-blue-100"><b class="text-blue-800">Cartela ${c.n}:</b> <span class="text-blue-600 font-mono ml-2">${dezenas}</span></div>`;
+                referencias.push(ref);
+            }
+
+            // --- FASE 2: APENAS ESCRITAS ---
+            for (const ref of referencias) {
+                transaction.update(ref, {
+                    status: 'reservada',
+                    nomeComprador: nome,
+                    comprador: nome,
+                    whatsapp: zap.replace(/\D/g, ''),
+                    whatsappComprador: zap.replace(/\D/g, ''),
+                    dataReserva: serverTimestamp()
                 });
-            } else { cart.classList.add('translate-y-full'); }
-        }
+            }
+        });
 
-        document.getElementById('btnConfirmar').onclick = async () => {
-            const nome = document.getElementById('compNome').value.trim();
-            const zap = document.getElementById('compZap').value.trim();
-            if (!nome || zap.length < 10) return alert("Preencheu Nome, sobrenome e WhatsApp corretamente?.");
-            document.getElementById('loading').style.display = 'flex';
-            const batch = writeBatch(db);
-            selecionadas.forEach(c => {
-                batch.update(doc(db, "bingos", "bingo_" + bingoId, "cartelas", String(c.n)), {
-                    status: "reservada", comprador: nome, whatsapp: zap.replace(/\D/g, ""), dataVenda: new Date().toLocaleString()
-                });
+        localStorage.setItem('user_nome', nome);
+        localStorage.setItem('user_zap', zap);
+
+        const reservaRef = await addDoc(collection(db, 'reservas_privadas'), {
+            bingoId: Number(bingoId),
+            nomeComprador: nome,
+            whatsapp: zap.replace(/\D/g, ''),
+            cartelas: selecionadas.map(c => Number(c.n)),
+            status: 'reservada',
+            dataReserva: serverTimestamp()
+        });
+        localStorage.setItem('reserva_id', reservaRef.id);
+
+        const totalCalculado = selecionadas.length * valorUnitario;
+
+        if (valorUnitario === 0) {
+
+            const subtitulo = document.getElementById('subtituloPagamento');
+            if (subtitulo) {
+                subtitulo.innerText = 'Sua inscrição foi realizada com sucesso';
+            }
+
+            document.getElementById('txtTotalFinal').innerText = 'INSCRIÇÃO GRATUITA';
+
+            document.getElementById('boxQrCode')
+                .classList.add('hidden');
+
+            document.getElementById('btnCopiarPix')
+                .classList.add('hidden');
+
+            document.getElementById('btnWhatsConfirmar')
+                .innerText = 'CONFIRMAR INSCRIÇÃO';
+
+        } else {
+
+            const subtitulo = document.getElementById('subtituloPagamento');
+            if (subtitulo) {
+                subtitulo.innerText = 'Realize o pagamento para validar suas cartelas';
+            }
+
+            document.getElementById('txtTotalFinal').innerText = totalCalculado.toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
             });
-            try {
-                await batch.commit();
-                localStorage.setItem('user_nome', nome);
-                localStorage.setItem('user_zap', zap);
-                document.getElementById('txtTotalFinal').innerText = (selecionadas.length * valorUnitario).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-                bloqueado = true;
-                document.getElementById('etapaReserva').classList.add('hidden');
-                document.getElementById('etapaPagamento').classList.remove('hidden');
-                document.getElementById('loading').style.display = 'none';
-            } catch (e) { alert("Erro ao salvar."); document.getElementById('loading').style.display = 'none'; }
+
+            document.getElementById('boxQrCode')
+                .classList.remove('hidden');
+
+            document.getElementById('btnCopiarPix')
+                .classList.remove('hidden');
+
+            document.getElementById('btnWhatsConfirmar')
+                .innerText = 'ENVIAR COMPROVANTE';
+
+            if (dadosBingo.pix) {
+
+                let nomeLimpoBingo = (dadosBingo.nome || "BINGO")
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^A-Z0-9]/gi, "")
+                    .toUpperCase();
+
+                let identificadorBingo = (
+                    "B" + bingoId + nomeLimpoBingo
+                ).slice(0, 25);
+
+                identificadorBingo = String(identificadorBingo)
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^A-Z0-9]/gi, '')
+                    .toUpperCase()
+                    .slice(0, 25);
+
+                const payloadPix = gerarPixCopiaECola(
+                    dadosBingo.pix,
+                    dadosBingo.nomeRecebedorPix || dadosBingo.nome,
+                    dadosBingo.cidadePix || 'BRASIL',
+                    totalCalculado,
+                    identificadorBingo
+                );
+
+                document.getElementById('chavePixTexto').innerText = payloadPix;
+
+                document.getElementById('qrcode').innerHTML = '';
+
+                new QRCode(document.getElementById('qrcode'), {
+                    text: payloadPix,
+                    width: 140,
+                    height: 140,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
         }
 
-        document.getElementById('btnCopiarPix').onclick = () => {
-            const chave = document.getElementById('chavePixTexto').innerText;
-            navigator.clipboard.writeText(chave);
-            alert("PIX Copiado!");
-        }
+        bloqueado = true;
+        document.getElementById('etapaReserva').classList.add('hidden');
+        document.getElementById('etapaPagamento').classList.remove('hidden');
+    } catch (e) {
+        console.error(e);
+        alert(e.message || 'Erro ao reservar cartela.');
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
+};
 
-        document.getElementById('btnWhatsConfirmar').onclick = () => {
-            const nome = document.getElementById('compNome').value;
-            const cartelas = selecionadas.map(c => c.n).join(", ");
-            const valorTotal = (selecionadas.length * valorUnitario).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-            let numResponsavel = dadosBingo["telefone"] || "84998396406";
-            let numLimpo = numResponsavel.replace(/\D/g, "");
-            if (numLimpo.length <= 11) numLimpo = "55" + numLimpo;
-            let msg = `Olá! Acabei de reservar cartelas no *${dadosBingo.nome}*.\n\n👤 *Nome:* ${nome}\n🎟️ *Cartelas:* ${cartelas}\n💰 *Total:* ${valorTotal}\n\nVou te mandar o comprovante!`;
-            window.open(`https://wa.me/${numLimpo}?text=${encodeURIComponent(msg)}`);
-        }
-        
+document.getElementById('btnCopiarPix').onclick = () => {
+    const chave = document.getElementById('chavePixTexto').innerText;
+    navigator.clipboard.writeText(chave);
+    alert('Código Pix Copia e Cola copiado com sucesso!');
+};
+
+document.getElementById('btnWhatsConfirmar').onclick = () => {
+    const nome = document.getElementById('compNome').value;
+    const cartelas = selecionadas.map(c => c.n).join(', ');
+    const reservaId = localStorage.getItem('reserva_id') || '';
+
+    const valorTotal = (selecionadas.length * valorUnitario).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+
+    let numResponsavel = dadosBingo.telefone || '84998396406';
+    let numLimpo = numResponsavel.replace(/\D/g, '');
+
+    if (numLimpo.length <= 11) {
+        numLimpo = '55' + numLimpo;
+    }
+
+    let msg = '';
+
+    if (valorUnitario === 0) {
+
+        msg = `Olá! Realizei a minha inscrição gratuita no bingo *${dadosBingo.nome}*.
+
+👤 *Nome:* ${nome}
+🎟️ *Cartelas:* ${cartelas}
+
+Pode confirmar minha vaga?`;
+
+    } else {
+
+        msg = `Olá! Acabei de reservar cartelas no *${dadosBingo.nome}*.
+
+👤 *Nome:* ${nome}
+🎟️ *Cartelas:* ${cartelas}
+💰 *Total:* ${valorTotal}
+
+Vou te mandar o comprovante!\n🆔 Reserva: ${reservaId}`;
+    }
+
+    window.open(`https://wa.me/${numLimpo}?text=${encodeURIComponent(msg)}`);
+};
+
 document.getElementById('compZap').addEventListener('input', function(e) {
     let v = e.target.value.replace(/\D/g, '');
     if (v.length > 11) v = v.slice(0, 11);
-
     if (v.length > 6) {
         v = v.replace(/^(\d{2})(\d{5})(\d+)/, '($1) $2-$3');
     } else if (v.length > 2) {
@@ -389,7 +817,7 @@ document.getElementById('compZap').addEventListener('input', function(e) {
     e.target.value = v;
 });
 
-        init();
-    </script>
+init();
+</script>
 </body>
 </html>
