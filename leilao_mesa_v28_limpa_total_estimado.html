@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leilão - Mesa do Leilão</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+
+<body class="bg-slate-100 min-h-screen text-slate-800">
+  <div class="max-w-6xl mx-auto p-3 md:p-6">
+    <header class="bg-white rounded-2xl shadow p-4 mb-4 border-t-8 border-amber-700">
+      <h1 class="text-2xl md:text-3xl font-black text-slate-900">🔨 Mesa do Leilão</h1>
+      <p class="text-sm text-slate-600 mt-1">Modo correria: prendas, arrematador, ganhador e valor.</p>
+
+      <div id="boxLeilaoAtivo" class="mt-4 rounded-2xl p-4 bg-yellow-100 text-yellow-900 font-bold">
+        Carregando leilão ativo...
+      </div>
+
+      <div class="mt-4 grid md:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-sm font-bold mb-1">Operador logado</label>
+          <div id="operadorBox" class="rounded-xl p-3 bg-yellow-100 text-yellow-900 font-bold">Verificando...</div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold mb-1">Status da conexão</label>
+          <div id="statusConexaoMini" class="rounded-xl p-3 bg-green-100 text-green-800 font-bold">🟢 Online</div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold mb-1">Último arremate</label>
+          <div id="ultimoArremateBox" class="rounded-xl p-3 bg-amber-100 font-black">--</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid lg:grid-cols-2 gap-4">
+      <section class="bg-white rounded-2xl shadow p-4">
+        <h2 class="text-xl font-black mb-3">Novo Arremate</h2>
+
+        <form id="formArremate" class="space-y-3">
+          <div>
+            <label class="block font-bold mb-1">Prendas (números) *</label>
+            <input id="campoPrendas" required inputmode="numeric" class="w-full border rounded-xl p-4 text-2xl font-black" placeholder="" />
+          </div>
+
+          <div id="previewPrendas" class="space-y-2 bg-slate-50 border rounded-xl p-3">
+            <div class="text-slate-500">As prendas aparecerão aqui.</div>
+          </div>
+
+          <div id="boxTotalEstimado" class="hidden rounded-2xl bg-amber-50 border border-amber-200 p-3">
+            <div class="flex justify-between items-center">
+              <div class="font-bold text-amber-800">Total aproximado das prendas</div>
+              <div id="totalEstimadoPrendas" class="text-2xl font-black text-amber-900">R$ 0,00</div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">Pesquisar arrematador *</label>
+            <input id="buscaArrematador" class="w-full border rounded-xl p-4 text-xl font-bold" placeholder="" />
+            <div id="resultadosArrematador" class="mt-2 space-y-2"></div>
+            <input type="hidden" id="arrematadorSelecionadoNumero" />
+          </div>
+
+          <div id="boxSelecionado" class="hidden bg-green-100 text-green-900 rounded-xl p-3 font-bold"></div>
+
+          <div>
+            <label class="block font-bold mb-1">Para quem?</label>
+            <input id="ganhador" class="w-full border rounded-xl p-3 text-lg" placeholder="" />
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">Valor do arremate (R$) *</label>
+            <input id="valorArremate" required type="number" min="0" step="0.01" inputmode="decimal" class="w-full border rounded-xl p-4 text-2xl font-black" placeholder="" />
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">Observação</label>
+            <textarea id="observacao" class="w-full border rounded-xl p-3" rows="2" placeholder=""></textarea>
+          </div>
+
+          <button id="btnConfirmar" type="submit" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-black text-xl rounded-xl p-4">
+            Confirmar Arremate
+          </button>
+        
+      <div class="mt-6 border-t pt-4">
+        <div class="text-lg font-black mb-2">Editar arremate</div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <input id="numeroEditarArremate" class="col-span-2 border rounded-xl p-3" placeholder="Nº do arremate" />
+
+          <button type="button"
+          onclick="buscarArremateEdicao()"
+          class="bg-blue-700 hover:bg-blue-800 text-white rounded-xl p-3 font-black">
+          Buscar
+          </button>
+        </div>
+
+        <div id="boxEdicaoArremate" class="hidden mt-4 border rounded-2xl p-3 bg-slate-50 space-y-3">
+
+          <input type="hidden" id="edicaoArremateId">
+
+          <div>
+            <label class="block font-bold mb-1">Arrematador Nº</label>
+            <input id="edicaoArrematadorNumero" class="w-full border rounded-xl p-3" inputmode="numeric" oninput="atualizarNomeArrematadorEdicao()">
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">Nome do arrematador</label>
+            <input id="edicaoArrematadorNome" class="w-full border rounded-xl p-3">
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">Para quem?</label>
+            <input id="edicaoGanhador" class="w-full border rounded-xl p-3">
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">Valor do arremate (R$)</label>
+            <input id="edicaoValor" type="number" step="0.01" class="w-full border rounded-xl p-3">
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">Prendas (números)</label>
+
+            <input id="edicaoPrendas"
+            class="w-full border rounded-xl p-3"
+            oninput="atualizarPreviewEdicaoPrendas()">
+
+            <div id="previewEdicaoPrendas"
+            class="hidden mt-2 rounded-xl bg-slate-50 border p-3 text-sm space-y-1">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold mb-1">Motivo da alteração</label>
+            <textarea id="edicaoMotivo" rows="2" class="w-full border rounded-xl p-3"></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button"
+            onclick="salvarEdicaoArremate()"
+            class="bg-blue-700 hover:bg-blue-800 text-white rounded-xl p-3 font-black">
+            Salvar alteração
+            </button>
+
+            <button type="button"
+            onclick="cancelarEdicaoArremate()"
+            class="bg-white border rounded-xl p-3 font-black">
+            Cancelar edição
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+</form>
+      </section>
+
+      <section class="bg-white rounded-2xl shadow p-4">
+        <div id="ultimoDestaque" class="hidden mb-4 rounded-2xl p-4 bg-amber-100 border border-amber-300"></div>
+
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+          <h2 class="text-xl font-black">Últimos Arremates</h2>
+          <input id="buscaLista" class="border rounded-xl p-3" placeholder="Buscar..." />
+        </div>
+
+        <div id="listaArremates" class="space-y-3 max-h-[660px] overflow-auto pr-1">
+          <div class="text-slate-500">Carregando arremates...</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCbZpcPftK64JRnG8agKT_HHZu4FGaHnFw",
+      authDomain: "leilaopadroeiro.firebaseapp.com",
+      projectId: "leilaopadroeiro",
+      storageBucket: "leilaopadroeiro.firebasestorage.app",
+      messagingSenderId: "114008677717",
+      appId: "1:114008677717:web:0f85a7ced3f2398421a3dc"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
+    const boxLeilaoAtivo = document.getElementById("boxLeilaoAtivo");
+    const operadorBox = document.getElementById("operadorBox");
+    const ultimoArremateBox = document.getElementById("ultimoArremateBox");
+    const campoPrendas = document.getElementById("campoPrendas");
+    const previewPrendas = document.getElementById("previewPrendas");
+    const buscaArrematador = document.getElementById("buscaArrematador");
+    const resultadosArrematador = document.getElementById("resultadosArrematador");
+    const arrematadorSelecionadoNumero = document.getElementById("arrematadorSelecionadoNumero");
+    const boxSelecionado = document.getElementById("boxSelecionado");
+    const form = document.getElementById("formArremate");
+    const listaArremates = document.getElementById("listaArremates");
+    const buscaLista = document.getElementById("buscaLista");
+    const ultimoDestaque = document.getElementById("ultimoDestaque");
+
+    let leilaoAtivo = null;
+    let operadorLogado = null;
+    let prendasCache = [];
+    let arrematadoresCache = [];
+    let arrematesCache = [];
+    let prendasSelecionadas = [];
+    let arrematadorSelecionado = null;
+
+    let unsubPrendas = null, unsubArrematadores = null, unsubArremates = null;
+
+    verificarOperador();
+
+    const statusConexaoMini = document.getElementById("statusConexaoMini");
+
+    window.addEventListener("online", atualizarStatusMini);
+    window.addEventListener("offline", atualizarStatusMini);
+
+    atualizarStatusMini();
+
+    function atualizarStatusMini() {
+      if (navigator.onLine) {
+        statusConexaoMini.innerHTML = "🟢 Online";
+        statusConexaoMini.className = "rounded-xl p-3 bg-green-100 text-green-800 font-bold";
+      } else {
+        statusConexaoMini.innerHTML = "🔴 Offline";
+        statusConexaoMini.className = "rounded-xl p-3 bg-red-100 text-red-800 font-bold";
+      }
+    }
+
+    function verificarOperador() {
+      const raw = localStorage.getItem("leilao_usuario_logado");
+      if (!raw) {
+        operadorLogado = null;
+
+        operadorBox.innerHTML = `
+          <div class="grid grid-cols-2 gap-2">
+            <input id="loginNomeMesa" class="border rounded-lg p-2 text-slate-900" placeholder="Nome" />
+            <input id="loginPinMesa" class="border rounded-lg p-2 text-slate-900" placeholder="PIN" maxlength="4" inputmode="numeric" />
+          </div>
+
+          <button type="button" onclick="loginDiretoMesa()" class="mt-2 w-full bg-slate-900 text-white rounded-lg p-2 font-bold">
+            Entrar
+          </button>
+        `;
+
+        operadorBox.className = "rounded-xl p-3 bg-yellow-100 text-yellow-900 font-bold";
+        return;
+      }
+      try {
+        operadorLogado = JSON.parse(raw);
+        operadorBox.innerHTML = `
+          <div>${escapeHtml(operadorLogado.apelido || operadorLogado.nome)}</div>
+          <div class="text-xs font-normal">${escapeHtml(nomeFuncao(operadorLogado.funcao))}</div>
+
+          <button onclick="sairOperadorMesa()" class="mt-1 text-xs underline">
+            Trocar
+          </button>
+        `;
+        operadorBox.className = "rounded-xl p-3 bg-green-100 text-green-800 font-bold";
+      } catch {
+        localStorage.removeItem("leilao_usuario_logado");
+        verificarOperador();
+
+    const statusConexaoMini = document.getElementById("statusConexaoMini");
+
+    window.addEventListener("online", atualizarStatusMini);
+    window.addEventListener("offline", atualizarStatusMini);
+
+    atualizarStatusMini();
+
+    function atualizarStatusMini() {
+      if (navigator.onLine) {
+        statusConexaoMini.innerHTML = "🟢 Online";
+        statusConexaoMini.className = "rounded-xl p-3 bg-green-100 text-green-800 font-bold";
+      } else {
+        statusConexaoMini.innerHTML = "🔴 Offline";
+        statusConexaoMini.className = "rounded-xl p-3 bg-red-100 text-red-800 font-bold";
+      }
+    }
+
+      }
+    }
+
+    db.collection("configuracoes").doc("leilaoAtivo").onSnapshot((doc) => {
+      if (!doc.exists) {
+        leilaoAtivo = null;
+        boxLeilaoAtivo.innerHTML = "Nenhum leilão ativo. Ative um leilão no admin.";
+        boxLeilaoAtivo.className = "mt-4 rounded-2xl p-4 bg-red-100 text-red-800 font-bold";
+        limparListeners();
+        return;
+      }
+      leilaoAtivo = doc.data();
+      boxLeilaoAtivo.innerHTML = `
+        <div class="text-xl font-black">Leilão Nº ${leilaoAtivo.numero || "-"} - ${escapeHtml(leilaoAtivo.nome || "")}</div>
+      `;
+      boxLeilaoAtivo.className = "mt-4 rounded-2xl p-4 bg-green-100 text-green-900 font-bold";
+      ouvirDados();
+    });
+
+    function limparListeners() {
+      if (unsubPrendas) unsubPrendas();
+      if (unsubArrematadores) unsubArrematadores();
+      if (unsubArremates) unsubArremates();
+      listaArremates.innerHTML = `<div class="bg-red-100 text-red-800 p-3 rounded-xl font-bold">Nenhum leilão ativo.</div>`;
+    }
+
+    function leilaoDoc() { return db.collection("leiloes").doc(leilaoAtivo.leilaoId); }
+    function refPrendas() { return leilaoDoc().collection("prendas"); }
+    function refArrematadores() { return leilaoDoc().collection("arrematadores"); }
+    function refArremates() { return leilaoDoc().collection("arremates"); }
+    function refContadorArremates() { return leilaoDoc().collection("configuracoes").doc("contadorArremates"); }
+
+    function ouvirDados() {
+      limparListeners();
+
+      unsubPrendas = refPrendas().onSnapshot((snapshot) => {
+        prendasCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        atualizarPreviewPrendas();
+        atualizarTotalEstimadoPrendas();
+      });
+
+      unsubArrematadores = refArrematadores().orderBy("numero", "asc").onSnapshot((snapshot) => {
+        arrematadoresCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        pesquisarArrematador();
+      });
+
+      unsubArremates = refArremates().orderBy("codigo", "desc").limit(80).onSnapshot((snapshot) => {
+        arrematesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        ultimoArremateBox.textContent = arrematesCache.length ? `Nº ${arrematesCache[0].codigo}` : "--";
+        renderizarUltimoDestaque();
+        renderizarArremates();
+      });
+    }
+
+    campoPrendas.addEventListener("input", () => {
+      atualizarPreviewPrendas();
+      atualizarTotalEstimadoPrendas();
+    });
+    buscaArrematador.addEventListener("input", pesquisarArrematador);
+    buscaLista.addEventListener("input", renderizarArremates);
+
+    function parseCodigos(texto) {
+      return [...new Set(String(texto || "").split(/[,\s;.-]+/).map(x => Number(x.trim())).filter(n => Number.isInteger(n) && n > 0))];
+    }
+
+    function atualizarTotalEstimadoPrendas() {
+      const box = document.getElementById("boxTotalEstimado");
+      const totalBox = document.getElementById("totalEstimadoPrendas");
+
+      if (!box || !totalBox) return;
+
+      const encontradas = prendasSelecionadas.filter(p => p.encontrada);
+
+      if (!encontradas.length) {
+        box.classList.add("hidden");
+        totalBox.textContent = dinheiro(0);
+        return;
+      }
+
+      const total = encontradas.reduce((s, p) => s + Number(p.valorEstimado || 0), 0);
+
+      box.classList.remove("hidden");
+      totalBox.textContent = dinheiro(total);
+    }
+
+    function atualizarPreviewPrendas() {
+      const codigos = parseCodigos(campoPrendas.value);
+      prendasSelecionadas = codigos.map(codigo => {
+        const p = prendasCache.find(x => Number(x.codigo) === Number(codigo));
+        return p ? { encontrada: true, ...p } : { encontrada: false, codigo };
+      });
+
+      if (!codigos.length) {
+        previewPrendas.innerHTML = `<div class="text-slate-500">As prendas aparecerão aqui.</div>`;
+        atualizarTotalEstimadoPrendas();
+        return;
+      }
+
+      previewPrendas.innerHTML = prendasSelecionadas.map(p => {
+        if (!p.encontrada) return `<div class="rounded-xl p-3 bg-red-100 text-red-800 font-bold">Prenda Nº ${p.codigo} não encontrada.</div>`;
+        const bloqueada = p.status === "arrematada";
+        return `
+          <div class="rounded-xl p-3 ${bloqueada ? "bg-red-50 border border-red-200" : "bg-white border"}">
+            <div class="flex justify-between gap-2">
+              <div>
+                <div class="text-xl font-black text-amber-800">Prenda Nº ${p.codigo}</div>
+                <div class="font-black">${escapeHtml(p.nome || "")}</div>
+                <div class="text-sm"><b>Doador:</b> ${escapeHtml(p.doador || "")}</div>
+                <div class="text-sm"><b>Endereço:</b> ${escapeHtml(p.endereco || p.comunidade || "")}</div>
+              </div>
+              <span class="text-xs h-fit px-2 py-1 rounded-full ${bloqueada ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}">${escapeHtml(p.status || "cadastrada")}</span>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    function pesquisarArrematador() {
+      const termo = buscaArrematador.value.trim().toLowerCase();
+
+      if (arrematadorSelecionado && termo === String(arrematadorSelecionado.numero)) return;
+
+      arrematadorSelecionado = null;
+      arrematadorSelecionadoNumero.value = "";
+      boxSelecionado.classList.add("hidden");
+
+      if (!termo) {
+        resultadosArrematador.innerHTML = `<div class="text-sm text-slate-500">Digite o nº ou nome.</div>`;
+        return;
+      }
+
+      const encontrados = arrematadoresCache.filter(a => {
+        const texto = `${a.numero} ${a.nome} ${a.comunidade} ${a.endereco}`.toLowerCase();
+        return texto.includes(termo);
+      }).slice(0, 8);
+
+      if (!encontrados.length) {
+        resultadosArrematador.innerHTML = `<div class="bg-red-100 text-red-800 rounded-xl p-3 font-bold">Arrematador não encontrado. Cadastre antes de lançar.</div>`;
+        return;
+      }
+
+      resultadosArrematador.innerHTML = encontrados.map(a => `
+        <button type="button" onclick='selecionarArrematador(${JSON.stringify(a.numero)})' class="w-full text-left bg-white border rounded-xl p-3 hover:bg-amber-50">
+          <div class="font-black">Nº ${a.numero} — ${escapeHtml(a.nome || "")}</div>
+          <div class="text-sm text-slate-600">${escapeHtml(a.comunidade || "-")} | ${escapeHtml(a.endereco || "-")}</div>
+        </button>
+      `).join("");
+
+      atualizarTotalEstimadoPrendas();
+    }
+
+    function selecionarArrematador(numero) {
+      const a = arrematadoresCache.find(x => Number(x.numero) === Number(numero));
+      if (!a) return;
+      arrematadorSelecionado = a;
+      arrematadorSelecionadoNumero.value = a.numero;
+      buscaArrematador.value = String(a.numero);
+      resultadosArrematador.innerHTML = "";
+      boxSelecionado.innerHTML = `Selecionado: Arrematador Nº ${a.numero} — ${escapeHtml(a.nome || "")}`;
+      boxSelecionado.classList.remove("hidden");
+    }
+
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      verificarOperador();
+
+    const statusConexaoMini = document.getElementById("statusConexaoMini");
+
+    window.addEventListener("online", atualizarStatusMini);
+    window.addEventListener("offline", atualizarStatusMini);
+
+    atualizarStatusMini();
+
+    function atualizarStatusMini() {
+      if (navigator.onLine) {
+        statusConexaoMini.innerHTML = "🟢 Online";
+        statusConexaoMini.className = "rounded-xl p-3 bg-green-100 text-green-800 font-bold";
+      } else {
+        statusConexaoMini.innerHTML = "🔴 Offline";
+        statusConexaoMini.className = "rounded-xl p-3 bg-red-100 text-red-800 font-bold";
+      }
+    }
+
+      if (!operadorLogado) return alert("Faça login de operador antes de lançar arremate.");
+      if (!leilaoAtivo) return alert("Nenhum leilão ativo.");
+
+      const codigos = parseCodigos(campoPrendas.value);
+      if (!codigos.length) return alert("Informe pelo menos uma prenda.");
+      if (!arrematadorSelecionado) return alert("Selecione o arrematador.");
+      if (prendasSelecionadas.some(p => !p.encontrada)) return alert("Existe prenda não encontrada.");
+      if (prendasSelecionadas.some(p => p.status === "arrematada")) return alert("Uma ou mais prendas já estão arrematadas.");
+
+      let ganhador = document.getElementById("ganhador").value.trim();
+      if (!ganhador) {
+        ganhador = "o mesmo";
+      }
+
+      const valorTotal = Number(document.getElementById("valorArremate").value || 0);
+      if (valorTotal <= 0) return alert("Informe um valor válido.");
+
+      if (!confirm(`Confirmar arremate?\n\nPrendas: ${codigos.join(", ")}\nArrematador: Nº ${arrematadorSelecionado.numero} — ${arrematadorSelecionado.nome}\nPara: ${ganhador}\nValor: ${dinheiro(valorTotal)}`)) return;
+
+      const btn = document.getElementById("btnConfirmar");
+      btn.disabled = true;
+      btn.textContent = "Salvando...";
+
+      try {
+        const agora = new Date();
+
+        await db.runTransaction(async (transaction) => {
+          const contadorRef = refContadorArremates();
+
+          const contadorSnap = await transaction.get(contadorRef);
+          const prendaSnaps = [];
+          for (const codigo of codigos) {
+            prendaSnaps.push({ codigo, snap: await transaction.get(refPrendas().doc(String(codigo))) });
+          }
+          const arrematadorSnap = await transaction.get(refArrematadores().doc(String(arrematadorSelecionado.numero)));
+
+          if (!arrematadorSnap.exists) throw new Error("Arrematador não encontrado.");
+          for (const item of prendaSnaps) {
+            if (!item.snap.exists) throw new Error(`Prenda Nº ${item.codigo} não encontrada.`);
+            if (item.snap.data().status === "arrematada") throw new Error(`Prenda Nº ${item.codigo} já está arrematada.`);
+          }
+
+          const ultimo = contadorSnap.exists && typeof contadorSnap.data().ultimoCodigo === "number" ? contadorSnap.data().ultimoCodigo : 0;
+          const codigoArremate = ultimo + 1;
+
+          const prendasResumo = prendaSnaps.map(item => {
+            const p = item.snap.data();
+            return { codigo: p.codigo, nome: p.nome || "", doador: p.doador || "", comunidade: p.endereco || p.comunidade || "" };
+          });
+
+          const a = arrematadorSnap.data();
+
+          transaction.set(contadorRef, {
+            ultimoCodigo: codigoArremate,
+            atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+
+          transaction.set(refArremates().doc(String(codigoArremate)), {
+            codigo: codigoArremate,
+            leilaoId: leilaoAtivo.leilaoId,
+            leilaoNumero: leilaoAtivo.numero || null,
+            prendasCodigos: codigos,
+            prendasResumo,
+            arrematadorNumero: a.numero,
+            arrematadorNome: a.nome || "",
+            arrematadorEndereço: a.comunidade || "",
+            arrematadorEndereco: a.endereco || "",
+            ganhador,
+            valorTotal,
+            valorPago: 0,
+            saldo: valorTotal,
+            statusPagamento: "em_aberto",
+            status: "confirmado",
+            observacao: document.getElementById("observacao").value.trim(),
+            criadoPor: operadorLogado.apelido || operadorLogado.nome,
+            criadoPorId: operadorLogado.id || "",
+            criadoEm: agora.toISOString(),
+            criadoEmServidor: firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+          codigos.forEach(codigo => {
+            transaction.set(refPrendas().doc(String(codigo)), {
+              status: "arrematada",
+              arremateCodigo: codigoArremate,
+              arrematadorNumero: a.numero,
+              arrematadorNome: a.nome || "",
+              ganhador,
+              valorArremate: valorTotal,
+              arrematadaPor: operadorLogado.apelido || operadorLogado.nome,
+              arrematadaPorId: operadorLogado.id || "",
+              arrematadaEm: agora.toISOString(),
+              atualizadoEm: agora.toISOString()
+            }, { merge: true });
+          });
+        });
+
+        const arrematadorHistorico = {
+          numero: arrematadorSelecionado ? arrematadorSelecionado.numero : "",
+          nome: arrematadorSelecionado ? (arrematadorSelecionado.nome || "") : ""
+        };
+
+        await registrarHistorico(
+          "criacao_arremate",
+          "Arremate criado",
+          {
+            prendas: codigos,
+            arrematadorNumero: arrematadorHistorico.numero,
+            arrematadorNome: arrematadorHistorico.nome,
+            ganhador,
+            valorTotal
+          }
+        );
+
+        form.reset();
+        arrematadorSelecionado = null;
+        arrematadorSelecionadoNumero.value = "";
+        boxSelecionado.classList.add("hidden");
+        resultadosArrematador.innerHTML = "";
+        prendasSelecionadas = [];
+        previewPrendas.innerHTML = `<div class="text-slate-500">As prendas aparecerão aqui.</div>`;
+        atualizarTotalEstimadoPrendas();
+
+        alert("Arremate registrado com sucesso!");
+      } catch (err) {
+        console.error(err);
+        alert(err.message || "Erro ao salvar arremate.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Confirmar Arremate";
+      }
+    });
+
+    function renderizarUltimoDestaque() {
+      if (!arrematesCache.length) {
+        ultimoDestaque.classList.add("hidden");
+        return;
+      }
+      const a = arrematesCache[0];
+      ultimoDestaque.classList.remove("hidden");
+      ultimoDestaque.innerHTML = `
+        <div class="text-sm font-bold text-amber-900">ÚLTIMO ARREMATE</div>
+        <div class="text-2xl font-black">Nº ${a.codigo} — ${dinheiro(a.valorTotal)}</div>
+        <div class="font-bold">Arrematador ${a.arrematadorNumero}: ${escapeHtml(a.arrematadorNome || "")}</div>
+        <div class="font-bold">Para: ${escapeHtml(a.ganhador || "-")}</div>
+        <div class="text-sm">Prendas: ${(a.prendasCodigos || []).join(", ")}</div>
+      `;
+    }
+
+    function renderizarArremates() {
+      const termo = buscaLista.value.trim().toLowerCase();
+      const filtrados = arrematesCache.filter(a => {
+        const texto = `${a.codigo} ${a.arrematadorNumero} ${a.arrematadorNome} ${a.ganhador} ${a.prendasCodigos?.join(" ")}`.toLowerCase();
+        return texto.includes(termo);
+      });
+
+      if (!filtrados.length) {
+        listaArremates.innerHTML = `<div class="text-slate-500">Nenhum arremate encontrado.</div>`;
+        return;
+      }
+
+      listaArremates.innerHTML = filtrados.map(a => `
+        <div class="border rounded-2xl p-3 bg-slate-50">
+          <div class="text-xl font-black text-amber-800">Arremate Nº ${a.codigo}</div>
+          <div class="font-black">Arrematador ${a.arrematadorNumero} — ${escapeHtml(a.arrematadorNome || "")}</div>
+          <div class="font-bold">Para: ${escapeHtml(a.ganhador || "-")}</div>
+          <div class="text-sm"><b>Valor:</b> ${dinheiro(a.valorTotal)} | <b>Pagamento:</b> ${labelPagamento(a.statusPagamento)}</div>
+          <div class="text-sm mt-2"><b>Prendas:</b></div>
+          <div class="text-sm">${(a.prendasResumo || []).map(p => `<div>• ${p.codigo} — ${escapeHtml(p.nome || "")} — Doador: ${escapeHtml(p.doador || "")}</div>`).join("")}</div>
+          <div class="text-xs text-slate-500 mt-2">Lançado por ${escapeHtml(a.criadoPor || "-")} em ${a.criadoEm ? dataHoraBrasil(a.criadoEm) : "-"}</div>
+        </div>
+      `).join("");
+    }
+
+    function dataBrasil(dataIso) {
+      if (!dataIso) return "-";
+      const [ano, mes, dia] = dataIso.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+    function dataHoraBrasil(date) {
+      return new Date(date).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit" });
+    }
+    
+async function registrarHistorico(tipo, descricao, dados = {}) {
+
+  try {
+
+    if (!leilaoAtivo || !leilaoAtivo.leilaoId) return;
+
+    await leilaoDoc()
+      .collection("historico")
+      .add({
+        tipo,
+        descricao,
+        dados,
+        usuario: operadorLogado ? (operadorLogado.apelido || operadorLogado.nome) : "Sistema",
+        usuarioId: operadorLogado ? (operadorLogado.id || "") : "",
+        criadoEm: new Date().toISOString(),
+        criadoEmServidor: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+  } catch (error) {
+
+    console.warn("Não foi possível registrar histórico:", error);
+
+  }
+
+}
+
+
+function dinheiro(valor) {
+      return Number(valor || 0).toLocaleString("pt-BR", { style:"currency", currency:"BRL" });
+    }
+    function labelPagamento(status) {
+      return { em_aberto:"Em aberto", parcial:"Parcial", pago:"Pago" }[status] || status || "Em aberto";
+    }
+    function nomeFuncao(funcao) {
+      const nomes = { admin:"Administração", cadastro:"Cadastro de prendas", mesa:"Mesa do leilão", caixa:"Caixa / pagamentos", impressao:"Impressão", geral:"Geral" };
+      return nomes[funcao] || funcao || "-";
+    }
+    
+
+let arremateEdicaoAtual = null;
+
+async function buscarArremateEdicao() {
+
+  const numero = Number(document.getElementById("numeroEditarArremate").value || 0);
+
+  if (!numero) {
+    alert("Digite o número do arremate.");
+    return;
+  }
+
+  try {
+
+    const snap = await leilaoDoc()
+      .collection("arremates")
+      .where("codigo", "==", numero)
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      alert("Arremate não encontrado.");
+      return;
+    }
+
+    const docSnap = snap.docs[0];
+
+    arremateEdicaoAtual = {
+      id: docSnap.id,
+      ...docSnap.data()
+    };
+
+    document.getElementById("boxEdicaoArremate").classList.remove("hidden");
+
+    document.getElementById("edicaoArremateId").value = arremateEdicaoAtual.id;
+    document.getElementById("edicaoArrematadorNumero").value = arremateEdicaoAtual.arrematadorNumero || "";
+    document.getElementById("edicaoArrematadorNome").value = arremateEdicaoAtual.arrematadorNome || "";
+    document.getElementById("edicaoGanhador").value =
+      String(arremateEdicaoAtual.ganhador || "").trim().toLowerCase() === String(arremateEdicaoAtual.arrematadorNome || "").trim().toLowerCase()
+      ? "o mesmo"
+      : (arremateEdicaoAtual.ganhador || "");
+    document.getElementById("edicaoValor").value = arremateEdicaoAtual.valorTotal || "";
+    document.getElementById("edicaoPrendas").value = (arremateEdicaoAtual.prendasCodigos || []).join(", ");
+
+    atualizarPreviewEdicaoPrendas();
+
+  } catch (error) {
+
+    console.error(error);
+    alert("Erro ao buscar arremate.");
+
+  }
+
+}
+
+
+async function atualizarNomeArrematadorEdicao() {
+
+  const numero = Number(document.getElementById("edicaoArrematadorNumero").value || 0);
+
+  if (!numero) return;
+
+  try {
+
+    const snap = await leilaoDoc()
+      .collection("arrematadores")
+      .doc(String(numero))
+      .get();
+
+    if (!snap.exists) return;
+
+    const arrematador = snap.data();
+
+    document.getElementById("edicaoArrematadorNome").value = arrematador.nome || "";
+
+    const campoGanhador = document.getElementById("edicaoGanhador");
+    const valorAtual = String(campoGanhador.value || "").trim().toLowerCase();
+
+    if (!valorAtual || valorAtual === String(arremateEdicaoAtual?.arrematadorNome || "").trim().toLowerCase()) {
+      campoGanhador.value = "o mesmo";
+    }
+
+  } catch (error) {
+    console.error(error);
+  }
+
+}
+
+
+
+async function atualizarPreviewEdicaoPrendas() {
+
+  const box = document.getElementById("previewEdicaoPrendas");
+
+  if (!box) return;
+
+  const codigos = document.getElementById("edicaoPrendas")
+    .value
+    .split(",")
+    .map(x => Number(x.trim()))
+    .filter(Boolean);
+
+  if (!codigos.length) {
+    box.classList.add("hidden");
+    box.innerHTML = "";
+    return;
+  }
+
+  try {
+
+    const resultados = await Promise.all(
+      codigos.map(async codigo => {
+
+        const snap = await leilaoDoc()
+          .collection("prendas")
+          .doc(String(codigo))
+          .get();
+
+        if (!snap.exists) {
+          return {
+            codigo,
+            nome: "Prenda não encontrada"
+          };
+        }
+
+        return {
+          codigo,
+          ...snap.data()
+        };
+
+      })
+    );
+
+    box.classList.remove("hidden");
+
+    box.innerHTML = resultados.map(p => `
+
+      <div class="flex justify-between gap-3">
+
+        <div>
+          <span class="font-black">${p.codigo}</span>
+          -
+          ${escapeHtml(p.nome || "")}
+        </div>
+
+        <div class="text-slate-500 text-xs">
+          ${escapeHtml(p.status || "")}
+        </div>
+
+      </div>
+
+    `).join("");
+
+  } catch (error) {
+
+    console.error(error);
+
+  }
+
+}
+
+
+
+function cancelarEdicaoArremate() {
+
+  arremateEdicaoAtual = null;
+
+  const box = document.getElementById("boxEdicaoArremate");
+  if (box) box.classList.add("hidden");
+
+  const campos = [
+    "numeroEditarArremate",
+    "edicaoArremateId",
+    "edicaoArrematadorNumero",
+    "edicaoArrematadorNome",
+    "edicaoGanhador",
+    "edicaoValor",
+    "edicaoPrendas",
+    "edicaoMotivo"
+  ];
+
+  campos.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  const preview = document.getElementById("previewEdicaoPrendas");
+  if (preview) {
+    preview.classList.add("hidden");
+    preview.innerHTML = "";
+  }
+
+}
+
+
+async function salvarEdicaoArremate() {
+
+  if (!arremateEdicaoAtual) return;
+
+  try {
+
+    const novoNumero = Number(document.getElementById("edicaoArrematadorNumero").value || 0);
+
+    const novoNome = document.getElementById("edicaoArrematadorNome").value.trim();
+
+    let novoGanhador = document.getElementById("edicaoGanhador").value.trim();
+
+    if (novoGanhador.toLowerCase() === novoNome.toLowerCase()) {
+      novoGanhador = "o mesmo";
+    }
+
+    const novoValor = Number(document.getElementById("edicaoValor").value || 0);
+
+    const novasPrendas = document.getElementById("edicaoPrendas").value
+      .split(",")
+      .map(x => Number(x.trim()))
+      .filter(Boolean);
+
+    // valida se alguma prenda já pertence a outro arremate
+    for (const codigo of novasPrendas) {
+
+      const prendaSnap = await leilaoDoc()
+        .collection("prendas")
+        .doc(String(codigo))
+        .get();
+
+      if (prendaSnap.exists) {
+
+        const prenda = prendaSnap.data();
+
+        const arremateCodigoPrenda = Number(prenda.arremateCodigo || 0);
+
+        const arremateAtualCodigo = Number(arremateEdicaoAtual.codigo || 0);
+
+        if (
+          prenda.status === "arrematada" &&
+          arremateCodigoPrenda &&
+          arremateCodigoPrenda !== arremateAtualCodigo
+        ) {
+
+          alert(
+            `Prenda nº ${codigo} já está no arremate nº ${arremateCodigoPrenda} de ${prenda.arrematadorNome || "outro arrematador"}.`
+          );
+
+          return;
+        }
+
+      }
+
+    }
+
+    const batch = db.batch();
+
+    const arremateRef = leilaoDoc()
+      .collection("arremates")
+      .doc(arremateEdicaoAtual.id);
+
+    batch.set(arremateRef, {
+
+      arrematadorNumero: novoNumero,
+      arrematadorNome: novoNome,
+      ganhador: novoGanhador,
+      valorTotal: novoValor,
+      prendasCodigos: novasPrendas,
+
+      alteradoPor: operadorLogado ? (operadorLogado.apelido || operadorLogado.nome) : "Sistema",
+
+      alteradoEm: new Date().toISOString(),
+
+      motivoAlteracao: document.getElementById("edicaoMotivo").value.trim()
+
+    }, { merge: true });
+
+    novasPrendas.forEach(codigo => {
+
+      batch.set(
+        leilaoDoc().collection("prendas").doc(String(codigo)),
+        {
+          status: "arrematada",
+          arrematadorNumero: novoNumero,
+          arrematadorNome: novoNome,
+          ganhador: novoGanhador,
+          valorArremate: novoValor
+        },
+        { merge: true }
+      );
+
+    });
+
+    await batch.commit();
+
+    await registrarHistorico(
+      "edicao_arremate",
+      `Arremate Nº ${arremateEdicaoAtual.codigo || ""} editado`,
+      {
+        arremateCodigo: arremateEdicaoAtual.codigo || "",
+        antes: {
+          arrematadorNumero: arremateEdicaoAtual.arrematadorNumero || "",
+          arrematadorNome: arremateEdicaoAtual.arrematadorNome || "",
+          ganhador: arremateEdicaoAtual.ganhador || "",
+          valorTotal: arremateEdicaoAtual.valorTotal || 0,
+          prendasCodigos: arremateEdicaoAtual.prendasCodigos || []
+        },
+        depois: {
+          arrematadorNumero: novoNumero,
+          arrematadorNome: novoNome,
+          ganhador: novoGanhador,
+          valorTotal: novoValor,
+          prendasCodigos: novasPrendas
+        },
+        motivo: document.getElementById("edicaoMotivo") ? document.getElementById("edicaoMotivo").value.trim() : ""
+      }
+    );
+
+    alert("Arremate atualizado!");
+
+  } catch (error) {
+
+    console.error(error);
+    alert("Erro ao salvar alteração.");
+
+  }
+
+}
+
+async function cancelarArremateEdicao() {
+
+  if (!arremateEdicaoAtual) return;
+
+  if (!confirm("Cancelar este arremate?")) return;
+
+  try {
+
+    await leilaoDoc()
+      .collection("arremates")
+      .doc(arremateEdicaoAtual.id)
+      .set({
+        status: "cancelado",
+        canceladoPor: operadorLogado ? (operadorLogado.apelido || operadorLogado.nome) : "Sistema",
+        canceladoEm: new Date().toISOString()
+      }, { merge: true });
+
+    const prendas = arremateEdicaoAtual.prendasCodigos || [];
+
+    for (const codigo of prendas) {
+
+      await leilaoDoc()
+        .collection("prendas")
+        .doc(String(codigo))
+        .set({
+          status: "cadastrada",
+          arrematadorNome: "",
+          arrematadorNumero: "",
+          valorArremate: "",
+          ganhador: ""
+        }, { merge: true });
+
+    }
+
+    await registrarHistorico(
+      "cancelamento_arremate",
+      `Arremate Nº ${arremateEdicaoAtual.codigo || ""} cancelado`,
+      {
+        arremateCodigo: arremateEdicaoAtual.codigo || "",
+        arrematadorNumero: arremateEdicaoAtual.arrematadorNumero || "",
+        arrematadorNome: arremateEdicaoAtual.arrematadorNome || "",
+        prendasCodigos: arremateEdicaoAtual.prendasCodigos || [],
+        valorTotal: arremateEdicaoAtual.valorTotal || 0
+      }
+    );
+
+    alert("Arremate cancelado!");
+
+  } catch (error) {
+
+    console.error(error);
+    alert("Erro ao cancelar.");
+
+  }
+
+}
+
+
+async function cancelarUltimoArremate() {
+
+  if (!confirm("Cancelar o último arremate?")) return;
+
+  try {
+
+    const snap = await leilaoDoc()
+      .collection("arremates")
+      .orderBy("codigo", "desc")
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      alert("Nenhum arremate encontrado.");
+      return;
+    }
+
+    const docSnap = snap.docs[0];
+    const arremate = docSnap.data();
+
+    await leilaoDoc()
+      .collection("arremates")
+      .doc(docSnap.id)
+      .set({
+        status: "cancelado",
+        canceladoPor: operadorLogado ? (operadorLogado.apelido || operadorLogado.nome) : "Sistema",
+        canceladoEm: new Date().toISOString()
+      }, { merge: true });
+
+    const prendas = arremate.prendasCodigos || [];
+
+    for (const codigo of prendas) {
+
+      await leilaoDoc()
+        .collection("prendas")
+        .doc(String(codigo))
+        .set({
+          status: "cadastrada",
+          arrematadorNome: "",
+          arrematadorNumero: "",
+          valorArremate: "",
+          ganhador: "",
+          arremateId: ""
+        }, { merge: true });
+
+    }
+
+    alert("Último arremate cancelado!");
+
+  } catch (error) {
+
+    console.error(error);
+    alert("Erro ao cancelar arremate.");
+
+  }
+
+}
+
+function escapeHtml(texto)
+ {
+      return String(texto).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+  </script>
+</body>
+</html>
