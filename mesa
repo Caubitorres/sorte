@@ -1,0 +1,952 @@
+/*
+  APPS SCRIPT - Sistema de Leilão no Google Planilhas - v7 Mesa: retorna Arrematadores na ação dados
+  Mantém Admin/Prendas/Arrematadores/Caixa e reforça retorno de arrematadores para a Mesa.
+*/
+
+const TOKEN = 'leilao2026';
+
+const ABAS = {
+  CONFIG: 'Config',
+  LEILOES: 'Leiloes',
+  PRENDAS: 'Prendas',
+  CATEGORIAS: 'Categorias',
+  MESA: 'Mesa',
+  ARREMATES: 'Arremates',
+  CONTROLE: 'Controle',
+  ARREMATADORES: 'Arrematadores',
+  CAIXA: 'Caixa',
+  PAGAMENTOS: 'Pagamentos'
+};
+
+const CABECALHOS = {
+  [ABAS.CONFIG]: ['chave', 'valor'],
+  [ABAS.LEILOES]: ['id', 'numero', 'nome', 'data', 'hora', 'capela', 'local', 'observacao', 'modelo', 'status', 'criadoPor', 'criadoEm', 'atualizadoPor', 'atualizadoEm', 'encerradoPor', 'encerradoEm', 'duplicadoDe', 'duplicadoDeNumero', 'copiouPrendas'],
+  [ABAS.PRENDAS]: ['id', 'leilaoId', 'leilaoNumero', 'codigo', 'nome', 'doador', 'enderecoDoador', 'telefone', 'valorEstimado', 'categoria', 'observacao', 'status', 'criadoEm', 'atualizadoEm', 'salvoPrendaEm'],
+  [ABAS.CATEGORIAS]: ['id', 'leilaoId', 'nome'],
+  [ABAS.MESA]: ['id', 'leilaoId', 'leilaoNumero', 'ordem', 'numerosPrendas', 'codigoArrematador', 'ganhador', 'valor', 'criadoEm', 'atualizadoEm', 'salvoMesaEm'],
+  [ABAS.ARREMATES]: ['id', 'leilaoId', 'leilaoNumero', 'codigo', 'ordemMesa', 'arrematadorNumero', 'arrematadorNome', 'ganhador', 'valorTotal', 'valorPago', 'saldo', 'statusPagamento', 'status', 'prendasResumo', 'codigosPrendas', 'origem', 'criadoEm', 'atualizadoEm'],
+  [ABAS.ARREMATADORES]: ['id', 'leilaoId', 'leilaoNumero', 'numero', 'codigo', 'nome', 'telefone', 'endereco', 'observacao', 'totalArrematado', 'totalPago', 'saldo', 'statusPagamento', 'criadoEm', 'atualizadoEm', 'salvoEm'],
+  [ABAS.CAIXA]: ['id', 'leilaoId', 'tipo', 'descricao', 'valor', 'forma', 'data', 'operador'],
+  [ABAS.PAGAMENTOS]: ['id', 'leilaoId', 'leilaoNumero', 'arremateId', 'ordemMesa', 'arrematadorId', 'arrematadorNumero', 'arrematadorNome', 'valor', 'forma', 'tipoPagamento', 'detalhePagamento', 'status', 'data', 'criadoEm', 'operador'],
+  [ABAS.CONTROLE]: ['id', 'leilaoId', 'tipo', 'inicioEm', 'encerradoEm', 'atualizadoEm']
+};
+
+function doGet(e) {
+  const p = e.parameter || {};
+  const callback = p.callback || 'callback';
+  let saida;
+
+  try {
+    if (p.token !== TOKEN) throw new Error('Token inválido. Confira TOKEN_LEILAO no HTML e TOKEN no Apps Script.');
+    prepararPlanilha();
+
+    if (p.action === 'dados') saida = getDados();
+    else if (p.action === 'adminDados') saida = adminDados();
+    else if (p.action === 'salvarLeilao') saida = salvarLeilao(p);
+    else if (p.action === 'ativarLeilao') saida = ativarLeilao(p);
+    else if (p.action === 'encerrarLeilao') saida = encerrarLeilao(p);
+    else if (p.action === 'duplicarLeilao') saida = duplicarLeilao(p);
+    else if (p.action === 'salvarPrenda') saida = salvarPrenda(p);
+    else if (p.action === 'salvarArrematador') saida = salvarArrematador(p);
+    else if (p.action === 'salvarCategoria') saida = salvarCategoria(p);
+    else if (p.action === 'salvarMesa') saida = salvarMesa(p);
+    else if (p.action === 'limparMesa') saida = limparMesa(p);
+    else if (p.action === 'registrarInicioLeilao') saida = registrarInicioLeilao(p);
+    else if (p.action === 'encerrarTempoLeilao') saida = encerrarTempoLeilao(p);
+    else if (p.action === 'salvarPagamentoArremate') saida = salvarPagamentoArremate(p);
+    else saida = { ok: false, erro: 'Ação não reconhecida: ' + (p.action || '') };
+  } catch (err) {
+    saida = { ok: false, erro: String(err && err.message ? err.message : err) };
+  }
+
+  return ContentService
+    .createTextOutput(callback + '(' + JSON.stringify(saida) + ');')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
+function prepararPlanilha() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  Object.keys(CABECALHOS).forEach(nomeAba => {
+    let sh = ss.getSheetByName(nomeAba);
+    if (!sh) sh = ss.insertSheet(nomeAba);
+    garantirCabecalho(sh, CABECALHOS[nomeAba]);
+  });
+
+  garantirConfigBasica();
+  garantirCategoriasPadrao();
+}
+
+function garantirCabecalho(sh, cabecalhoNecessario) {
+  const lastCol = Math.max(sh.getLastColumn(), cabecalhoNecessario.length, 1);
+  const atual = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(v => String(v || '').trim()).filter(Boolean);
+
+  if (atual.length === 0) {
+    sh.getRange(1, 1, 1, cabecalhoNecessario.length).setValues([cabecalhoNecessario]);
+    sh.setFrozenRows(1);
+    return;
+  }
+
+  const faltando = cabecalhoNecessario.filter(c => !atual.includes(c));
+  if (faltando.length) {
+    sh.getRange(1, atual.length + 1, 1, faltando.length).setValues([faltando]);
+  }
+  sh.setFrozenRows(1);
+}
+
+function garantirConfigBasica() {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.CONFIG);
+  const cfg = lerConfig();
+  if (!cfg.leilaoId) setConfig('leilaoId', '');
+  if (!cfg.numero) setConfig('numero', '');
+  if (!cfg.nome) setConfig('nome', '');
+  if (!cfg.ultimoNumeroLeilao) setConfig('ultimoNumeroLeilao', String(maiorNumeroLeilao()));
+}
+
+function garantirCategoriasPadrao() {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.CATEGORIAS);
+  const dados = lerAba(ABAS.CATEGORIAS);
+  if (dados.length) return;
+  const lista = ['Não informar', 'Animais', 'Bebidas', 'Casa', 'Roupas', 'Comidas', 'Agricultura', 'Serviços', 'Outros'];
+  const cab = cabecalho(sh);
+  lista.forEach((nome, i) => inserirObjeto(sh, cab, { id: 'cat_' + (i + 1), leilaoId: 'geral', nome }));
+}
+
+function adminDados() {
+  return { ok: true, config: lerConfig(), leiloes: lerAba(ABAS.LEILOES) };
+}
+
+function getDados() {
+  const config = lerConfig();
+  const leilaoId = config.leilaoId || '';
+
+  const prendas = filtrarPorLeilao(lerAba(ABAS.PRENDAS), leilaoId);
+  const categorias = filtrarCategorias(lerAba(ABAS.CATEGORIAS), leilaoId);
+  const mesa = filtrarPorLeilao(lerAba(ABAS.MESA), leilaoId);
+  const arremates = filtrarPorLeilao(lerAba(ABAS.ARREMATES), leilaoId);
+  const arrematadores = normalizarArrematadores(filtrarPorLeilao(lerAba(ABAS.ARREMATADORES), leilaoId));
+  const pagamentos = filtrarPorLeilao(lerAba(ABAS.PAGAMENTOS), leilaoId);
+  const controle = filtrarPorLeilao(lerAba(ABAS.CONTROLE), leilaoId);
+
+  return {
+    ok: true,
+    config,
+    prendas,
+    categorias,
+    mesa,
+    arremates,
+    arrematadores,
+    pagamentos,
+    controle,
+    debug: {
+      leilaoId,
+      qtdPrendas: prendas.length,
+      qtdArrematadores: arrematadores.length,
+      qtdMesa: mesa.length,
+      qtdArremates: arremates.length,
+      qtdPagamentos: pagamentos.length
+    }
+  };
+}
+
+
+function normalizarArrematadores(lista) {
+  return lista.map(a => {
+    const numero = a.numero || a.codigo || '';
+    a.numero = numero;
+    a.codigo = a.codigo || numero;
+    return a;
+  });
+}
+
+function filtrarPorLeilao(lista, leilaoId) {
+  if (!leilaoId) return lista;
+  return lista.filter(x => !x.leilaoId || String(x.leilaoId) === String(leilaoId));
+}
+
+function filtrarCategorias(lista, leilaoId) {
+  return lista.filter(x => !x.leilaoId || x.leilaoId === 'geral' || String(x.leilaoId) === String(leilaoId));
+}
+
+function salvarLeilao(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const operador = String(p.operador || '').trim();
+    if (!operador) throw new Error('Informe o operador.');
+
+    const nome = String(p.nome || '').trim();
+    const data = String(p.data || '').trim();
+    const capela = String(p.capela || '').trim();
+    const local = String(p.local || '').trim();
+    if (!nome) throw new Error('Informe o nome do leilão.');
+    if (!data) throw new Error('Informe a data.');
+    if (!capela) throw new Error('Informe a capela.');
+    if (!local) throw new Error('Informe o local.');
+
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.LEILOES);
+    const cab = cabecalho(sh);
+    const agora = new Date().toISOString();
+    let leiloes = lerAba(ABAS.LEILOES);
+    let id = String(p.id || '').trim();
+    let linha = id ? localizarLinhaPorId(sh, cab, id) : -1;
+    let numero;
+    let criadoPor = operador;
+    let criadoEm = agora;
+    let status = 'rascunho';
+
+    if (linha > 0) {
+      const antigo = leiloes.find(l => String(l.id) === id) || {};
+      numero = antigo.numero;
+      criadoPor = antigo.criadoPor || operador;
+      criadoEm = antigo.criadoEm || agora;
+      status = antigo.status || 'rascunho';
+    } else {
+      numero = proximoNumeroLeilao();
+      id = 'leilao-' + numero;
+      linha = sh.getLastRow() + 1;
+    }
+
+    const obj = {
+      id,
+      numero,
+      nome,
+      data,
+      hora: String(p.hora || '').trim(),
+      capela,
+      local,
+      observacao: String(p.observacao || '').trim(),
+      modelo: 'planilha',
+      status,
+      criadoPor,
+      criadoEm,
+      atualizadoPor: operador,
+      atualizadoEm: agora,
+      encerradoPor: '',
+      encerradoEm: '',
+      duplicadoDe: '',
+      duplicadoDeNumero: '',
+      copiouPrendas: ''
+    };
+
+    escreverObjeto(sh, cab, linha, obj);
+    setConfig('ultimoNumeroLeilao', String(Math.max(Number(numero) || 0, Number(lerConfig().ultimoNumeroLeilao) || 0)));
+    return { ok: true, leilao: obj };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function ativarLeilao(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const operador = String(p.operador || '').trim();
+    if (!operador) throw new Error('Informe o operador.');
+    const id = String(p.id || '').trim();
+    if (!id) throw new Error('Leilão não informado.');
+
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.LEILOES);
+    const cab = cabecalho(sh);
+    const dados = lerAba(ABAS.LEILOES);
+    const alvo = dados.find(l => String(l.id) === id);
+    if (!alvo) throw new Error('Leilão não encontrado.');
+
+    const values = sh.getDataRange().getValues();
+    const idxId = cab.indexOf('id');
+    const idxStatus = cab.indexOf('status');
+    const idxAtualizadoPor = cab.indexOf('atualizadoPor');
+    const idxAtualizadoEm = cab.indexOf('atualizadoEm');
+    const agora = new Date().toISOString();
+
+    for (let i = 1; i < values.length; i++) {
+      const rowId = String(values[i][idxId] || '');
+      if (!rowId) continue;
+      let status = String(values[i][idxStatus] || 'rascunho');
+      if (rowId === id) status = 'ativo';
+      else if (status === 'ativo') status = 'inativo';
+      sh.getRange(i + 1, idxStatus + 1).setValue(status);
+      sh.getRange(i + 1, idxAtualizadoPor + 1).setValue(operador);
+      sh.getRange(i + 1, idxAtualizadoEm + 1).setValue(agora);
+    }
+
+    setConfig('leilaoId', alvo.id);
+    setConfig('numero', String(alvo.numero || ''));
+    setConfig('nome', String(alvo.nome || ''));
+    setConfig('data', String(alvo.data || ''));
+    setConfig('hora', String(alvo.hora || ''));
+    setConfig('capela', String(alvo.capela || ''));
+    setConfig('local', String(alvo.local || ''));
+    setConfig('status', 'ativo');
+    setConfig('atualizadoPor', operador);
+    setConfig('atualizadoEm', agora);
+
+    return { ok: true, leilao: alvo };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function encerrarLeilao(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const operador = String(p.operador || '').trim();
+    if (!operador) throw new Error('Informe o operador.');
+    const id = String(p.id || '').trim();
+    if (!id) throw new Error('Leilão não informado.');
+
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.LEILOES);
+    const cab = cabecalho(sh);
+    const linha = localizarLinhaPorId(sh, cab, id);
+    if (linha < 0) throw new Error('Leilão não encontrado.');
+
+    const agora = new Date().toISOString();
+    const obj = objetoDaLinha(sh, cab, linha);
+    obj.status = 'encerrado';
+    obj.encerradoPor = operador;
+    obj.encerradoEm = agora;
+    obj.atualizadoPor = operador;
+    obj.atualizadoEm = agora;
+    escreverObjeto(sh, cab, linha, obj);
+
+    const cfg = lerConfig();
+    if (String(cfg.leilaoId || '') === id) {
+      setConfig('leilaoId', '');
+      setConfig('numero', '');
+      setConfig('nome', '');
+      setConfig('status', '');
+    }
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function duplicarLeilao(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const operador = String(p.operador || '').trim();
+    if (!operador) throw new Error('Informe o operador.');
+    const origemId = String(p.id || '').trim();
+    const origem = lerAba(ABAS.LEILOES).find(l => String(l.id) === origemId);
+    if (!origem) throw new Error('Leilão de origem não encontrado.');
+
+    const numero = proximoNumeroLeilao();
+    const novoId = 'leilao-' + numero;
+    const agora = new Date().toISOString();
+    const copiarPrendas = String(p.copiarPrendas || '') === 'true';
+
+    const novo = {
+      id: novoId,
+      numero,
+      nome: String(p.nome || origem.nome || '').trim(),
+      data: String(p.data || origem.data || '').trim(),
+      hora: String(p.hora || origem.hora || '').trim(),
+      capela: String(p.capela || origem.capela || '').trim(),
+      local: String(p.local || origem.local || '').trim(),
+      observacao: String(p.observacao || origem.observacao || '').trim(),
+      modelo: 'planilha',
+      status: 'rascunho',
+      criadoPor: operador,
+      criadoEm: agora,
+      atualizadoPor: operador,
+      atualizadoEm: agora,
+      duplicadoDe: origemId,
+      duplicadoDeNumero: origem.numero || '',
+      copiouPrendas: copiarPrendas ? 'sim' : 'nao'
+    };
+
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.LEILOES);
+    inserirObjeto(sh, cabecalho(sh), novo);
+    setConfig('ultimoNumeroLeilao', String(numero));
+
+    if (copiarPrendas) copiarPrendasParaNovoLeilao(origemId, novoId, numero, operador);
+    return { ok: true, leilao: novo };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function copiarPrendasParaNovoLeilao(origemId, novoId, novoNumero, operador) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.PRENDAS);
+  const cab = cabecalho(sh);
+  const agora = new Date().toISOString();
+  const prendas = lerAba(ABAS.PRENDAS).filter(p => String(p.leilaoId || '') === String(origemId));
+  prendas.forEach(p => {
+    const nova = Object.assign({}, p, {
+      id: 'prenda_' + Utilities.getUuid(),
+      leilaoId: novoId,
+      leilaoNumero: novoNumero,
+      status: 'disponivel',
+      criadoEm: agora,
+      atualizadoEm: agora,
+      salvoPrendaEm: agora
+    });
+    inserirObjeto(sh, cab, nova);
+  });
+}
+
+function salvarPrenda(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName(ABAS.PRENDAS);
+    const cab = cabecalho(sh);
+    const agora = new Date().toISOString();
+    const config = lerConfig();
+    const leilaoId = String(p.leilaoId || config.leilaoId || 'principal');
+    const leilaoNumero = String(config.numero || '');
+
+    const nome = String(p.nome || '').trim();
+    if (!nome) throw new Error('Informe o nome da prenda.');
+
+    let id = String(p.id || '').trim();
+    let linha = -1;
+    let codigo;
+    let criadoEm = agora;
+
+    if (id && id !== '__nova__') {
+      linha = localizarLinhaPorId(sh, cab, id);
+      if (linha > 0) {
+        const antigo = objetoDaLinha(sh, cab, linha);
+        codigo = antigo.codigo;
+        criadoEm = antigo.criadoEm || agora;
+      }
+    }
+
+    if (linha === -1) {
+      id = 'prenda_' + Utilities.getUuid();
+      codigo = proximoCodigoPrenda(leilaoId);
+      linha = sh.getLastRow() + 1;
+    }
+
+    const obj = {
+      id,
+      leilaoId,
+      leilaoNumero,
+      codigo,
+      nome,
+      doador: String(p.doador || '').trim(),
+      enderecoDoador: String(p.enderecoDoador || '').trim(),
+      telefone: String(p.telefone || '').trim(),
+      valorEstimado: Number(String(p.valorEstimado || '0').replace(',', '.')) || 0,
+      categoria: String(p.categoria || 'Não informar').trim() || 'Não informar',
+      observacao: String(p.observacao || '').trim(),
+      status: 'disponivel',
+      criadoEm,
+      atualizadoEm: agora,
+      salvoPrendaEm: agora
+    };
+
+    escreverObjeto(sh, cab, linha, obj);
+    return { ok: true, prenda: obj };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+function salvarArrematador(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sh = ss.getSheetByName(ABAS.ARREMATADORES);
+    const cab = cabecalho(sh);
+    const agora = new Date().toISOString();
+    const config = lerConfig();
+    const leilaoId = String(p.leilaoId || config.leilaoId || '').trim();
+    if (!leilaoId) throw new Error('Nenhum leilão ativo. Ative um leilão no Admin.');
+    const leilaoNumero = String(config.numero || '');
+
+    const nome = String(p.nome || '').trim();
+    if (!nome) throw new Error('Informe o nome do arrematador.');
+
+    let id = String(p.id || '').trim();
+    let linha = -1;
+    let numero;
+    let criadoEm = agora;
+
+    if (id && id !== '__nova__') {
+      linha = localizarLinhaPorId(sh, cab, id);
+      if (linha > 0) {
+        const antigo = objetoDaLinha(sh, cab, linha);
+        numero = antigo.numero || antigo.codigo;
+        criadoEm = antigo.criadoEm || agora;
+      }
+    }
+
+    if (linha === -1) {
+      id = 'arrematador_' + Utilities.getUuid();
+      numero = proximoNumeroArrematador(leilaoId);
+      linha = sh.getLastRow() + 1;
+    }
+
+    const obj = {
+      id,
+      leilaoId,
+      leilaoNumero,
+      numero,
+      codigo: numero,
+      nome,
+      telefone: String(p.telefone || '').trim(),
+      endereco: String(p.endereco || '').trim(),
+      observacao: String(p.observacao || '').trim(),
+      criadoEm,
+      atualizadoEm: agora,
+      salvoEm: agora
+    };
+
+    escreverObjeto(sh, cab, linha, obj);
+    return { ok: true, arrematador: obj };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function proximoNumeroArrematador(leilaoId) {
+  const lista = lerAba(ABAS.ARREMATADORES).filter(a => String(a.leilaoId || '') === String(leilaoId));
+  return lista.reduce((m, a) => Math.max(m, Number(a.numero || a.codigo) || 0), 0) + 1;
+}
+
+function salvarCategoria(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const nome = String(p.nome || '').trim();
+    if (!nome) throw new Error('Digite a nova categoria.');
+    const config = lerConfig();
+    const leilaoId = String(p.leilaoId || config.leilaoId || 'geral');
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.CATEGORIAS);
+    const existentes = lerAba(ABAS.CATEGORIAS);
+    const achada = existentes.find(c => normalizarTexto(c.nome) === normalizarTexto(nome) && (c.leilaoId === 'geral' || String(c.leilaoId || '') === leilaoId));
+    if (achada) return { ok: true, categoria: achada, jaExistia: true };
+    const obj = { id: 'cat_' + Utilities.getUuid(), leilaoId, nome };
+    inserirObjeto(sh, cabecalho(sh), obj);
+    return { ok: true, categoria: obj, jaExistia: false };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+function salvarMesa(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const config = lerConfig();
+    const leilaoId = String(p.leilaoId || config.leilaoId || '').trim();
+    if (!leilaoId) throw new Error('Nenhum leilão ativo. Ative um leilão no Admin.');
+    const leilaoNumero = String(config.numero || '');
+
+    const numerosPrendas = String(p.numerosPrendas || '').trim();
+    const codigoArrematador = String(p.codigoArrematador || '').trim();
+    const ganhador = String(p.ganhador || '').trim();
+    const valorTexto = String(p.valor || '').replace(',', '.').trim();
+    const valor = Number(valorTexto) || 0;
+    if (!numerosPrendas && !codigoArrematador && !ganhador && !valorTexto) throw new Error('Linha vazia.');
+
+    registrarInicioLeilao({});
+
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.MESA);
+    const cab = cabecalho(sh);
+    const agora = new Date().toISOString();
+    let id = String(p.id || '').trim();
+    let linha = -1;
+    let ordem;
+    let criadoEm = agora;
+
+    if (id && id !== '__nova__') {
+      linha = localizarLinhaPorId(sh, cab, id);
+      if (linha > 0) {
+        const antigo = objetoDaLinha(sh, cab, linha);
+        ordem = antigo.ordem;
+        criadoEm = antigo.criadoEm || agora;
+      }
+    }
+
+    if (linha === -1) {
+      id = 'mesa_' + Utilities.getUuid();
+      ordem = proximaOrdemMesa(leilaoId);
+      linha = sh.getLastRow() + 1;
+    }
+
+    const obj = {
+      id,
+      leilaoId,
+      leilaoNumero,
+      ordem,
+      numerosPrendas,
+      codigoArrematador,
+      ganhador,
+      valor: valorTexto,
+      criadoEm,
+      atualizadoEm: agora,
+      salvoMesaEm: agora
+    };
+
+    escreverObjeto(sh, cab, linha, obj);
+    const arremate = sincronizarArremateDaMesa(obj, leilaoId, leilaoNumero);
+    return { ok: true, mesa: obj, arremate };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function proximaOrdemMesa(leilaoId) {
+  const lista = lerAba(ABAS.MESA).filter(l => String(l.leilaoId || '') === String(leilaoId));
+  return lista.reduce((m, l) => Math.max(m, Number(l.ordem) || 0), 0) + 1;
+}
+
+function sincronizarArremateDaMesa(linhaMesa, leilaoId, leilaoNumero) {
+  const numeros = String(linhaMesa.numerosPrendas || '').trim();
+  const cod = String(linhaMesa.codigoArrematador || '').trim();
+  const valor = Number(String(linhaMesa.valor || '').replace(',', '.')) || 0;
+  if (!numeros || !cod || !(valor > 0)) return null;
+
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.ARREMATES);
+  const cab = cabecalho(sh);
+  const agora = new Date().toISOString();
+  const arrematadores = normalizarArrematadores(filtrarPorLeilao(lerAba(ABAS.ARREMATADORES), leilaoId));
+  const prendas = filtrarPorLeilao(lerAba(ABAS.PRENDAS), leilaoId);
+  const ar = arrematadores.find(a => String(a.numero || a.codigo || '') === String(cod));
+  const antigoLinha = localizarLinhaPorId(sh, cab, linhaMesa.id);
+  const antigo = antigoLinha > 0 ? objetoDaLinha(sh, cab, antigoLinha) : {};
+  const valorPago = Number(antigo.valorPago || 0);
+  const lista = tokensPrendasGS(numeros).map(n => {
+    const p = prendas.find(pr => String(pr.codigo) === String(n));
+    return { codigo: p ? p.codigo : n, nome: p ? (p.nome || p.descricao || '') : '' };
+  });
+
+  const obj = {
+    id: linhaMesa.id,
+    leilaoId,
+    leilaoNumero,
+    codigo: Number(linhaMesa.ordem || 0),
+    ordemMesa: Number(linhaMesa.ordem || 0),
+    arrematadorNumero: ar ? Number(ar.numero || ar.codigo) : (Number(cod) || cod),
+    arrematadorNome: ar ? String(ar.nome || '') : '',
+    ganhador: String(linhaMesa.ganhador || '').trim(),
+    valorTotal: valor,
+    valorPago,
+    saldo: Math.max(valor - valorPago, 0),
+    statusPagamento: valorPago >= valor ? 'pago' : (valorPago > 0 ? 'parcial' : 'em_aberto'),
+    status: antigo.status || '',
+    prendasResumo: JSON.stringify(lista),
+    codigosPrendas: numeros,
+    origem: 'mesa',
+    criadoEm: antigo.criadoEm || agora,
+    atualizadoEm: agora
+  };
+
+  const linha = antigoLinha > 0 ? antigoLinha : sh.getLastRow() + 1;
+  escreverObjeto(sh, cab, linha, obj);
+  return obj;
+}
+
+function registrarInicioLeilao(p) {
+  const config = lerConfig();
+  const leilaoId = String(p.leilaoId || config.leilaoId || '').trim();
+  if (!leilaoId) throw new Error('Nenhum leilão ativo.');
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.CONTROLE);
+  const cab = cabecalho(sh);
+  const tipo = 'tempoLeilao';
+  const id = leilaoId + '_' + tipo;
+  let linha = localizarLinhaPorId(sh, cab, id);
+  let obj = linha > 0 ? objetoDaLinha(sh, cab, linha) : { id, leilaoId, tipo };
+  if (!obj.inicioEm) obj.inicioEm = new Date().toISOString();
+  obj.atualizadoEm = new Date().toISOString();
+  escreverObjeto(sh, cab, linha > 0 ? linha : sh.getLastRow() + 1, obj);
+  return { ok: true, controle: obj };
+}
+
+function encerrarTempoLeilao(p) {
+  const config = lerConfig();
+  const leilaoId = String(p.leilaoId || config.leilaoId || '').trim();
+  if (!leilaoId) throw new Error('Nenhum leilão ativo.');
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.CONTROLE);
+  const cab = cabecalho(sh);
+  const tipo = 'tempoLeilao';
+  const id = leilaoId + '_' + tipo;
+  let linha = localizarLinhaPorId(sh, cab, id);
+  let obj = linha > 0 ? objetoDaLinha(sh, cab, linha) : { id, leilaoId, tipo };
+  const agora = new Date().toISOString();
+  if (!obj.inicioEm) obj.inicioEm = agora;
+  obj.encerradoEm = agora;
+  obj.atualizadoEm = agora;
+  escreverObjeto(sh, cab, linha > 0 ? linha : sh.getLastRow() + 1, obj);
+  return { ok: true, controle: obj };
+}
+
+function limparMesa(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const config = lerConfig();
+    const leilaoId = String(p.leilaoId || config.leilaoId || '').trim();
+    if (!leilaoId) throw new Error('Nenhum leilão ativo.');
+    apagarLinhasPorLeilao(ABAS.MESA, leilaoId);
+    apagarArrematesMesaPorLeilao(leilaoId);
+    apagarControleTempoPorLeilao(leilaoId);
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function apagarLinhasPorLeilao(nomeAba, leilaoId) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomeAba);
+  const cab = cabecalho(sh);
+  const idx = cab.indexOf('leilaoId');
+  if (idx < 0) return;
+  const values = sh.getDataRange().getValues();
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][idx] || '') === String(leilaoId)) sh.deleteRow(i + 1);
+  }
+}
+
+function apagarArrematesMesaPorLeilao(leilaoId) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.ARREMATES);
+  const cab = cabecalho(sh);
+  const idxLeilao = cab.indexOf('leilaoId');
+  const idxOrigem = cab.indexOf('origem');
+  const idxOrdem = cab.indexOf('ordemMesa');
+  const idxPrendas = cab.indexOf('prendasResumo');
+  const values = sh.getDataRange().getValues();
+  for (let i = values.length - 1; i >= 1; i--) {
+    const mesmo = String(values[i][idxLeilao] || '') === String(leilaoId);
+    const origem = idxOrigem >= 0 ? String(values[i][idxOrigem] || '') : '';
+    const temOrdem = idxOrdem >= 0 && String(values[i][idxOrdem] || '').trim() !== '';
+    const temPrendas = idxPrendas >= 0 && String(values[i][idxPrendas] || '').trim() !== '';
+    if (mesmo && (origem === 'mesa' || origem === 'mesa_operacional' || temOrdem || temPrendas)) sh.deleteRow(i + 1);
+  }
+}
+
+function apagarControleTempoPorLeilao(leilaoId) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.CONTROLE);
+  const cab = cabecalho(sh);
+  const idxLeilao = cab.indexOf('leilaoId');
+  const idxTipo = cab.indexOf('tipo');
+  const values = sh.getDataRange().getValues();
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (String(values[i][idxLeilao] || '') === String(leilaoId) && String(values[i][idxTipo] || '') === 'tempoLeilao') sh.deleteRow(i + 1);
+  }
+}
+
+function tokensPrendasGS(texto) {
+  return String(texto || '').split(/[,+;\s]+/).map(x => x.trim()).filter(Boolean);
+}
+
+function salvarPagamentoArremate(p) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const config = lerConfig();
+    const leilaoId = String(p.leilaoId || config.leilaoId || '').trim();
+    if (!leilaoId) throw new Error('Nenhum leilão ativo. Ative um leilão no Admin.');
+    const leilaoNumero = String(config.numero || '');
+
+    const arremateId = String(p.arremateId || p.id || '').trim();
+    if (!arremateId) throw new Error('Arremate não informado.');
+
+    const valor = Number(String(p.valor || '0').replace('R$', '').replace(/\./g, '').replace(',', '.')) || 0;
+    if (!(valor > 0)) throw new Error('Informe um valor de pagamento maior que zero.');
+
+    const tipo = String(p.tipoPagamento || p.tipo || 'dinheiro').trim() || 'dinheiro';
+    const detalhe = String(p.detalhePagamento || p.detalhe || '').trim();
+    const operador = String(p.operador || '').trim();
+
+    const shArr = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.ARREMATES);
+    const cabArr = cabecalho(shArr);
+    const linhaArr = localizarLinhaPorId(shArr, cabArr, arremateId);
+    if (linhaArr < 1) throw new Error('Arremate não encontrado.');
+
+    const arr = objetoDaLinha(shArr, cabArr, linhaArr);
+    if (String(arr.leilaoId || '') !== String(leilaoId)) throw new Error('Este arremate não pertence ao leilão ativo.');
+    if (String(arr.status || '') === 'cancelado') throw new Error('Este arremate está cancelado.');
+
+    const agora = new Date().toISOString();
+    const shPag = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.PAGAMENTOS);
+    const cabPag = cabecalho(shPag);
+
+    const pagamento = {
+      id: 'pagamento_' + Utilities.getUuid(),
+      leilaoId,
+      leilaoNumero,
+      arremateId: arr.id,
+      ordemMesa: arr.ordemMesa || arr.codigo || '',
+      arrematadorId: String(p.arrematadorId || '').trim(),
+      arrematadorNumero: arr.arrematadorNumero || '',
+      arrematadorNome: arr.arrematadorNome || '',
+      valor,
+      forma: tipo,
+      tipoPagamento: tipo,
+      detalhePagamento: detalhe,
+      status: 'confirmado',
+      data: agora,
+      criadoEm: agora,
+      operador
+    };
+
+    inserirObjeto(shPag, cabPag, pagamento);
+
+    const novoPago = totalPagoArremateGS(arremateId, leilaoId);
+    const total = Number(arr.valorTotal || arr.valor || 0) || 0;
+    const saldo = Math.max(total - novoPago, 0);
+    const statusPagamento = total > 0 && saldo <= 0 ? 'pago' : (novoPago > 0 ? 'parcial' : 'em_aberto');
+
+    arr.valorPago = novoPago;
+    arr.saldo = saldo;
+    arr.statusPagamento = statusPagamento;
+    arr.atualizadoEm = agora;
+    escreverObjeto(shArr, cabArr, linhaArr, arr);
+
+    const resumoArrematador = atualizarResumoArrematadorGS(leilaoId, arr.arrematadorNumero);
+
+    return { ok: true, pagamento, arremate: arr, resumoArrematador };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function totalPagoArremateGS(arremateId, leilaoId) {
+  const pags = lerAba(ABAS.PAGAMENTOS).filter(p =>
+    String(p.leilaoId || '') === String(leilaoId || '') &&
+    String(p.arremateId || '') === String(arremateId || '') &&
+    String(p.status || '') !== 'cancelado'
+  );
+  return pags.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+}
+
+function atualizarResumoArrematadorGS(leilaoId, numero) {
+  if (numero === undefined || numero === null || String(numero).trim() === '') return null;
+  const compras = lerAba(ABAS.ARREMATES).filter(a =>
+    String(a.leilaoId || '') === String(leilaoId || '') &&
+    String(a.status || '') !== 'cancelado' &&
+    String(a.arrematadorNumero || '') === String(numero || '')
+  );
+
+  const total = compras.reduce((s, a) => s + (Number(a.valorTotal || a.valor) || 0), 0);
+  const pago = compras.reduce((s, a) => s + totalPagoArremateGS(a.id, leilaoId), 0);
+  const saldo = Math.max(total - pago, 0);
+  const statusPagamento = total > 0 && saldo <= 0 ? 'pago' : (pago > 0 ? 'parcial' : (total > 0 ? 'em_aberto' : 'sem_compra'));
+
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.ARREMATADORES);
+  const cab = cabecalho(sh);
+  const idxLeilao = cab.indexOf('leilaoId');
+  const idxNumero = cab.indexOf('numero');
+  const idxCodigo = cab.indexOf('codigo');
+  const values = sh.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const mesmoLeilao = String(values[i][idxLeilao] || '') === String(leilaoId || '');
+    const num = idxNumero >= 0 ? values[i][idxNumero] : '';
+    const cod = idxCodigo >= 0 ? values[i][idxCodigo] : '';
+    if (mesmoLeilao && (String(num) === String(numero) || String(cod) === String(numero))) {
+      const obj = objetoDaLinha(sh, cab, i + 1);
+      obj.totalArrematado = total;
+      obj.totalPago = pago;
+      obj.saldo = saldo;
+      obj.statusPagamento = statusPagamento;
+      obj.atualizadoEm = new Date().toISOString();
+      escreverObjeto(sh, cab, i + 1, obj);
+      return obj;
+    }
+  }
+  return null;
+}
+
+function lerConfig() {
+  const linhas = lerAba(ABAS.CONFIG);
+  const obj = {};
+  linhas.forEach(l => { if (l.chave) obj[String(l.chave)] = l.valor; });
+  return obj;
+}
+
+function setConfig(chave, valor) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(ABAS.CONFIG);
+  const values = sh.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === String(chave)) {
+      sh.getRange(i + 1, 2).setValue(valor);
+      return;
+    }
+  }
+  sh.appendRow([chave, valor]);
+}
+
+function lerAba(nomeAba) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomeAba);
+  if (!sh) return [];
+  const values = sh.getDataRange().getValues();
+  if (values.length < 2) return [];
+  const cab = values[0].map(v => String(v || '').trim());
+  return values.slice(1)
+    .filter(row => row.some(v => String(v).trim() !== ''))
+    .map(row => {
+      const obj = {};
+      cab.forEach((c, i) => { if (c) obj[c] = normalizarValor(row[i]); });
+      return obj;
+    });
+}
+
+function cabecalho(sh) {
+  return sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(v => String(v || '').trim());
+}
+
+function localizarLinhaPorId(sh, cab, id) {
+  const idx = cab.indexOf('id');
+  if (idx < 0) return -1;
+  const values = sh.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][idx]) === String(id)) return i + 1;
+  }
+  return -1;
+}
+
+function objetoDaLinha(sh, cab, linha) {
+  const row = sh.getRange(linha, 1, 1, cab.length).getValues()[0];
+  const obj = {};
+  cab.forEach((c, i) => obj[c] = normalizarValor(row[i]));
+  return obj;
+}
+
+function escreverObjeto(sh, cab, linha, obj) {
+  sh.getRange(linha, 1, 1, cab.length).setValues([cab.map(c => obj[c] !== undefined ? obj[c] : '')]);
+}
+
+function inserirObjeto(sh, cab, obj) {
+  escreverObjeto(sh, cab, sh.getLastRow() + 1, obj);
+}
+
+function maiorNumeroLeilao() {
+  const leiloes = lerAba(ABAS.LEILOES);
+  return leiloes.reduce((m, l) => Math.max(m, Number(l.numero) || 0), 0);
+}
+
+function proximoNumeroLeilao() {
+  const cfg = lerConfig();
+  return Math.max(Number(cfg.ultimoNumeroLeilao) || 0, maiorNumeroLeilao()) + 1;
+}
+
+function proximoCodigoPrenda(leilaoId) {
+  const prendas = lerAba(ABAS.PRENDAS).filter(p => String(p.leilaoId || '') === String(leilaoId));
+  return prendas.reduce((m, p) => Math.max(m, Number(p.codigo) || 0), 0) + 1;
+}
+
+function normalizarTexto(txt) {
+  return String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
+
+function normalizarValor(v) {
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if ((s.startsWith('[') && s.endsWith(']')) || (s.startsWith('{') && s.endsWith('}'))) {
+      try { return JSON.parse(s); } catch(e) {}
+    }
+  }
+  return v;
+}
