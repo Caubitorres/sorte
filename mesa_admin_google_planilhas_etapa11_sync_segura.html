@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mesa do Leilão</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body { height:100%; }
+    body { background:#f1f5f9; overflow:hidden; }
+    .topo-fixo { position: sticky; top: 0; z-index: 60; }
+    .tabela-wrap { height: calc(100vh - 178px); overflow:auto; border-radius: 14px; position: relative; }
+    .buscas-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; align-items:end; }
+    .busca-card { background:transparent; border:0; border-radius:0; padding:0; }
+    .busca-card label { display:none; }
+    .busca-card input { width:100%; min-width:0; border:1px solid #dbe3ef; border-radius:14px; padding:12px 14px; font-size:14px; background:#ffffff; color:#334155; box-shadow: inset 0 1px 0 rgba(15,23,42,.03); }
+    .busca-card input::placeholder { color:#94a3b8; }
+    .busca-card input:focus { outline:none; border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+    .dirty { background:#fff7ed !important; }
+    @media (max-width: 900px) { body{overflow:auto;} .buscas-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; align-items:end; } .busca-card { grid-column:auto !important; } .tabela-wrap{height:70vh;} }
+    table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 1200px; }
+    thead { position: sticky; top: 0; z-index: 40; }
+    thead th { position: sticky; top: 0; z-index: 45; background:#1d4ed8; color:white; box-shadow:0 2px 4px rgba(15,23,42,.25); }
+    th, td { border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; padding:4px 6px; vertical-align: middle; }
+    th:first-child, td:first-child { border-left:1px solid #cbd5e1; }
+    thead th { border-top:1px solid #1d4ed8; }
+    tbody tr:nth-child(even){ background:#f8fafc; }
+    tbody tr:nth-child(odd){ background:white; }
+    input.cell { width:100%; border:0; background:transparent; outline:none; padding:4px 3px; font-size:15px; }
+    input.cell:focus { background:#fef9c3; box-shadow: inset 0 0 0 2px #eab308; border-radius:6px; }
+    .ordem { font-weight:900; text-align:center; color:#1d4ed8; width:64px; }
+    .num { text-align:right; }
+    .prendas-texto { font-size:13px; line-height:1.2; color:#334155; min-width:260px; }
+    .valor-pago, .valor-resta { font-size:13px; font-weight:900; text-align:right; white-space:nowrap; }
+    .valor-resta { color:#991b1b; }
+    .valor-pago { color:#166534; }
+    .acao { text-align:center; width:82px; }
+    .aberto { color:#991b1b; }
+    .parcial { color:#a16207; }
+    .pago { color:#166534; }
+    .draft { background:#ecfeff !important; }
+    .aviso { color:#991b1b; font-weight:800; font-size:12px; }
+    .ok-cell { text-align:center; width:78px; }
+    .btn-ok { border:1px solid #fdba74; background:#ffedd5; color:#9a3412; border-radius:10px; padding:6px 10px; font-weight:900; font-size:13px; min-width:58px; }
+    .btn-ok:hover { background:#fed7aa; }
+    .btn-ok.salvo { border-color:#86efac; background:#dcfce7; color:#166534; }
+    .btn-ok.salvando { border-color:#bfdbfe; background:#dbeafe; color:#1d4ed8; }
+
+    #resumo { font-weight: 400 !important; }
+    #resumo b { font-weight: 900 !important; }
+  </style>
+</head>
+<body class="text-slate-800">
+  <div class="max-w-[1700px] mx-auto p-2 md:p-3">
+    <header class="topo-fixo bg-white rounded-2xl shadow border-t-8 border-blue-700 p-2 mb-2">
+      <div class="flex flex-col xl:flex-row xl:items-center gap-2 justify-between">
+        <div>
+          <h1 class="text-xl md:text-2xl font-black">Mesa do Leilão</h1>
+          <div id="boxLeilaoAtivo" class="text-base font-bold text-slate-600">Carregando leilão ativo...</div>
+        </div>
+        <div class="flex flex-wrap gap-2 items-center text-sm max-w-full">
+          <div id="resumo" class="bg-slate-100 rounded-xl px-3 py-2 font-normal">--</div>
+          <div id="statusConexao" class="bg-green-100 text-green-800 rounded-xl px-3 py-2">🟢 Online</div>
+          <div id="statusTempoLeilao" class="bg-slate-100 text-slate-700 rounded-xl px-3 py-2 font-normal">Leilão não iniciado</div>
+          <button onclick="salvarAlteracoesVisiveis()" class="bg-blue-700 hover:bg-blue-800 text-white rounded-xl px-3 py-2 font-black">💾 Salvar alterações</button>
+          <button onclick="limparMesa()" class="bg-slate-500 hover:bg-slate-600 text-white rounded-xl px-3 py-2 font-semibold text-sm">🗑️ Limpar Mesa</button>
+          <button id="btnEncerrarLeilao" onclick="encerrarLeilao()" class="bg-slate-500 hover:bg-slate-600 text-white rounded-xl px-3 py-2 font-semibold text-sm">🔴 Encerrar Leilão</button>
+        </div>
+      </div>
+
+      <div class="buscas-grid mt-2">
+        <div class="busca-card">
+          <label>Buscar prenda por nº ou nome</label>
+          <input id="buscaPrenda" placeholder="Buscar prenda por nº ou nome..." />
+        </div>
+        <div class="busca-card">
+          <label>Buscar arrematador por código ou nome</label>
+          <input id="buscaArrematador" placeholder="Buscar arrematador por código ou nome..." />
+        </div>
+        <div class="busca-card">
+          <label>Buscar dentro da mesa</label>
+          <input id="buscaTabela" placeholder="Buscar dentro da mesa..." />
+        </div>
+      </div>
+      <div class="mt-1 text-xs text-slate-500">Atalhos: <b>G</b> = próxima Galinha Assada disponível | <b>C</b> = próxima Galinha Cozida disponível.</div>
+      <div id="resultadosBusca" class="mt-1 text-xs text-slate-600"></div>
+    </header>
+
+    <section class="bg-white rounded-2xl shadow p-1">
+      <div class="tabela-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="w-[70px]">Ordem</th>
+              <th class="w-[160px]">Nº Prenda(s)</th>
+              <th>Prendas</th>
+              <th class="w-[60px]">Cód.</th>
+              <th class="w-[220px]">Arrematador</th>
+              <th class="w-[190px]">Ganhador(a)</th>
+              <th class="w-[95px]">Valor</th>
+              <th class="w-[95px]">Pago</th>
+              <th class="w-[95px]">Resta</th>
+              <th class="w-[78px]">OK</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabela">
+            <tr><td colspan="10" class="text-center p-6 text-slate-500">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+<script>
+/*
+  MESA DO LEILÃO - GOOGLE PLANILHAS - ETAPA 10
+  Linha imediata + início visual automático + sincronização segura entre telas.
+*/
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwddT_BJGh_ioYI5lCRVspyM3YoxLDyEbAEjucWqW7iZ_lXkbZMkhsL3bBIWyOzCJNq/exec";
+const TOKEN_LEILAO = "leilao2026";
+
+const boxLeilaoAtivo = document.getElementById('boxLeilaoAtivo');
+const statusConexao = document.getElementById('statusConexao');
+const resumo = document.getElementById('resumo');
+const corpoTabela = document.getElementById('corpoTabela');
+const buscaTabela = document.getElementById('buscaTabela');
+const buscaPrenda = document.getElementById('buscaPrenda');
+const buscaArrematador = document.getElementById('buscaArrematador');
+const resultadosBusca = document.getElementById('resultadosBusca');
+
+let leilaoAtivo = null;
+let linhasMesa = [];
+let prendas = [];
+let arrematadores = [];
+let arremates = [];
+let pagamentos = [];
+let controle = [];
+let carregando = false;
+let inicioLeilaoLocal = null;
+let fimLeilaoLocal = null;
+let timerInicioLeilao = null;
+let atualizacaoAutomaticaPausadaAte = 0;
+let linhasSalvando = new Set();
+let limpandoMesa = false;
+let filaSalvamento = [];
+let processandoFilaSalvamento = false;
+
+window.addEventListener('online', atualizarStatus);
+window.addEventListener('offline', atualizarStatus);
+buscaTabela.addEventListener('input', renderizarTabela);
+buscaPrenda.addEventListener('input', renderizarBuscaAuxiliar);
+buscaArrematador.addEventListener('input', renderizarBuscaAuxiliar);
+corpoTabela.addEventListener('focusin', () => pausarAtualizacaoAutomatica(12000));
+corpoTabela.addEventListener('keydown', () => pausarAtualizacaoAutomatica(12000));
+atualizarStatus();
+iniciar();
+
+function iniciar(){
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('COLE_AQUI')){
+    boxLeilaoAtivo.textContent = 'Cole a URL do Apps Script na variável APPS_SCRIPT_URL.';
+    corpoTabela.innerHTML = '<tr><td colspan="10" class="text-center p-6 text-red-700 font-bold">Falta configurar a URL do Apps Script.</td></tr>';
+    return;
+  }
+  carregarDados();
+  setInterval(() => { if(!carregando && !mesaTemEdicaoAtiva()) carregarDados(false); }, 5000);
+  iniciarTimerInicioLeilao();
+}
+
+
+function mesaTemEdicaoAtiva(){
+  const ativo = document.activeElement;
+  const editandoCampo = !!(ativo && ativo.closest && ativo.closest('#corpoTabela') && ativo.matches('input.cell'));
+  const temDirty = !!document.querySelector('#corpoTabela .dirty');
+  const pausado = Date.now() < atualizacaoAutomaticaPausadaAte;
+  return editandoCampo || temDirty || pausado || limpandoMesa || linhasSalvando.size > 0 || filaSalvamento.length > 0 || processandoFilaSalvamento;
+}
+
+function pausarAtualizacaoAutomatica(ms = 20000){
+  atualizacaoAutomaticaPausadaAte = Date.now() + ms;
+}
+
+function atualizarStatus(){
+  if(navigator.onLine){ statusConexao.textContent = '🟢 Online'; statusConexao.className='bg-green-100 text-green-800 rounded-lg px-2 py-1.5'; }
+  else { statusConexao.textContent = '🔴 Offline'; statusConexao.className='bg-red-100 text-red-800 rounded-lg px-2 py-1.5'; }
+}
+
+function chamarAPI(params){
+  return new Promise((resolve, reject) => {
+    if(!navigator.onLine){ reject(new Error('Sem internet')); return; }
+    const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+    const script = document.createElement('script');
+    const url = new URL(APPS_SCRIPT_URL);
+    const todos = { token:TOKEN_LEILAO, ...params, callback:callbackName };
+    Object.keys(todos).forEach(k => url.searchParams.set(k, todos[k] == null ? '' : String(todos[k])));
+    let encerrado = false;
+    const limpar = () => { try{ delete window[callbackName]; }catch(e){ window[callbackName]=undefined; } script.remove(); };
+    const timer = setTimeout(() => {
+      if(encerrado) return;
+      encerrado = true;
+      limpar();
+      reject(new Error('Tempo esgotado ao acessar a planilha'));
+    }, 25000);
+    window[callbackName] = (resposta) => {
+      if(encerrado) return;
+      encerrado = true;
+      clearTimeout(timer);
+      limpar();
+      if(resposta && resposta.ok === false) reject(new Error(resposta.erro || 'Erro na API'));
+      else resolve(resposta);
+    };
+    script.onerror = () => {
+      if(encerrado) return;
+      encerrado = true;
+      clearTimeout(timer);
+      limpar();
+      reject(new Error('Falha ao carregar Apps Script'));
+    };
+    script.src = url.toString();
+    document.body.appendChild(script);
+  });
+}
+
+async function carregarDados(mostrarCarregando=true, forcar=false){
+  if(!forcar && !mostrarCarregando && mesaTemEdicaoAtiva()) return;
+  try{
+    carregando = true;
+    if(mostrarCarregando){
+      corpoTabela.innerHTML = '<tr><td colspan="10" class="text-center p-6 text-slate-500">Carregando da planilha...</td></tr>';
+    }
+    const res = await chamarAPI({ action:'dados' });
+
+    // Se a atualização automática chegou enquanto alguém começou a digitar,
+    // não redesenha a tabela para não apagar a primeira digitação.
+    if(!forcar && !mostrarCarregando && mesaTemEdicaoAtiva()){
+      return;
+    }
+
+    leilaoAtivo = res.config || null;
+    prendas = Array.isArray(res.prendas) ? res.prendas.map(normalizarPrenda) : [];
+    arrematadores = Array.isArray(res.arrematadores) ? res.arrematadores.map(normalizarArrematador) : [];
+    linhasMesa = Array.isArray(res.mesa) ? res.mesa.map(normalizarMesa) : [];
+    arremates = Array.isArray(res.arremates) ? res.arremates.map(normalizarArremate) : [];
+    pagamentos = Array.isArray(res.pagamentos) ? res.pagamentos : [];
+    controle = Array.isArray(res.controle) ? res.controle : [];
+
+    if(!leilaoAtivo || !leilaoAtivo.leilaoId){
+      boxLeilaoAtivo.textContent = 'Nenhum leilão ativo.';
+      corpoTabela.innerHTML = '<tr><td colspan="10" class="text-center p-6 text-red-700 font-bold">Nenhum leilão ativo. Ative um leilão no Admin.</td></tr>';
+      resumo.innerHTML = '--';
+      return;
+    }
+
+    boxLeilaoAtivo.innerHTML = `Leilão Nº ${escapeHtml(leilaoAtivo.numero || '-')} - ${escapeHtml(leilaoAtivo.nome || '')}`;
+    atualizarControleTempo();
+    renderizarTabela();
+    renderizarBuscaAuxiliar();
+    mostrarDiagnosticoCarregamento();
+  }catch(e){
+    console.error(e);
+    boxLeilaoAtivo.textContent = 'Erro ao carregar dados da planilha.';
+    corpoTabela.innerHTML = `<tr><td colspan="10" class="text-center p-6 text-red-700 font-bold">${escapeHtml(e.message || 'Erro ao carregar')}</td></tr>`;
+  }finally{
+    carregando = false;
+  }
+}
+
+function normalizarPrenda(p){ return { ...p, codigo:Number(p.codigo || 0), nome:p.nome || p.descricao || '' }; }
+function normalizarArrematador(a){
+  const numeroBase = a.numero ?? a.codigo ?? a.id ?? '';
+  return {
+    ...a,
+    numero: String(numeroBase).trim(),
+    codigo: String(a.codigo ?? numeroBase).trim(),
+    id: String(a.id ?? '').trim()
+  };
+}
+function normalizarMesa(l){ return { ...l, ordem:Number(l.ordem || 0), numerosPrendas:String(l.numerosPrendas || ''), codigoArrematador:String(l.codigoArrematador || ''), valor:String(l.valor || '') }; }
+function normalizarArremate(a){
+  const obj = { ...a };
+  obj.id = String(obj.id || '');
+  obj.ordemMesa = obj.ordemMesa || obj.codigo || '';
+  obj.valorTotal = Number(obj.valorTotal || obj.valor || 0) || 0;
+  obj.valorPago = Number(obj.valorPago || 0) || 0;
+  obj.prendasResumo = normalizarPrendasResumo(obj.prendasResumo, obj.codigosPrendas);
+  return obj;
+}
+function normalizarPrendasResumo(valor, codigos){
+  if(Array.isArray(valor)) return valor;
+  if(typeof valor === 'string' && valor.trim()){
+    try{ const parsed = JSON.parse(valor); if(Array.isArray(parsed)) return parsed; }catch(e){}
+    if(valor.includes('|')) return valor.split('|').map(x => ({ codigo:x.trim(), nome:'' })).filter(x => x.codigo);
+  }
+  return String(codigos || '').split(/[,+;\s]+/).map(x => x.trim()).filter(Boolean).map(c => ({ codigo:c, nome:'' }));
+}
+
+function listaPrendasResumo(a){
+  return normalizarPrendasResumo(a?.prendasResumo, a?.codigosPrendas || a?.prendas || '');
+}
+
+function proximaOrdem(){ const max = linhasMesa.reduce((m,l)=>Math.max(m, Number(l.ordem || 0)), 0); return max + 1; }
+function linhaVazia(){ return { id:'__nova__', ordem:proximaOrdem(), numerosPrendas:'', codigoArrematador:'', ganhador:'', valor:'' }; }
+
+function linhasMesaSemDuplicar(){
+  const vistosId = new Set();
+  const vistosOrdem = new Set();
+  const vistosConteudo = new Set();
+  const limpas = [];
+  [...linhasMesa]
+    .filter(l => l && String(l.id || '') !== '__nova__')
+    .sort((a,b)=>Number(a.ordem||0)-Number(b.ordem||0))
+    .forEach(l => {
+      const id = String(l.id || '').trim();
+      const ordem = String(l.ordem || '').trim();
+      const conteudo = [
+        String(l.numerosPrendas || '').trim(),
+        String(l.codigoArrematador || '').trim(),
+        String(l.ganhador || '').trim(),
+        String(l.valor || '').trim()
+      ].join('|');
+
+      // Se veio a mesma linha duas vezes da planilha, mantém apenas uma.
+      if(id && vistosId.has(id)) return;
+      if(ordem && vistosOrdem.has(ordem)) return;
+      if(conteudo !== '|||' && vistosConteudo.has(conteudo)) return;
+
+      if(id) vistosId.add(id);
+      if(ordem) vistosOrdem.add(ordem);
+      if(conteudo !== '|||') vistosConteudo.add(conteudo);
+      limpas.push(l);
+    });
+  linhasMesa = limpas;
+  return limpas;
+}
+
+function garantirUmaLinhaNova(){
+  const existentes = Array.from(document.querySelectorAll('tbody tr[data-id="__nova__"]'));
+  existentes.slice(1).forEach(tr => tr.remove());
+  if(existentes.length === 0){
+    corpoTabela.insertAdjacentHTML('beforeend', montarLinha(linhaVazia()));
+  }
+}
+
+function renderizarTabela(){
+  const termo = buscaTabela.value.trim().toLowerCase();
+  const linhas = linhasMesaSemDuplicar();
+  const comDraft = [...linhas, linhaVazia()];
+  const linhasFiltradas = comDraft.filter(l => {
+    if(!termo) return true;
+    const nomesPrendas = obterPrendasResumo(l.numerosPrendas, l).texto;
+    const ar = obterArrematador(l.codigoArrematador);
+    const texto = `${l.ordem} ${l.numerosPrendas||''} ${nomesPrendas} ${l.codigoArrematador||''} ${ar?.nome||''} ${l.ganhador||''} ${l.valor||''}`.toLowerCase();
+    return texto.includes(termo);
+  });
+  if(!linhasFiltradas.length){
+    corpoTabela.innerHTML = '<tr><td colspan="10" class="text-center p-6 text-slate-500">Nenhum registro encontrado.</td></tr>';
+    return;
+  }
+  corpoTabela.innerHTML = linhasFiltradas.map(l => montarLinha(l)).join('');
+  atualizarResumo();
+}
+
+function montarLinha(l){
+  const isDraft = l.id === '__nova__';
+  const ar = obterArrematador(l.codigoArrematador);
+  const resumoPrendas = obterPrendasResumo(l.numerosPrendas, l);
+  const pagamento = obterPagamentoLinha(l);
+  const salvo = !!l.salvoMesaEm && !isDraft;
+  const btnTexto = salvo ? 'Salvo' : 'OK';
+  const btnClasse = salvo ? 'btn-ok salvo' : 'btn-ok';
+  return `
+    <tr class="${isDraft ? 'draft' : ''}" data-id="${escapeHtml(l.id)}">
+      <td class="ordem">${Number(l.ordem || 0)}</td>
+      <td><input class="cell" data-campo="numerosPrendas" value="${escapeAttr(l.numerosPrendas || '')}" oninput="alterarCampoLocal('${escapeJs(l.id)}','numerosPrendas',this.value,this)"></td>
+      <td class="prendas-texto" data-preview="prendas">${resumoPrendas.html}</td>
+      <td><input class="cell num" data-campo="codigoArrematador" value="${escapeAttr(l.codigoArrematador || '')}" oninput="alterarCampoLocal('${escapeJs(l.id)}','codigoArrematador',this.value,this)"></td>
+      <td class="font-bold text-sm" data-preview="arrematador">${ar ? escapeHtml(ar.nome||'') : ''}</td>
+      <td><input class="cell" data-campo="ganhador" value="${escapeAttr(l.ganhador || '')}" oninput="alterarCampoLocal('${escapeJs(l.id)}','ganhador',this.value,this)"></td>
+      <td><input class="cell num" data-campo="valor" type="text" inputmode="decimal" value="${escapeAttr(l.valor === undefined || l.valor === null ? '' : l.valor)}" oninput="alterarCampoLocal('${escapeJs(l.id)}','valor',this.value,this)"></td>
+      <td class="valor-pago" data-preview="pago">${pagamento.pagoTexto}</td>
+      <td class="valor-resta" data-preview="resta">${pagamento.restaTexto}</td>
+      <td class="ok-cell"><button type="button" class="${btnClasse}" onclick="salvarLinhaOk('${escapeJs(l.id)}', this)">${btnTexto}</button></td>
+    </tr>`;
+}
+
+function alterarCampoLocal(id, campo, valor, el){
+  pausarAtualizacaoAutomatica();
+  const tr = el ? el.closest('tr') : document.querySelector(`tr[data-id="${CSS.escape(id)}"]`);
+  if(!tr) return;
+  const btn = tr.querySelector('.btn-ok');
+  if(btn){ btn.textContent = 'OK'; btn.className = 'btn-ok'; btn.disabled = false; }
+  if(el) el.classList.add('dirty');
+  if(campo === 'codigoArrematador'){
+    const ar = obterArrematador(valor);
+    const alvo = tr.querySelector('[data-preview="arrematador"]');
+    if(alvo){
+      if(ar) alvo.textContent = ar.nome || '';
+      else alvo.innerHTML = valor ? '<span class="aviso">Arrematador não encontrado. Carregados: '+ arrematadores.length +'</span>' : '';
+    }
+  }
+  if(campo === 'numerosPrendas'){
+    const alvo = tr.querySelector('[data-preview="prendas"]');
+    if(alvo){
+      const convertido = prepararNumerosPrendas(valor, id, true);
+      if(convertido.ok) alvo.innerHTML = obterPrendasResumo(convertido.valor, {id}).html;
+      else alvo.innerHTML = `<span class="aviso">${escapeHtml(convertido.mensagem || '')}</span>`;
+    }
+  }
+  if(campo === 'valor'){
+    const linha = { id, ordem: Number(tr.querySelector('.ordem')?.textContent || 0), valor };
+    const pagamento = obterPagamentoLinha(linha);
+    const pago = tr.querySelector('[data-preview="pago"]');
+    const resta = tr.querySelector('[data-preview="resta"]');
+    if(pago) pago.textContent = pagamento.pagoTexto;
+    if(resta) resta.textContent = pagamento.restaTexto;
+  }
+}
+window.alterarCampoLocal = alterarCampoLocal;
+
+function chaveComparacao(valor){
+  return String(valor ?? '').trim().replace(/^0+(?=\d)/, '');
+}
+
+function obterArrematador(codigo){
+  const c = chaveComparacao(codigo);
+  if(!c) return null;
+  const n = Number(c);
+  return arrematadores.find(a => {
+    const possiveis = [a.numero, a.codigo, a.id, a.Codigo, a.CÓDIGO, a['Cód.']];
+    return possiveis.some(v => {
+      const cv = chaveComparacao(v);
+      if(cv === c) return true;
+      const nv = Number(cv);
+      return Number.isFinite(n) && Number.isFinite(nv) && nv === n;
+    });
+  }) || null;
+}
+function normalizarTexto(txt){ return String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+function tokensPrendas(texto){ return String(texto || '').split(/[,+;\s]+/).map(x=>x.trim()).filter(Boolean); }
+function nomePrenda(p){ return p ? (p.nome || p.descricao || '') : ''; }
+function ehGalinhaAssada(p){ const n = normalizarTexto(`${p?.codigo || ''} ${nomePrenda(p)}`); return n.includes('galinha') && n.includes('assad'); }
+function ehGalinhaCozida(p){ const n = normalizarTexto(`${p?.codigo || ''} ${nomePrenda(p)}`); return n.includes('galinha') && (n.includes('coz') || n.includes('cozid') || n.includes('cozinh') || n.includes('panela')); }
+
+function codigosUsados(excetoLinhaId = ''){
+  const usados = new Set();
+  linhasMesa.forEach(l => {
+    if(excetoLinhaId && String(l.id) === String(excetoLinhaId)) return;
+    tokensPrendas(l.numerosPrendas).forEach(n => { if(/^\d+$/.test(n)) usados.add(String(Number(n))); });
+  });
+  arremates.forEach(a => {
+    if(excetoLinhaId && String(a.id) === String(excetoLinhaId)) return;
+    listaPrendasResumo(a).forEach(p => { if(p && p.codigo !== undefined && p.codigo !== null) usados.add(String(Number(p.codigo) || p.codigo)); });
+    tokensPrendas(a.codigosPrendas || '').forEach(n => usados.add(String(Number(n) || n)));
+  });
+  return usados;
+}
+function proximaPrendaPorTipo(tipo, excetoLinhaId = '', extras = new Set()){
+  const usados = codigosUsados(excetoLinhaId);
+  const lista = prendas.filter(p => tipo === 'G' ? ehGalinhaAssada(p) : ehGalinhaCozida(p)).sort((a,b)=>Number(a.codigo||0)-Number(b.codigo||0));
+  return lista.find(p => !usados.has(String(Number(p.codigo) || p.codigo)) && !extras.has(String(Number(p.codigo) || p.codigo))) || null;
+}
+function prepararNumerosPrendas(valorOriginal, linhaId){
+  const entrada = tokensPrendas(valorOriginal);
+  const saida = [];
+  const usadosNaLinha = new Set();
+  const usadosFora = codigosUsados(linhaId);
+  for(const tokenBruto of entrada){
+    const token = String(tokenBruto).trim();
+    const t = token.toUpperCase();
+    let codigoFinal = token;
+    if(t === 'G' || t === 'GA'){
+      const prox = proximaPrendaPorTipo('G', linhaId, usadosNaLinha);
+      if(!prox) return { ok:false, mensagem:'Não encontrei Galinha Assada disponível para usar.' };
+      codigoFinal = String(prox.codigo);
+    } else if(t === 'C' || t === 'GC'){
+      const prox = proximaPrendaPorTipo('C', linhaId, usadosNaLinha);
+      if(!prox) return { ok:false, mensagem:'Não encontrei Galinha Cozida disponível para usar.' };
+      codigoFinal = String(prox.codigo);
+    }
+    codigoFinal = String(Number(codigoFinal) || codigoFinal);
+    if(usadosNaLinha.has(codigoFinal)) return { ok:false, mensagem:`A prenda ${codigoFinal} foi repetida na mesma linha.` };
+    const p = prendas.find(pr => String(Number(pr.codigo) || pr.codigo) === String(codigoFinal));
+    if(!p) return { ok:false, mensagem:`Prenda ${codigoFinal} não encontrada no cadastro.` };
+    if(usadosFora.has(String(codigoFinal))){
+      const info = descricaoUsoPrenda(codigoFinal, linhaId);
+      return { ok:false, mensagem:`A prenda ${codigoFinal} já foi usada${info ? ' ' + info : ''}.` };
+    }
+    usadosNaLinha.add(codigoFinal);
+    saida.push(codigoFinal);
+  }
+  return { ok:true, valor: saida.join(', ') };
+}
+function localizarUsoPrenda(codigo, excetoLinhaId = ''){
+  const c = String(Number(codigo) || codigo);
+  const l = linhasMesa.find(l => String(l.id) !== String(excetoLinhaId) && tokensPrendas(l.numerosPrendas).map(x=>String(Number(x)||x)).includes(c));
+  if(l) return l.ordem || '';
+  const a = arremates.find(a => String(a.id) !== String(excetoLinhaId) && listaPrendasResumo(a).some(p => String(Number(p.codigo)||p.codigo) === c));
+  if(a) return a.ordemMesa || a.codigo || '';
+  return '';
+}
+function descricaoUsoPrenda(codigo, excetoLinhaId = ''){
+  const c = String(Number(codigo) || codigo);
+  const l = linhasMesa.find(l => String(l.id) !== String(excetoLinhaId) && tokensPrendas(l.numerosPrendas).map(x=>String(Number(x)||x)).includes(c));
+  if(l){
+    const ar = obterArrematador(l.codigoArrematador);
+    const valor = valorDecimal(l.valor);
+    const partes = [`na Ordem ${l.ordem || '-'}`];
+    if(ar && ar.nome) partes.push(`e arrematada por ${ar.nome}`);
+    if(valor > 0) partes.push(`por ${dinheiro(valor)}`);
+    return partes.join(' ');
+  }
+  const a = arremates.find(a => String(a.id) !== String(excetoLinhaId) && listaPrendasResumo(a).some(p => String(Number(p.codigo)||p.codigo) === c));
+  if(a){
+    const partes = [`na Ordem ${a.ordemMesa || a.codigo || '-'}`];
+    if(a.arrematadorNome) partes.push(`e arrematada por ${a.arrematadorNome}`);
+    if(Number(a.valorTotal || 0) > 0) partes.push(`por ${dinheiro(a.valorTotal)}`);
+    return partes.join(' ');
+  }
+  return '';
+}
+function obterPrendasResumo(numerosTexto, linhaAtual = {}){
+  const nums = tokensPrendas(numerosTexto);
+  const usados = new Set();
+  const lista = [];
+  const partes = [];
+  nums.forEach(n0 => {
+    const n = String(Number(n0) || n0);
+    if(usados.has(n)){ partes.push(`<span class="aviso">${escapeHtml(n)} repetida na mesma linha</span>`); return; }
+    usados.add(n);
+    const p = prendas.find(pr => String(Number(pr.codigo) || pr.codigo) === String(n));
+    if(p){
+      lista.push({ codigo:p.codigo, nome:nomePrenda(p) });
+      const usoDetalhe = descricaoUsoPrenda(n, linhaAtual.id || '');
+      const avisoUso = usoDetalhe ? ` <span class="aviso">— já usada ${escapeHtml(usoDetalhe)}</span>` : '';
+      partes.push(`<b>${escapeHtml(p.codigo)}</b> - ${escapeHtml(nomePrenda(p))}${avisoUso}`);
+    }else{
+      lista.push({ codigo:n, nome:'' });
+      partes.push(`<span class="aviso">${escapeHtml(n)} não encontrada</span>`);
+    }
+  });
+  return { lista, texto: lista.map(p=>`${p.codigo} ${p.nome}`).join(' | '), html: partes.join('<br>') };
+}
+
+function pagamentosValidos(){ return pagamentos.filter(p => p.status !== 'cancelado'); }
+function totalPagoArremate(id){
+  const porPagamentos = pagamentosValidos().filter(p => String(p.arremateId || '') === String(id || '')).reduce((s,p)=>s+Number(p.valor||0),0);
+  const arr = arremates.find(a => String(a.id) === String(id));
+  const antigo = Number(arr?.valorPago || 0);
+  return Math.max(porPagamentos, antigo);
+}
+function obterPagamentoLinha(linha){
+  const a = arremates.find(x => String(x.id) === String(linha.id) || Number(x.ordemMesa) === Number(linha.ordem));
+  const total = Number((a?.valorTotal ?? valorDecimal(linha.valor)) || 0);
+  const pago = a ? totalPagoArremate(a.id) : 0;
+  const resta = Math.max(total - pago, 0);
+  return { pagoTexto: pago > 0 ? moeda(pago) : '', restaTexto: total > 0 ? (resta > 0 ? moeda(resta) : '—') : '' };
+}
+function atualizarResumo(){
+  const validos = arremates.filter(a=>a.status !== 'cancelado');
+  const total = validos.reduce((s,a)=>s+Number(a.valorTotal||0),0);
+  const pago = validos.reduce((s,a)=>s+totalPagoArremate(a.id),0);
+  const totalPrendas = prendas.length;
+  const usados = codigosUsados('');
+  let prendasSubiram = 0;
+  prendas.forEach(p => { if(usados.has(String(Number(p.codigo)||p.codigo))) prendasSubiram++; });
+  const prendasRestam = Math.max(totalPrendas - prendasSubiram, 0);
+  resumo.innerHTML = `Ordens: <b>${linhasMesa.length}</b> | Prendas: Total: <b>${totalPrendas}</b>; Subiram: <b>${prendasSubiram}</b>; Restam: <b>${prendasRestam}</b> | Total: <b>${dinheiro(total)}</b> | Pago: <b>${dinheiro(pago)}</b> | Resta: <b>${dinheiro(Math.max(total-pago,0))}</b>`;
+}
+function totaisArrematador(numero){
+  const compras = arremates.filter(a => a.status !== 'cancelado' && String(a.arrematadorNumero || '') === String(numero || ''));
+  const valor = compras.reduce((s,a)=>s+Number(a.valorTotal||0),0);
+  const pago = compras.reduce((s,a)=>s+totalPagoArremate(a.id),0);
+  const resta = Math.max(valor - pago, 0);
+  return { valor, pago, resta };
+}
+function mostrarDiagnosticoCarregamento(){
+  const qtdA = Array.isArray(arrematadores) ? arrematadores.length : 0;
+  const qtdP = Array.isArray(prendas) ? prendas.length : 0;
+  const msg = `<div class="mb-1 text-slate-500"><b>Carregados:</b> ${qtdP} prendas | ${qtdA} arrematadores</div>`;
+  if(resultadosBusca && !buscaPrenda.value.trim() && !buscaArrematador.value.trim()){
+    resultadosBusca.innerHTML = msg;
+  }
+}
+
+function renderizarBuscaAuxiliar(){
+  const qp = buscaPrenda.value.trim().toLowerCase();
+  const qa = buscaArrematador.value.trim().toLowerCase();
+  let html = '';
+  if(!qp && !qa){ mostrarDiagnosticoCarregamento(); return; }
+  if(qp){
+    const achadas = prendas.filter(p => `${p.codigo} ${p.nome||''} ${p.descricao||''}`.toLowerCase().includes(qp)).slice(0,8);
+    html += `<div class="mb-1"><b>Prendas:</b> ${achadas.length ? achadas.map(p=>`<span class="inline-block bg-blue-50 border rounded-lg px-2 py-1 mr-1 mb-1"><b>${escapeHtml(p.codigo)}</b> - ${escapeHtml(p.nome||p.descricao||'')}</span>`).join('') : 'não encontrada'}</div>`;
+  }
+  if(qa){
+    const achados = arrematadores.filter(a => `${a.numero} ${a.nome||''}`.toLowerCase().includes(qa)).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR')).slice(0,8);
+    html += `<div><b>Arrematadores:</b> ${achados.length ? achados.map(a=>{ const t=totaisArrematador(a.numero); return `<span class="inline-block bg-emerald-50 border rounded-lg px-2 py-1 mr-1 mb-1"><b>${escapeHtml(a.nome||'')}</b> <span class="text-slate-500">cód. ${escapeHtml(a.numero)}</span> <span class="text-slate-700">| Valor: <b>${moeda(t.valor)}</b> Pago: <b class="text-green-700">${moeda(t.pago)}</b> Resta: <b class="text-red-700">${moeda(t.resta)}</b></span></span>` }).join('') : 'não encontrado'}</div>`;
+  }
+  resultadosBusca.innerHTML = html;
+}
+
+function atualizarControleTempo(){
+  const item = controle.find(c => String(c.tipo || c.id || '').toLowerCase().includes('tempo')) || controle.find(c => c.inicioEm || c.encerradoEm) || {};
+  inicioLeilaoLocal = item.inicioEm || null;
+  fimLeilaoLocal = item.encerradoEm || null;
+  atualizarTempoLeilaoInicio();
+}
+function formatarHoraBRInicio(iso){ if(!iso) return '--:--'; return new Date(iso).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }); }
+function formatarDuracaoInicio(ms){ if(!ms || ms < 0) return '0min'; const totalMin = Math.floor(ms / 60000); const horas = Math.floor(totalMin / 60); const mins = totalMin % 60; return horas > 0 ? `${horas}h${String(mins).padStart(2,'0')}min` : `${mins}min`; }
+function atualizarTempoLeilaoInicio(){
+  const el = document.getElementById('statusTempoLeilao');
+  const btn = document.getElementById('btnEncerrarLeilao');
+  if(!inicioLeilaoLocal){
+    if(el){ el.className = 'bg-slate-100 text-slate-700 rounded-xl px-3 py-2 font-normal'; el.innerHTML = 'Leilão não iniciado'; }
+    if(btn){ btn.textContent = '🔴 Encerrar Leilão'; btn.className = 'bg-slate-500 hover:bg-slate-600 text-white rounded-xl px-3 py-2 font-semibold text-sm'; }
+    return;
+  }
+  const inicio = new Date(inicioLeilaoLocal);
+  const fim = fimLeilaoLocal ? new Date(fimLeilaoLocal) : new Date();
+  const tempo = formatarDuracaoInicio(fim - inicio);
+  if(fimLeilaoLocal){
+    const horaFim = formatarHoraBRInicio(fimLeilaoLocal);
+    if(el){ el.className = 'bg-red-100 text-red-800 rounded-xl px-3 py-2 font-normal'; el.innerHTML = `Leilão encerrado às <b>${horaFim}</b> | Início: <b>${formatarHoraBRInicio(inicioLeilaoLocal)}</b> | Tempo: <b>${tempo}</b>`; }
+    if(btn){ btn.textContent = `🔴 Leilão encerrado às ${horaFim}`; btn.className = 'bg-red-100 text-red-800 rounded-xl px-3 py-2 font-normal'; }
+    return;
+  }
+  if(el){ el.className = 'bg-blue-100 text-blue-800 rounded-xl px-3 py-2 font-normal'; el.innerHTML = `Leilão iniciado | Início: <b>${formatarHoraBRInicio(inicioLeilaoLocal)}</b> | Tempo: <b>${tempo}</b>`; }
+}
+function iniciarTimerInicioLeilao(){ if(timerInicioLeilao) clearInterval(timerInicioLeilao); timerInicioLeilao = setInterval(atualizarTempoLeilaoInicio, 30000); }
+
+function dadosDaLinha(tr){
+  return {
+    numerosPrendas: tr.querySelector('[data-campo="numerosPrendas"]')?.value.trim() || '',
+    codigoArrematador: tr.querySelector('[data-campo="codigoArrematador"]')?.value.trim() || '',
+    ganhador: tr.querySelector('[data-campo="ganhador"]')?.value.trim() || '',
+    valor: tr.querySelector('[data-campo="valor"]')?.value.trim() || ''
+  };
+}
+
+function linhaTemAlgo(dados){
+  return Object.values(dados).some(v => String(v || '').trim() !== '');
+}
+
+function prepararDadosMesaParaSalvar(id, dados){
+  const dadosProntos = { ...dados };
+  if(!linhaTemAlgo(dadosProntos)) return null;
+
+  if(dadosProntos.numerosPrendas){
+    const convertido = prepararNumerosPrendas(dadosProntos.numerosPrendas, id);
+    if(!convertido.ok){
+      alert(convertido.mensagem);
+      return null;
+    }
+    dadosProntos.numerosPrendas = convertido.valor;
+  }
+
+  if(dadosProntos.codigoArrematador && !obterArrematador(dadosProntos.codigoArrematador)){
+    const ok = confirm(`O código de arrematador ${dadosProntos.codigoArrematador} não foi encontrado. Deseja salvar mesmo assim?`);
+    if(!ok) return null;
+  }
+  return dadosProntos;
+}
+
+async function salvarDadosMesa(id, dados){
+  if(!leilaoAtivo || !leilaoAtivo.leilaoId){ alert('Nenhum leilão ativo.'); return null; }
+  return await chamarAPI({
+    action:'salvarMesa',
+    id,
+    numerosPrendas:dados.numerosPrendas,
+    codigoArrematador:dados.codigoArrematador,
+    ganhador:dados.ganhador,
+    valor:dados.valor
+  });
+}
+
+async function salvarLinha(id){
+  const tr = document.querySelector(`tr[data-id="${CSS.escape(String(id))}"]`);
+  if(!tr) return null;
+  const dados = prepararDadosMesaParaSalvar(id, dadosDaLinha(tr));
+  if(!dados) return null;
+  return await salvarDadosMesa(id, dados);
+}
+window.salvarLinha = salvarLinha;
+
+function aplicarRetornoMesaLocal(res, idOriginal, tr){
+  if(!res || !res.mesa) return null;
+  let mesa = normalizarMesa({ ...res.mesa });
+  if(!mesa.id && res.id) mesa.id = String(res.id);
+  if(!mesa.id && mesa.ordem) mesa.id = 'mesa_' + mesa.ordem;
+  if(!mesa.ordem && tr) mesa.ordem = Number(tr.querySelector('.ordem')?.textContent || 0) || proximaOrdem();
+
+  const conteudoMesa = [mesa.numerosPrendas, mesa.codigoArrematador, mesa.ganhador, mesa.valor].map(v=>String(v||'').trim()).join('|');
+
+  linhasMesa = linhasMesa.filter(l => {
+    if(!l) return false;
+    if(String(l.id || '') === '__nova__') return false;
+    if(mesa.id && String(l.id || '') === String(mesa.id)) return false;
+    if(mesa.ordem && Number(l.ordem || 0) === Number(mesa.ordem || 0)) return false;
+    const conteudoL = [l.numerosPrendas, l.codigoArrematador, l.ganhador, l.valor].map(v=>String(v||'').trim()).join('|');
+    if(conteudoMesa !== '|||' && conteudoL === conteudoMesa) return false;
+    return true;
+  });
+  linhasMesa.push(mesa);
+  linhasMesaSemDuplicar();
+
+  if(res.arremate){
+    const arr = normalizarArremate(res.arremate);
+    const ai = arremates.findIndex(a => String(a.id) === String(arr.id));
+    if(ai >= 0) arremates[ai] = { ...arremates[ai], ...arr };
+    else arremates.push(arr);
+  }
+
+  if(tr){
+    tr.setAttribute('data-id', mesa.id);
+    tr.classList.remove('draft');
+    const ordem = tr.querySelector('.ordem');
+    if(ordem) ordem.textContent = mesa.ordem || ordem.textContent;
+    const campos = {
+      numerosPrendas: mesa.numerosPrendas,
+      codigoArrematador: mesa.codigoArrematador,
+      ganhador: mesa.ganhador,
+      valor: mesa.valor
+    };
+    Object.keys(campos).forEach(campo => {
+      const input = tr.querySelector(`[data-campo="${campo}"]`);
+      if(input) input.value = campos[campo] || '';
+    });
+    const botao = tr.querySelector('.btn-ok');
+    if(botao) botao.setAttribute('onclick', `salvarLinhaOk('${escapeJs(mesa.id)}', this)`);
+  }
+
+  return mesa;
+}
+
+
+function enfileirarSalvamento(tarefa){
+  filaSalvamento.push(tarefa);
+  processarFilaSalvamento();
+}
+
+async function processarFilaSalvamento(){
+  if(processandoFilaSalvamento) return;
+  processandoFilaSalvamento = true;
+  while(filaSalvamento.length){
+    const tarefa = filaSalvamento.shift();
+    try{ await tarefa(); }
+    catch(e){ console.error('Erro na fila de salvamento:', e); }
+  }
+  processandoFilaSalvamento = false;
+  // Depois que a fila termina, busca o estado real da planilha sem atrapalhar edição.
+  setTimeout(() => { if(!mesaTemEdicaoAtiva()) carregarDados(false, true); }, 800);
+}
+
+function transformarLinhaNovaEmLocal(tr, dados){
+  const ordem = Number(tr.querySelector('.ordem')?.textContent || proximaOrdem()) || proximaOrdem();
+  const tempId = 'local_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+  const local = normalizarMesa({
+    id: tempId,
+    ordem,
+    ...dados,
+    salvoMesaEm: new Date().toISOString(),
+    salvandoLocal: true
+  });
+
+  linhasMesa.push(local);
+  linhasMesaSemDuplicar();
+
+  tr.setAttribute('data-id', tempId);
+  tr.classList.remove('draft');
+  tr.querySelectorAll('.dirty').forEach(el => el.classList.remove('dirty'));
+  const botao = tr.querySelector('.btn-ok');
+  if(botao){
+    botao.setAttribute('onclick', `salvarLinhaOk('${escapeJs(tempId)}', this)`);
+    botao.disabled = false;
+    botao.textContent = 'Salvo';
+    botao.className = 'btn-ok salvo';
+  }
+
+  garantirUmaLinhaNova();
+  const nova = document.querySelector('tbody tr[data-id="__nova__"] input[data-campo="numerosPrendas"]');
+  if(nova) nova.focus();
+  return { tempId, ordem };
+}
+
+
+function iniciarTempoLeilaoVisualSeNecessario(){
+  if(!inicioLeilaoLocal){
+    inicioLeilaoLocal = new Date().toISOString();
+    fimLeilaoLocal = null;
+    atualizarTempoLeilaoInicio();
+  }
+}
+
+async function salvarLinhaOk(id, btn){
+  pausarAtualizacaoAutomatica(45000);
+  const tr = btn?.closest('tr');
+  if(!tr) return;
+
+  const dadosOriginais = dadosDaLinha(tr);
+  const dados = prepararDadosMesaParaSalvar(id, dadosOriginais);
+  if(!dados) return;
+
+  iniciarTempoLeilaoVisualSeNecessario();
+
+  const idParaSalvar = String(id || '');
+  const chaveLinha = idParaSalvar === '__nova__'
+    ? 'nova:' + [dados.numerosPrendas, dados.codigoArrematador, dados.ganhador, dados.valor].join('|')
+    : idParaSalvar;
+  if(linhasSalvando.has(chaveLinha)) return;
+  linhasSalvando.add(chaveLinha);
+
+  let tempInfo = null;
+  const textoAnterior = btn ? btn.textContent : 'OK';
+
+  if(idParaSalvar === '__nova__'){
+    tempInfo = transformarLinhaNovaEmLocal(tr, dados);
+  }else if(btn){
+    btn.disabled = true;
+    btn.textContent = 'Salvo';
+    btn.className = 'btn-ok salvo';
+  }
+
+  enfileirarSalvamento(async () => {
+    try{
+      const res = await salvarDadosMesa(idParaSalvar === '__nova__' ? '__nova__' : idParaSalvar, dados);
+      if(res){
+        if(res.controle){
+          const ctrl = res.controle;
+          const idxCtrl = controle.findIndex(c => String(c.id || '') === String(ctrl.id || ''));
+          if(idxCtrl >= 0) controle[idxCtrl] = ctrl;
+          else controle.push(ctrl);
+          inicioLeilaoLocal = ctrl.inicioEm || inicioLeilaoLocal;
+          fimLeilaoLocal = ctrl.encerradoEm || fimLeilaoLocal;
+          atualizarTempoLeilaoInicio();
+        }
+        if(tempInfo && res.mesa){
+          // Troca a linha local temporária pela linha real retornada pela planilha.
+          res.mesa.id = res.mesa.id || res.id;
+          const idxTemp = linhasMesa.findIndex(l => String(l.id) === String(tempInfo.tempId));
+          if(idxTemp >= 0) linhasMesa.splice(idxTemp, 1);
+          aplicarRetornoMesaLocal(res, tempInfo.tempId, tr);
+        }else{
+          aplicarRetornoMesaLocal(res, idParaSalvar, tr);
+        }
+
+        if(tr) tr.querySelectorAll('.dirty').forEach(el => el.classList.remove('dirty'));
+        if(btn){ btn.disabled = false; btn.textContent = 'Salvo'; btn.className = 'btn-ok salvo'; }
+        atualizarResumo();
+      }else if(btn){
+        btn.disabled = false;
+        btn.textContent = textoAnterior === 'Salvo' ? 'Salvo' : 'OK';
+        btn.className = textoAnterior === 'Salvo' ? 'btn-ok salvo' : 'btn-ok';
+      }
+    }catch(e){
+      console.error(e);
+      alert('Erro ao salvar linha da Mesa: ' + (e.message || e));
+      if(btn){ btn.disabled = false; btn.textContent = 'OK'; btn.className = 'btn-ok'; }
+    }finally{
+      setTimeout(()=>linhasSalvando.delete(chaveLinha), 800);
+    }
+  });
+}
+window.salvarLinhaOk = salvarLinhaOk;
+
+async function salvarAlteracoesVisiveis(mostrarAlerta = true){
+  const linhas = Array.from(document.querySelectorAll('tbody tr[data-id]'));
+  let enviadas = 0;
+  for(const tr of linhas){
+    const id = tr.getAttribute('data-id');
+    const dados = dadosDaLinha(tr);
+    const temDirty = !!tr.querySelector('.dirty');
+    if(!linhaTemAlgo(dados)) continue;
+    if(id !== '__nova__' && !temDirty) continue;
+    const btn = tr.querySelector('.btn-ok');
+    salvarLinhaOk(id, btn);
+    enviadas++;
+  }
+  if(mostrarAlerta && enviadas > 0) alert('Linhas enviadas para salvamento. Aguarde os botões ficarem como Salvo.');
+}
+
+
+async function limparMesa(){
+  if(!leilaoAtivo || !leilaoAtivo.leilaoId){
+    alert('Nenhum leilão ativo.');
+    return;
+  }
+  if(limpandoMesa) return;
+
+  const ok = confirm(
+    'Apagar a Mesa deste leilão?\n\n' +
+    'Serão apagados:\n' +
+    '- linhas da Mesa;\n' +
+    '- arremates gerados pela Mesa;\n' +
+    '- controle de tempo do leilão.\n\n' +
+    'Prendas, arrematadores e pagamentos serão mantidos.'
+  );
+  if(!ok) return;
+
+  limpandoMesa = true;
+  pausarAtualizacaoAutomatica(30000);
+  const botoes = Array.from(document.querySelectorAll('button'));
+  botoes.forEach(b => b.disabled = true);
+
+  try{
+    await chamarAPI({ action:'limparMesa' });
+    linhasMesa = [];
+    arremates = arremates.filter(a => String(a.origem || '') !== 'mesa');
+    controle = [];
+    inicioLeilaoLocal = null;
+    fimLeilaoLocal = null;
+    atualizarTempoLeilaoInicio();
+    corpoTabela.innerHTML = '';
+    garantirUmaLinhaNova();
+    atualizarResumo();
+    renderizarBuscaAuxiliar();
+    await carregarDados(false, true);
+    alert('Mesa limpa.');
+  }catch(e){
+    console.error(e);
+    alert('Erro ao limpar Mesa: ' + (e.message || e));
+  }finally{
+    limpandoMesa = false;
+    botoes.forEach(b => b.disabled = false);
+  }
+}
+
+async function encerrarLeilao(){
+  if(!leilaoAtivo || !leilaoAtivo.leilaoId){
+    alert('Nenhum leilão ativo.');
+    return;
+  }
+
+  const ok = confirm('Deseja registrar o horário final do leilão?\n\nAs correções continuarão permitidas depois.');
+  if(!ok) return;
+
+  try{
+    const res = await chamarAPI({ action:'encerrarTempoLeilao' });
+    const ctrl = res && res.controle ? res.controle : null;
+    if(ctrl){
+      const idx = controle.findIndex(c => String(c.id || '') === String(ctrl.id || ''));
+      if(idx >= 0) controle[idx] = ctrl;
+      else controle.push(ctrl);
+      inicioLeilaoLocal = ctrl.inicioEm || inicioLeilaoLocal;
+      fimLeilaoLocal = ctrl.encerradoEm || new Date().toISOString();
+    }else{
+      if(!inicioLeilaoLocal) inicioLeilaoLocal = new Date().toISOString();
+      fimLeilaoLocal = new Date().toISOString();
+    }
+    if(!fimLeilaoLocal) fimLeilaoLocal = new Date().toISOString();
+    if(!inicioLeilaoLocal) inicioLeilaoLocal = fimLeilaoLocal;
+    atualizarTempoLeilaoInicio();
+    const btn = document.getElementById('btnEncerrarLeilao');
+    if(btn){
+      btn.textContent = '🔴 Leilão encerrado às ' + formatarHoraBRInicio(fimLeilaoLocal);
+      btn.className = 'bg-red-100 text-red-800 rounded-xl px-3 py-2 font-normal';
+    }
+    alert('Horário final do leilão registrado.');
+  }catch(e){
+    console.error(e);
+    alert('Erro ao registrar encerramento: ' + (e.message || e));
+  }
+}
+
+window.salvarAlteracoesVisiveis = salvarAlteracoesVisiveis;
+window.limparMesa = limparMesa;
+window.encerrarLeilao = encerrarLeilao;
+
+function valorDecimal(valor){ const texto = String(valor || '').replace('R$', '').replace(/\./g, '').replace(',', '.').trim(); const n = Number(texto); return Number.isFinite(n) && n > 0 ? n : 0; }
+function dinheiro(v){ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function moeda(v){ return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function escapeHtml(t){ return String(t??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;'); }
+function escapeAttr(t){ return escapeHtml(t); }
+function escapeJs(t){ return String(t??'').replaceAll('\\','\\\\').replaceAll("'","\\'"); }
+</script>
+</body>
+</html>
