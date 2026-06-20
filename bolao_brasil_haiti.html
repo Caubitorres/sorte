@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bolão Brasil x Haiti</title>
+  <style>
+    :root {
+      --verde: #159447;
+      --verde-escuro: #0f6d35;
+      --amarelo: #ffd43b;
+      --azul: #1557c0;
+      --fundo: #f5f7fb;
+      --texto: #1f2937;
+      --cinza: #6b7280;
+      --borda: #d9e1ee;
+      --branco: #ffffff;
+      --vermelho: #c62828;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #eef7ff, #f7fbef);
+      color: var(--texto);
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--verde), var(--azul));
+      color: white;
+      padding: 26px 16px;
+      text-align: center;
+      border-bottom: 6px solid var(--amarelo);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: .3px;
+    }
+
+    header p {
+      margin: 8px 0 0;
+      font-size: 16px;
+      opacity: .95;
+    }
+
+    .container {
+      width: min(1050px, 94vw);
+      margin: 22px auto 40px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--branco);
+      border: 1px solid var(--borda);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(17, 24, 39, .08);
+    }
+
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+      color: var(--verde-escuro);
+    }
+
+    .linha {
+      display: grid;
+      grid-template-columns: 1.8fr .8fr .8fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .resultado-linha {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 16px;
+      outline: none;
+      background: #fff;
+    }
+
+    input:focus {
+      border-color: var(--azul);
+      box-shadow: 0 0 0 3px rgba(21, 87, 192, .13);
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 15px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .08s ease, opacity .2s ease;
+      white-space: nowrap;
+    }
+
+    button:active { transform: scale(.98); }
+
+    .btn-principal {
+      background: var(--verde);
+      color: white;
+    }
+
+    .btn-azul {
+      background: var(--azul);
+      color: white;
+    }
+
+    .btn-amarelo {
+      background: var(--amarelo);
+      color: #1f2937;
+    }
+
+    .btn-perigo {
+      background: #fee2e2;
+      color: var(--vermelho);
+      border: 1px solid #fecaca;
+    }
+
+    .btn-pequeno {
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    .resumo {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .box {
+      background: #f8fafc;
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .box strong {
+      display: block;
+      font-size: 25px;
+      color: var(--azul);
+    }
+
+    .box span {
+      color: var(--cinza);
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--borda);
+      padding: 11px 8px;
+      text-align: left;
+      font-size: 15px;
+    }
+
+    th {
+      background: #eef6ff;
+      color: #163a6b;
+    }
+
+    tr.ganhador {
+      background: #fff8d6;
+      font-weight: 700;
+    }
+
+    .placar {
+      font-weight: 800;
+      color: var(--verde-escuro);
+      font-size: 17px;
+    }
+
+    .mensagem {
+      padding: 13px;
+      border-radius: 13px;
+      background: #ecfdf5;
+      border: 1px solid #bbf7d0;
+      color: #065f46;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .vazio {
+      color: var(--cinza);
+      text-align: center;
+      padding: 20px 8px;
+    }
+
+    .acoes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+
+    .regras {
+      background: #fffbeb;
+      border-color: #fde68a;
+    }
+
+    .regras ul {
+      margin: 8px 0 0 20px;
+      padding: 0;
+    }
+
+    .regras li { margin: 5px 0; }
+
+    @media (max-width: 760px) {
+      header h1 { font-size: 24px; }
+      .linha, .resultado-linha, .resumo {
+        grid-template-columns: 1fr;
+      }
+      button { width: 100%; }
+      .acoes { justify-content: stretch; }
+      th, td { font-size: 13px; padding: 9px 6px; }
+      .ocultar-mobile { display: none; }
+    }
+
+    @media print {
+      body { background: white; }
+      header, .nao-imprimir, .card.formulario, .card.resultado-form { display: none; }
+      .container { width: 100%; margin: 0; }
+      .card { box-shadow: none; border: none; }
+      button { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🇧🇷 Bolão Brasil x Haiti 🇭🇹</h1>
+    <p>Cadastre os palpites, informe o resultado e veja automaticamente quem ganhou.</p>
+  </header>
+
+  <main class="container">
+    <section class="card regras nao-imprimir">
+      <h2>Como funciona</h2>
+      <ul>
+        <li>Digite o nome da pessoa e o placar que ela apostou.</li>
+        <li>Depois do jogo, coloque o resultado oficial.</li>
+        <li>Quem acertar o placar exato aparece como ganhador.</li>
+      </ul>
+    </section>
+
+    <section class="card formulario nao-imprimir">
+      <h2>Adicionar palpite</h2>
+      <div class="linha">
+        <div>
+          <label for="nome">Nome</label>
+          <input id="nome" type="text" placeholder="Ex.: João Silva" autocomplete="off" />
+        </div>
+        <div>
+          <label for="brasil">Brasil</label>
+          <input id="brasil" type="number" min="0" max="99" placeholder="0" />
+        </div>
+        <div>
+          <label for="haiti">Haiti</label>
+          <input id="haiti" type="number" min="0" max="99" placeholder="0" />
+        </div>
+        <button class="btn-principal" onclick="adicionarPalpite()">Adicionar</button>
+      </div>
+      <div id="msgCadastro" class="mensagem"></div>
+    </section>
+
+    <section class="card resultado-form nao-imprimir">
+      <h2>Resultado oficial</h2>
+      <div class="resultado-linha">
+        <div>
+          <label for="resBrasil">Gols do Brasil</label>
+          <input id="resBrasil" type="number" min="0" max="99" placeholder="Resultado Brasil" />
+        </div>
+        <div>
+          <label for="resHaiti">Gols do Haiti</label>
+          <input id="resHaiti" type="number" min="0" max="99" placeholder="Resultado Haiti" />
+        </div>
+        <button class="btn-azul" onclick="salvarResultado()">Mostrar ganhadores</button>
+      </div>
+      <div class="acoes">
+        <button class="btn-amarelo" onclick="window.print()">Imprimir lista</button>
+        <button class="btn-perigo" onclick="limparTudo()">Limpar tudo</button>
+      </div>
+      <div id="msgResultado" class="mensagem"></div>
+    </section>
+
+    <section class="resumo">
+      <div class="box">
+        <strong id="totalPalpites">0</strong>
+        <span>palpites cadastrados</span>
+      </div>
+      <div class="box">
+        <strong id="resultadoAtual">-- x --</strong>
+        <span>resultado oficial</span>
+      </div>
+      <div class="box">
+        <strong id="totalGanhadores">0</strong>
+        <span>ganhadores</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>🏆 Ganhadores</h2>
+      <div id="areaGanhadores" class="vazio">Informe o resultado oficial para apurar os ganhadores.</div>
+    </section>
+
+    <section class="card">
+      <h2>Lista de palpites</h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Nome</th>
+              <th>Palpite</th>
+              <th class="ocultar-mobile">Situação</th>
+              <th class="nao-imprimir">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaPalpites"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const CHAVE_PALPITES = 'bolaoBrasilHaiti_palpites';
+    const CHAVE_RESULTADO = 'bolaoBrasilHaiti_resultado';
+
+    let palpites = JSON.parse(localStorage.getItem(CHAVE_PALPITES) || '[]');
+    let resultado = JSON.parse(localStorage.getItem(CHAVE_RESULTADO) || 'null');
+
+    function salvarDados() {
+      localStorage.setItem(CHAVE_PALPITES, JSON.stringify(palpites));
+      localStorage.setItem(CHAVE_RESULTADO, JSON.stringify(resultado));
+    }
+
+    function mostrarMensagem(id, texto) {
+      const el = document.getElementById(id);
+      el.textContent = texto;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 3500);
+    }
+
+    function numeroValido(valor) {
+      return valor !== '' && !isNaN(valor) && Number(valor) >= 0;
+    }
+
+    function adicionarPalpite() {
+      const nome = document.getElementById('nome').value.trim();
+      const brasil = document.getElementById('brasil').value;
+      const haiti = document.getElementById('haiti').value;
+
+      if (!nome) {
+        mostrarMensagem('msgCadastro', 'Digite o nome da pessoa.');
+        return;
+      }
+      if (!numeroValido(brasil) || !numeroValido(haiti)) {
+        mostrarMensagem('msgCadastro', 'Digite o placar completo do palpite.');
+        return;
+      }
+
+      palpites.push({
+        id: Date.now(),
+        nome,
+        brasil: Number(brasil),
+        haiti: Number(haiti)
+      });
+
+      document.getElementById('nome').value = '';
+      document.getElementById('brasil').value = '';
+      document.getElementById('haiti').value = '';
+      document.getElementById('nome').focus();
+
+      salvarDados();
+      renderizar();
+      mostrarMensagem('msgCadastro', 'Palpite cadastrado com sucesso!');
+    }
+
+    function salvarResultado() {
+      const brasil = document.getElementById('resBrasil').value;
+      const haiti = document.getElementById('resHaiti').value;
+
+      if (!numeroValido(brasil) || !numeroValido(haiti)) {
+        mostrarMensagem('msgResultado', 'Digite o resultado oficial completo.');
+        return;
+      }
+
+      resultado = {
+        brasil: Number(brasil),
+        haiti: Number(haiti)
+      };
+
+      salvarDados();
+      renderizar();
+      mostrarMensagem('msgResultado', 'Resultado salvo. Ganhadores apurados!');
+    }
+
+    function removerPalpite(id) {
+      if (!confirm('Deseja remover este palpite?')) return;
+      palpites = palpites.filter(p => p.id !== id);
+      salvarDados();
+      renderizar();
+    }
+
+    function limparTudo() {
+      if (!confirm('Deseja apagar todos os palpites e o resultado?')) return;
+      palpites = [];
+      resultado = null;
+      localStorage.removeItem(CHAVE_PALPITES);
+      localStorage.removeItem(CHAVE_RESULTADO);
+      document.getElementById('resBrasil').value = '';
+      document.getElementById('resHaiti').value = '';
+      renderizar();
+    }
+
+    function acertouPlacar(p) {
+      return resultado && p.brasil === resultado.brasil && p.haiti === resultado.haiti;
+    }
+
+    function renderizar() {
+      const tbody = document.getElementById('tabelaPalpites');
+      tbody.innerHTML = '';
+
+      if (resultado) {
+        document.getElementById('resBrasil').value = resultado.brasil;
+        document.getElementById('resHaiti').value = resultado.haiti;
+      }
+
+      const ganhadores = resultado ? palpites.filter(acertouPlacar) : [];
+
+      document.getElementById('totalPalpites').textContent = palpites.length;
+      document.getElementById('resultadoAtual').textContent = resultado ? `${resultado.brasil} x ${resultado.haiti}` : '-- x --';
+      document.getElementById('totalGanhadores').textContent = ganhadores.length;
+
+      if (palpites.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="vazio">Nenhum palpite cadastrado ainda.</td></tr>`;
+      } else {
+        palpites.forEach((p, index) => {
+          const ganhou = acertouPlacar(p);
+          const tr = document.createElement('tr');
+          if (ganhou) tr.classList.add('ganhador');
+          tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${p.nome}</td>
+            <td class="placar">Brasil ${p.brasil} x ${p.haiti} Haiti</td>
+            <td class="ocultar-mobile">${resultado ? (ganhou ? '🏆 Ganhou' : 'Não acertou') : 'Aguardando resultado'}</td>
+            <td class="nao-imprimir"><button class="btn-perigo btn-pequeno" onclick="removerPalpite(${p.id})">Remover</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      const area = document.getElementById('areaGanhadores');
+      if (!resultado) {
+        area.className = 'vazio';
+        area.innerHTML = 'Informe o resultado oficial para apurar os ganhadores.';
+      } else if (ganhadores.length === 0) {
+        area.className = 'vazio';
+        area.innerHTML = `Resultado: <strong>Brasil ${resultado.brasil} x ${resultado.haiti} Haiti</strong><br>Ninguém acertou o placar exato.`;
+      } else {
+        area.className = '';
+        area.innerHTML = `
+          <p>Resultado: <strong>Brasil ${resultado.brasil} x ${resultado.haiti} Haiti</strong></p>
+          <table>
+            <thead>
+              <tr><th>Nº</th><th>Nome</th><th>Palpite</th></tr>
+            </thead>
+            <tbody>
+              ${ganhadores.map((g, i) => `
+                <tr class="ganhador">
+                  <td>${i + 1}</td>
+                  <td>🏆 ${g.nome}</td>
+                  <td class="placar">Brasil ${g.brasil} x ${g.haiti} Haiti</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+    }
+
+    document.getElementById('haiti').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') adicionarPalpite();
+    });
+
+    document.getElementById('nome').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('brasil').focus();
+    });
+
+    document.getElementById('brasil').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('haiti').focus();
+    });
+
+    renderizar();
+  </script>
+</body>
+</html>
