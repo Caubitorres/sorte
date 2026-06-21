@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bolão Admin</title>
+  <style>
+    :root{--verde:#009c3b;--verde2:#007a2f;--amarelo:#ffdf00;--azul:#002776;--azul2:#0b4edb;--branco:#fff;--texto:#172033;--cinza:#667085;--borda:#d8e2f3;--vermelho:#c62828;--ouro:#fff3b0;}
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--texto);background:radial-gradient(circle at 10% 0,rgba(255,223,0,.38),transparent 28%),linear-gradient(135deg,#e9f7ee,#eef4ff 58%,#fffbea)}header{background:linear-gradient(135deg,var(--verde),var(--azul));color:white;text-align:center;padding:28px 14px;border-bottom:7px solid var(--amarelo)}header h1{margin:0;font-size:30px}header p{margin:8px 0 0;opacity:.95}.container{width:min(1150px,94vw);margin:22px auto 40px;display:grid;gap:18px}.card{background:rgba(255,255,255,.96);border:1px solid var(--borda);border-radius:20px;padding:18px;box-shadow:0 10px 26px rgba(0,39,118,.10)}.card h2{margin:0 0 14px;color:var(--verde2);font-size:20px}.linha{display:grid;grid-template-columns:1.3fr 1fr .7fr .7fr auto;gap:10px;align-items:end}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:10px}.acoes{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-top:12px}label{display:block;font-weight:800;font-size:14px;margin-bottom:5px}input,select{width:100%;border:1px solid var(--borda);border-radius:13px;padding:12px;font-size:16px;outline:none;background:white}input:focus,select:focus{border-color:var(--azul2);box-shadow:0 0 0 3px rgba(0,39,118,.14)}button{border:0;border-radius:13px;padding:12px 15px;font-size:15px;font-weight:900;cursor:pointer;white-space:nowrap}.btn-principal{background:var(--verde);color:white}.btn-azul{background:var(--azul);color:white}.btn-amarelo{background:var(--amarelo);color:#132}.btn-perigo{background:#fee2e2;color:var(--vermelho);border:1px solid #fecaca}.btn-pequeno{padding:8px 10px;font-size:13px}.resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.box{background:#f8fbff;border:1px solid var(--borda);border-radius:16px;padding:14px;text-align:center}.box strong{display:block;font-size:25px;color:var(--azul)}.box span{font-size:13px;color:var(--cinza)}table{width:100%;border-collapse:collapse;border-radius:14px;overflow:hidden}th,td{border-bottom:1px solid var(--borda);padding:11px 8px;text-align:left;font-size:15px}th{background:#eaf2ff;color:#082d74}tr.ganhador{background:var(--ouro);font-weight:800}.placar{font-weight:900;color:var(--verde2);font-size:17px}.mensagem{display:none;margin-top:12px;padding:13px;border-radius:13px;background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46}.vazio{text-align:center;color:var(--cinza);padding:20px 8px}.erro{background:#fff1f2!important;border-color:#fecdd3!important;color:#9f1239!important}.admin-only{display:none}.nota{color:var(--cinza);font-size:14px;margin:8px 0 0}@media(max-width:900px){header h1{font-size:24px}.linha,.grid2,.grid3,.grid4,.resumo{grid-template-columns:1fr}.acoes{justify-content:stretch}button{width:100%}th,td{font-size:13px;padding:9px 6px}.ocultar-mobile{display:none}}@media print{header,.nao-imprimir,#loginBox{display:none!important}.container{width:100%;margin:0}.card{box-shadow:none;border:none}}
+  </style>
+</head>
+<body>
+<header><h1>🇧🇷 Bolão Admin</h1><p>Painel para controlar jogos, resultados, palpites e ranking.</p></header>
+<main class="container">
+  <section id="loginBox" class="card nao-imprimir"><h2>Acesso do administrador</h2><p class="nota">Digite a senha simples do painel.</p><label for="senha">Senha</label><input id="senha" type="password" placeholder="Senha do admin"><div class="acoes"><button class="btn-principal" onclick="entrar()">Entrar</button></div><div id="msgLogin" class="mensagem"></div></section>
+  <div id="painel" class="admin-only">
+    <section class="card nao-imprimir"><h2>Selecionar jogo</h2><div class="grid2"><div><label for="jogoSelect">Jogo</label><select id="jogoSelect"></select></div><div><label>Ajuda</label><p class="nota">Cada jogo mantém sua lista e seu ranking. O ranking geral soma todos os jogos com resultado. Apenas 1 jogo pode ficar ativo por vez.</p></div></div></section>
+
+
+    <section class="card nao-imprimir">
+      <h2>📌 Aviso do bolão</h2>
+      <p class="nota">
+        Este bolão é apenas uma brincadeira entre amigos, sem cobrança de valor para participar.
+        A finalidade é somente diversão e confraternização.
+      </p>
+    </section>
+
+    <section class="card nao-imprimir"><h2>Criar ou editar jogo</h2><div class="grid4"><div><label for="jogoId">Código do jogo</label><input id="jogoId" placeholder="brasil_escocia"></div><div><label for="timeA_nome">Time A</label><input id="timeA_nome" value="Brasil"></div><div><label for="timeB_nome">Time B</label><input id="timeB_nome" value="Escócia"></div><div><label for="dataJogo">Data/observação</label><input id="dataJogo" placeholder="Ex.: 25/06"></div><div><label for="premioJogo">Prêmio</label><input id="premioJogo" value="01 caixa de Chocolates." placeholder="Ex.: 01 caixa de Chocolates"></div><div><label for="fechaEm">Fechar palpites em</label><input id="fechaEm" type="datetime-local"></div></div><div class="acoes"><button class="btn-principal" onclick="salvarJogo(true)">Salvar e abrir palpites</button><button class="btn-amarelo" onclick="salvarJogo(false)">Salvar e fechar palpites</button><button class="btn-azul" onclick="novoJogo()">Novo jogo em branco</button></div><div id="msgJogo" class="mensagem"></div></section>
+
+    <section class="card nao-imprimir"><h2>Resultado oficial</h2><div class="grid3"><div><label id="labelResA" for="resA">Brasil</label><input id="resA" type="number" min="0" max="99" placeholder="0"></div><div><label id="labelResB" for="resB">Adversário</label><input id="resB" type="number" min="0" max="99" placeholder="0"></div><button class="btn-azul" onclick="salvarResultado()">Salvar resultado</button></div><div class="acoes"><button class="btn-amarelo" onclick="window.print()">Imprimir</button><button class="btn-perigo" onclick="limparResultado()">Limpar resultado</button><button class="btn-perigo" onclick="limparPalpites()">Apagar palpites deste jogo</button></div><div id="msgResultado" class="mensagem"></div></section>
+
+    <section class="card nao-imprimir"><h2>Adicionar palpite pelo admin</h2><div class="linha"><div><label for="nome">Nome</label><input id="nome" type="text" placeholder="Ex.: João Silva"></div><div><label for="telefone">Telefone</label><input id="telefone" type="tel" placeholder="Ex.: 84999990000"></div><div><label id="labelAddA" for="timeA">Brasil</label><input id="timeA" type="number" min="0" max="99" placeholder="0"></div><div><label id="labelAddB" for="timeB">Adversário</label><input id="timeB" type="number" min="0" max="99" placeholder="0"></div><button class="btn-principal" onclick="adicionarPalpite()">Adicionar</button></div><div id="msgCadastro" class="mensagem"></div></section>
+
+    <section class="resumo"><div class="box"><strong id="totalPalpites">0</strong><span>palpites neste jogo</span></div><div class="box"><strong id="resultadoAtual">-- x --</strong><span>resultado oficial</span></div><div class="box"><strong id="totalGanhadores">0</strong><span>placares exatos</span></div><div class="box"><strong id="jogosFinalizados">0</strong><span>jogos finalizados</span></div></section>
+    <section class="card"><h2>🏆 Ranking deste jogo</h2><div id="rankingJogo" class="vazio">Informe o resultado para apurar.</div></section>
+    <section class="card"><h2>⭐ Ranking geral</h2><p class="nota">Pontuação: 3 pontos para placar exato e 1 ponto para acertar vencedor ou empate.</p><div id="rankingGeral" class="vazio">Ainda não há ranking geral.</div></section>
+    <section class="card"><h2>Lista de palpites do jogo selecionado</h2><div style="overflow-x:auto"><table><thead><tr><th>Nº</th><th>Nome</th><th>Telefone</th><th>Palpite</th><th class="ocultar-mobile">Situação</th><th class="nao-imprimir">Ação</th></tr></thead><tbody id="tabelaPalpites"><tr><td colspan="6" class="vazio">Carregando...</td></tr></tbody></table></div></section>
+  </div>
+</main>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  const FIREBASE_ATIVO = true;
+  const firebaseConfig = {
+    apiKey: "AIzaSyB83ayGfej9_UB-2YHkZ2j0YxJXYW_0ujY",
+    authDomain: "bolao-10f98.firebaseapp.com",
+    projectId: "bolao-10f98",
+    storageBucket: "bolao-10f98.firebasestorage.app",
+    messagingSenderId: "759333743522",
+    appId: "1:759333743522:web:7fd18968d3301d88a860fb"
+  };
+
+  const SENHA_ADMIN = "1234";
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const jogosRef = collection(db, "bolao_jogos");
+  const palpitesRef = collection(db, "bolao_palpites");
+  let jogos = [];
+  let palpitesTodos = [];
+  let jogoAtualId = localStorage.getItem('bolao_admin_jogo_atual') || '';
+
+  const esc = txt => String(txt||"").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+  const telKey = txt => String(txt||'').replace(/\D/g,'');
+  const numeroValido = v => v !== '' && !isNaN(v) && Number(v) >= 0;
+  const dataDoc = v => v?.toMillis ? v.toMillis() : (v ? new Date(v).getTime() : 0);
+  function msg(id,texto,erro=false){const el=document.getElementById(id);el.textContent=texto;el.className='mensagem'+(erro?' erro':'');el.style.display='block';setTimeout(()=>el.style.display='none',4500)}
+
+  window.entrar=function(){ if(document.getElementById('senha').value===SENHA_ADMIN){sessionStorage.setItem('bolao_admin_ok','1'); liberar();} else msg('msgLogin','Senha incorreta.',true); }
+  function liberar(){document.getElementById('loginBox').style.display='none';document.getElementById('painel').style.display='grid';document.getElementById('painel').style.gap='18px'}
+  if(sessionStorage.getItem('bolao_admin_ok')==='1') liberar();
+
+  async function garantirJogo(){const ref=doc(db,'bolao_jogos','brasil_escocia');const snap=await getDoc(ref);if(!snap.exists()) await setDoc(ref,{timeA:'Brasil',timeB:'Escócia',aberto:true,resultado:null,data:'',premio:'01 caixa de Chocolates.',fechaEm:null,ordem:Date.now(),criadoEm:serverTimestamp()});}
+  onSnapshot(jogosRef, snap=>{jogos=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.ordem||dataDoc(b.criadoEm))-(a.ordem||dataDoc(a.criadoEm)));if(!jogoAtualId||!jogos.some(j=>j.id===jogoAtualId))jogoAtualId=jogos.find(j=>j.aberto)?.id||jogos[0]?.id||'';preencherJogo();renderizar();}, err=>console.error(err));
+  onSnapshot(palpitesRef, snap=>{palpitesTodos=snap.docs.map(d=>({id:d.id,...d.data()}));renderizar();}, err=>console.error(err));
+  document.getElementById('jogoSelect').addEventListener('change', e=>{jogoAtualId=e.target.value;localStorage.setItem('bolao_admin_jogo_atual',jogoAtualId);preencherJogo();renderizar();});
+
+
+  function toDatetimeLocal(valor){
+    if(!valor) return '';
+    const d = valor?.toDate ? valor.toDate() : new Date(valor);
+    if(isNaN(d.getTime())) return '';
+    const pad = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function fromDatetimeLocal(valor){
+    if(!valor) return null;
+    const d = new Date(valor);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  function prazoFechado(j){
+    if(!j?.fechaEm) return false;
+    const d = j.fechaEm?.toDate ? j.fechaEm.toDate() : new Date(j.fechaEm);
+    return !isNaN(d.getTime()) && Date.now() >= d.getTime();
+  }
+
+  function slug(txt){return String(txt||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'jogo';}
+  window.novoJogo=function(){document.getElementById('jogoId').value='';document.getElementById('timeA_nome').value='Brasil';document.getElementById('timeB_nome').value='';document.getElementById('dataJogo').value='';document.getElementById('premioJogo').value='01 caixa de Chocolates.';document.getElementById('fechaEm').value='';document.getElementById('resA').value='';document.getElementById('resB').value='';msg('msgJogo','Preencha o adversário e salve o novo jogo.');}
+  function preencherJogo(){const j=jogos.find(x=>x.id===jogoAtualId);document.getElementById('jogoSelect').innerHTML=jogos.length?jogos.map(x=>`<option value="${esc(x.id)}" ${x.id===jogoAtualId?'selected':''}>${x.aberto && !prazoFechado(x)?'🟢 ':''}${x.aberto && prazoFechado(x)?'⏰ ':''}${esc(x.timeA)} x ${esc(x.timeB)}${x.data?' - '+esc(x.data):''}</option>`).join(''):'<option>Nenhum jogo</option>';if(!j)return;document.getElementById('jogoId').value=j.id;document.getElementById('timeA_nome').value=j.timeA||'Brasil';document.getElementById('timeB_nome').value=j.timeB||'';document.getElementById('dataJogo').value=j.data||'';document.getElementById('premioJogo').value=j.premio||'01 caixa de Chocolates.';document.getElementById('fechaEm').value=toDatetimeLocal(j.fechaEm);document.getElementById('labelResA').textContent=j.timeA||'Brasil';document.getElementById('labelResB').textContent=j.timeB||'Adversário';document.getElementById('labelAddA').textContent=j.timeA||'Brasil';document.getElementById('labelAddB').textContent=j.timeB||'Adversário';document.getElementById('resA').value=j.resultado?.timeA ?? '';document.getElementById('resB').value=j.resultado?.timeB ?? '';}
+
+  window.salvarJogo=async function(aberto){const timeA=document.getElementById('timeA_nome').value.trim()||'Brasil';const timeB=document.getElementById('timeB_nome').value.trim()||'Adversário';let id=document.getElementById('jogoId').value.trim();if(!id)id=slug(`${timeA}_${timeB}_${Date.now()}`);id=slug(id);const data=document.getElementById('dataJogo').value.trim();const premio=document.getElementById('premioJogo').value.trim();const fechaEm=fromDatetimeLocal(document.getElementById('fechaEm').value);const ref=doc(db,'bolao_jogos',id);const antigo=jogos.find(j=>j.id===id)||{};await setDoc(ref,{...antigo,timeA,timeB,data,premio,fechaEm,aberto,resultado:antigo.resultado||null,ordem:antigo.ordem||Date.now(),atualizadoEm:serverTimestamp(),criadoEm:antigo.criadoEm||serverTimestamp()},{merge:true});if(aberto){const outrosAbertos=jogos.filter(j=>j.id!==id && j.aberto);await Promise.all(outrosAbertos.map(j=>setDoc(doc(db,'bolao_jogos',j.id),{aberto:false,atualizadoEm:serverTimestamp()},{merge:true})));}jogoAtualId=id;localStorage.setItem('bolao_admin_jogo_atual',id);msg('msgJogo',aberto?'Jogo salvo e ativado. Os outros jogos foram fechados automaticamente.':'Jogo salvo e palpites fechados.');}
+  window.salvarResultado=async function(){const j=jogos.find(x=>x.id===jogoAtualId);if(!j){msg('msgResultado','Selecione um jogo.',true);return;}const a=document.getElementById('resA').value;const b=document.getElementById('resB').value;if(!numeroValido(a)||!numeroValido(b)){msg('msgResultado','Digite o resultado completo.',true);return;}await setDoc(doc(db,'bolao_jogos',jogoAtualId),{resultado:{timeA:Number(a),timeB:Number(b)},aberto:false,atualizadoEm:serverTimestamp()},{merge:true});msg('msgResultado','Resultado salvo. Ranking atualizado!');}
+  window.limparResultado=async function(){if(!jogoAtualId||!confirm('Limpar resultado oficial deste jogo?'))return;await setDoc(doc(db,'bolao_jogos',jogoAtualId),{resultado:null,atualizadoEm:serverTimestamp()},{merge:true});msg('msgResultado','Resultado removido.');}
+  window.adicionarPalpite=async function(){const j=jogos.find(x=>x.id===jogoAtualId);if(!j){msg('msgCadastro','Selecione um jogo.',true);return;}if(prazoFechado(j)){msg('msgCadastro','O horário de palpites deste jogo já encerrou.',true);return;}if(!j.aberto){msg('msgCadastro','Os palpites deste jogo estão fechados.',true);return;}const nome=document.getElementById('nome').value.trim();const telefone=telKey(document.getElementById('telefone').value);const a=document.getElementById('timeA').value;const b=document.getElementById('timeB').value;if(!nome){msg('msgCadastro','Digite o nome.',true);return;}if(telefone.length<10){msg('msgCadastro','Digite um telefone válido com DDD.',true);return;}if(!numeroValido(a)||!numeroValido(b)){msg('msgCadastro','Digite o placar completo.',true);return;}const palpiteId=`${jogoAtualId}_${telefone}`;const ref=doc(db,'bolao_palpites',palpiteId);const existe=await getDoc(ref);if(existe.exists()){msg('msgCadastro','Este telefone já cadastrou palpite neste jogo.',true);return;}await setDoc(ref,{jogoId:jogoAtualId,nome,telefone,telefoneKey:telefone,timeA:Number(a),timeB:Number(b),criadoEm:serverTimestamp(),admin:true});document.getElementById('nome').value='';document.getElementById('telefone').value='';document.getElementById('timeA').value='';document.getElementById('timeB').value='';document.getElementById('nome').focus();msg('msgCadastro','Palpite adicionado.');}
+  window.removerPalpite=async function(id){if(!confirm('Remover este palpite?'))return;await deleteDoc(doc(db,'bolao_palpites',id));}
+  window.limparPalpites=async function(){if(!jogoAtualId||!confirm('Apagar TODOS os palpites deste jogo?'))return;const lista=palpitesTodos.filter(p=>p.jogoId===jogoAtualId);await Promise.all(lista.map(p=>deleteDoc(doc(db,'bolao_palpites',p.id))));msg('msgResultado','Palpites deste jogo apagados.');}
+
+  function pontos(p,j){if(!j.resultado)return 0;const exato=p.timeA===j.resultado.timeA&&p.timeB===j.resultado.timeB;if(exato)return 3;return Math.sign(j.resultado.timeA-j.resultado.timeB)===Math.sign(p.timeA-p.timeB)?1:0;}
+  function situacao(p,j){if(!j.resultado)return 'Aguardando resultado';const pts=pontos(p,j);if(pts===3)return '🏆 Placar exato';if(pts===1)return '✅ Acertou vencedor/empate';return 'Não pontuou';}
+  function tabelaRanking(lista){if(!lista.length)return '<div class="vazio">Ainda não há pontuação.</div>';return `<div style="overflow-x:auto"><table><thead><tr><th>Pos.</th><th>Nome</th><th>Pontos</th><th class="ocultar-mobile">Exatos</th><th class="ocultar-mobile">Jogos pontuados</th></tr></thead><tbody>${lista.map((r,i)=>`<tr class="${i===0?'ganhador':''}"><td>${i+1}</td><td>${esc(r.nome)}</td><td><strong>${r.pontos}</strong></td><td class="ocultar-mobile">${r.exatos}</td><td class="ocultar-mobile">${r.jogos}</td></tr>`).join('')}</tbody></table></div>`;}
+  function rankingDoJogo(j,palpites){if(!j.resultado)return [];return palpites.map(p=>({nome:p.nome,pontos:pontos(p,j),exatos:pontos(p,j)===3?1:0,jogos:pontos(p,j)>0?1:0})).filter(r=>r.pontos>0).sort((a,b)=>b.pontos-a.pontos||b.exatos-a.exatos||a.nome.localeCompare(b.nome));}
+  function rankingGeral(){const mapa=new Map();const finalizados=jogos.filter(j=>j.resultado);for(const p of palpitesTodos){const j=finalizados.find(x=>x.id===p.jogoId);if(!j)continue;const pts=pontos(p,j);if(pts<=0)continue;const chave=p.telefoneKey||p.telefone||p.nome;const atual=mapa.get(chave)||{nome:p.nome,pontos:0,exatos:0,jogos:0};atual.nome=atual.nome||p.nome;atual.pontos+=pts;atual.exatos+=pts===3?1:0;atual.jogos+=1;mapa.set(chave,atual);}return [...mapa.values()].sort((a,b)=>b.pontos-a.pontos||b.exatos-a.exatos||a.nome.localeCompare(b.nome));}
+  function renderizar(){const j=jogos.find(x=>x.id===jogoAtualId);if(!j)return;const palpites=palpitesTodos.filter(p=>p.jogoId===j.id).sort((a,b)=>dataDoc(a.criadoEm)-dataDoc(b.criadoEm));const ganhadores=j.resultado?palpites.filter(p=>pontos(p,j)===3):[];document.getElementById('totalPalpites').textContent=palpites.length;document.getElementById('resultadoAtual').textContent=j.resultado?`${j.resultado.timeA} x ${j.resultado.timeB}`:'-- x --';document.getElementById('totalGanhadores').textContent=ganhadores.length;document.getElementById('jogosFinalizados').textContent=jogos.filter(x=>x.resultado).length;document.getElementById('rankingJogo').innerHTML=j.resultado?tabelaRanking(rankingDoJogo(j,palpites)):'<div class="vazio">Informe o resultado para apurar.</div>';document.getElementById('rankingGeral').innerHTML=tabelaRanking(rankingGeral());const tbody=document.getElementById('tabelaPalpites');tbody.innerHTML=palpites.length?palpites.map((p,i)=>`<tr class="${pontos(p,j)===3?'ganhador':''}"><td>${i+1}</td><td>${esc(p.nome)}</td><td>${esc(p.telefone||'')}</td><td class="placar">${esc(j.timeA)} ${p.timeA} x ${p.timeB} ${esc(j.timeB)}</td><td class="ocultar-mobile">${situacao(p,j)}</td><td class="nao-imprimir"><button class="btn-perigo btn-pequeno" onclick="removerPalpite('${p.id}')">Remover</button></td></tr>`).join(''):'<tr><td colspan="6" class="vazio">Nenhum palpite cadastrado neste jogo.</td></tr>';}
+  garantirJogo();
+</script>
+</body>
+</html>
