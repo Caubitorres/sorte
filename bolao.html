@@ -1,345 +1,239 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bolão Recreativo da Copa</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bolão dos Jogos do Brasil</title>
   <style>
-    :root{
-      --green:#15803d;--green2:#16a34a;--yellow:#facc15;--blue:#1d4ed8;--red:#dc2626;
-      --bg:#f4f7fb;--card:#ffffff;--text:#102033;--muted:#64748b;--line:#dbe3ef;
-      --shadow:0 10px 30px rgba(15,23,42,.10);--radius:18px;
-    }
-    *{box-sizing:border-box} html{scroll-behavior:smooth}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(145deg,#eaf7ee 0%,#f8fafc 48%,#e8f0ff 100%);color:var(--text)}
-    header{padding:26px 16px 20px;background:linear-gradient(135deg,var(--green),#0f766e 55%,var(--blue));color:white;text-align:center;position:relative;overflow:hidden}
-    header::after{content:"";position:absolute;right:-70px;bottom:-150px;width:310px;height:310px;border-radius:50%;background:rgba(250,204,21,.25)}
-    .wrap{max-width:1180px;margin:0 auto;padding:0 14px 32px;position:relative;z-index:1}
-    h1{font-size:clamp(29px,6vw,48px);margin:0 0 8px;letter-spacing:-1px}.subtitle{margin:0;font-size:16px;opacity:.96}
-    .match-hero{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:18px;font-weight:900;font-size:clamp(24px,6vw,42px)}.flag{font-size:36px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.15))}
-    main{margin-top:18px}.card{background:rgba(255,255,255,.94);border:1px solid rgba(219,227,239,.95);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:16px;backdrop-filter:blur(8px)}
-    .grid{display:grid;grid-template-columns:1.02fr .98fr;gap:16px}@media(max-width:880px){.grid{grid-template-columns:1fr}}
-    h2{margin:0 0 12px;font-size:20px} h3{margin:12px 0 8px;font-size:16px}.muted{color:var(--muted);font-size:14px}.small{font-size:12px}.hidden{display:none!important}
-    label{display:block;font-weight:800;font-size:13px;margin:4px 0 6px} input,select{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font-size:16px;background:white;color:var(--text)} input:focus,select:focus{outline:3px solid rgba(29,78,216,.15);border-color:#60a5fa}
-    button{border:0;border-radius:12px;padding:12px 14px;font-weight:900;font-size:15px;cursor:pointer;transition:.15s transform,.15s opacity;background:var(--blue);color:white} button:hover{transform:translateY(-1px)} button:disabled{opacity:.45;cursor:not-allowed;transform:none}.btn-green{background:var(--green)}.btn-yellow{background:#ca8a04}.btn-red{background:var(--red)}.btn-light{background:#e2e8f0;color:#0f172a}.btn-ghost{background:transparent;color:var(--blue);border:1px solid #bfdbfe}.full{width:100%}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.three{display:grid;grid-template-columns:1fr 110px 110px;gap:10px;align-items:end}@media(max-width:600px){.two,.three{grid-template-columns:1fr}.actions button{width:100%}}
-    .notice{border-radius:14px;padding:12px 14px;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;font-size:14px}.ok{background:#ecfdf5;border-color:#bbf7d0;color:#14532d}.info{background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a}.danger-box{background:#fef2f2;border-color:#fecaca;color:#7f1d1d}
-    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.tab{background:#e2e8f0;color:#0f172a}.tab.active{background:var(--blue);color:white}.panel{display:none}.panel.active{display:block}
-    .toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}.toolbar > *{min-width:180px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.toolbar{display:block}.toolbar>*{width:100%;margin-bottom:8px}}
-    .stat{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:12px}.stat b{font-size:24px;display:block}.tag{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 9px;font-weight:900;font-size:12px;background:#e2e8f0;color:#334155}.tag-ok{background:#dcfce7;color:#166534}.tag-admin{background:#dbeafe;color:#1d4ed8}.tag-closed{background:#fee2e2;color:#991b1b}.tag-warn{background:#fef3c7;color:#92400e}
-    table{width:100%;border-collapse:collapse;margin-top:8px;overflow:hidden;border-radius:14px} th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;vertical-align:middle} th{background:#f8fafc;color:#334155;font-size:12px;text-transform:uppercase;letter-spacing:.05em} tr:last-child td{border-bottom:0}.placar{font-weight:900;font-size:18px;color:#0f172a;white-space:nowrap}.winner-row{background:#fef9c3}.nowrap{white-space:nowrap}.right{text-align:right}.center{text-align:center}.scroll{overflow:auto}.empty{padding:18px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px;background:#f8fafc;margin-top:10px}
-    .admin-panel{display:none}.is-admin .admin-panel{display:block}.admin-only{display:none}.is-admin .admin-only{display:inline-flex}.is-admin tr .admin-only{display:flex}.footer{padding:18px 14px 34px;text-align:center;color:#475569;font-size:13px}.print-only{display:none}
-    @media print{header,.no-print,.tabs,.form-card,.admin-panel,.actions,.footer,#firebaseAlert,#legalNotice{display:none!important}body{background:#fff}.card{box-shadow:none;border:1px solid #ddd}.grid{display:block}.print-only{display:block}.wrap{max-width:100%;padding:0}.panel{display:block!important}.hidden{display:none!important}}
+    :root{--verde:#009c3b;--verde2:#007a2f;--amarelo:#ffdf00;--azul:#002776;--azul2:#0b4edb;--branco:#fff;--fundo:#f4f8ff;--texto:#172033;--cinza:#667085;--borda:#d8e2f3;--vermelho:#c62828;--ouro:#fff3b0;}
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--texto);background:radial-gradient(circle at 10% 0,rgba(255,223,0,.38),transparent 28%),radial-gradient(circle at 90% 10%,rgba(0,156,59,.18),transparent 30%),linear-gradient(135deg,#e9f7ee,#eef4ff 58%,#fffbea)}
+    header{background:linear-gradient(135deg,var(--verde),var(--azul));color:white;text-align:center;padding:28px 14px;border-bottom:7px solid var(--amarelo)}
+    header h1{margin:0;font-size:30px} header p{margin:8px 0 0;opacity:.95}.container{width:min(1100px,94vw);margin:22px auto 40px;display:grid;gap:18px}.card{background:rgba(255,255,255,.96);border:1px solid var(--borda);border-radius:20px;padding:18px;box-shadow:0 10px 26px rgba(0,39,118,.10)}.card h2{margin:0 0 14px;color:var(--verde2);font-size:20px}.faixa{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.tag{display:inline-block;background:var(--amarelo);color:#173;line-height:1;border-radius:999px;padding:8px 12px;font-weight:900}.linha{display:grid;grid-template-columns:1.5fr 1fr .7fr .7fr auto;gap:10px;align-items:end}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:block;font-weight:800;font-size:14px;margin-bottom:5px}input,select{width:100%;border:1px solid var(--borda);border-radius:13px;padding:12px;font-size:16px;outline:none;background:white}input:focus,select:focus{border-color:var(--azul2);box-shadow:0 0 0 3px rgba(0,39,118,.14)}button{border:0;border-radius:13px;padding:12px 15px;font-size:15px;font-weight:900;cursor:pointer;white-space:nowrap}.btn-principal{background:var(--verde);color:white}.btn-amarelo{background:var(--amarelo);color:#132}.resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.box{background:#f8fbff;border:1px solid var(--borda);border-radius:16px;padding:14px;text-align:center}.box strong{display:block;font-size:25px;color:var(--azul)}.box span{font-size:13px;color:var(--cinza)}table{width:100%;border-collapse:collapse;border-radius:14px;overflow:hidden}th,td{border-bottom:1px solid var(--borda);padding:11px 8px;text-align:left;font-size:15px}th{background:#eaf2ff;color:#082d74}tr.ganhador{background:var(--ouro);font-weight:800}.placar{font-weight:900;color:var(--verde2);font-size:17px}.mensagem{display:none;margin-top:12px;padding:13px;border-radius:13px;background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46}.vazio{text-align:center;color:var(--cinza);padding:20px 8px}.erro{background:#fff1f2!important;border-color:#fecdd3!important;color:#9f1239!important}.nota{color:var(--cinza);font-size:14px;margin:8px 0 0}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef6ff;color:#082d74;font-size:12px;font-weight:800}
+    @media(max-width:840px){header h1{font-size:24px}.linha,.grid2,.resumo{grid-template-columns:1fr}button{width:100%}th,td{font-size:13px;padding:9px 6px}.ocultar-mobile{display:none}}
   </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <h1>Bolão Recreativo da Copa</h1>
-    <p class="subtitle">Palpites gratuitos, ranking geral e controle por administrador</p>
-    <div class="match-hero"><span class="flag">🇧🇷</span><span id="heroTitle">Brasil x Escócia</span><span class="flag" id="heroFlagB">🏴</span></div>
-  </div>
-</header>
-
-<main class="wrap" id="app">
-  <section class="card notice" id="legalNotice">
-    <b>Aviso:</b> este bolão é apenas uma brincadeira recreativa. Não há cobrança de inscrição, aposta em dinheiro, Pix, rifa ou premiação financeira.
-  </section>
-  <section id="firebaseAlert" class="card notice info hidden">
-    <b>Modo local ativado.</b> Os dados ficam salvos apenas neste aparelho. Para funcionar em vários celulares, configure o Firebase no começo do arquivo HTML.
-  </section>
-
-  <section class="card no-print">
-    <div class="tabs">
-      <button class="tab active" data-tab="palpitar">Palpitar</button>
-      <button class="tab" data-tab="palpites">Palpites</button>
-      <button class="tab" data-tab="ranking">Ranking</button>
-      <button class="tab" data-tab="admin">Admin</button>
-    </div>
-    <div class="toolbar">
+  <header><h1>🇧🇷 Bolão dos Jogos do Brasil</h1><p>Faça seu palpite no jogo ativo definido pelo administrador e acompanhe os rankings em tempo real.</p></header>
+  <main class="container">
+    <section class="card">
       <div>
-        <label for="jogoAtual">Jogo selecionado</label>
-        <select id="jogoAtual"></select>
+        <label>Jogo ativo</label>
+        <div class="faixa"><span class="tag" id="tagStatus">Jogo</span><h2 id="tituloJogo" style="margin:0">Carregando...</h2></div>
       </div>
-      <div id="statusJogo" class="notice info" style="margin-top:22px"></div>
-    </div>
-  </section>
-
-  <section id="panel-palpitar" class="panel active">
-    <div class="grid">
-      <section class="card form-card">
-        <h2>Registrar palpite</h2>
-        <p class="muted">Informe nome e WhatsApp para juntar seus pontos em todos os jogos. O WhatsApp não aparece na lista pública.</p>
-        <form id="formPalpite">
-          <div class="two">
-            <div><label for="nome">Nome</label><input id="nome" autocomplete="name" placeholder="Ex.: Maria, João, Caubí..." required maxlength="60"></div>
-            <div><label for="whats">WhatsApp <span class="muted">(só números)</span></label><input id="whats" inputmode="numeric" placeholder="Ex.: 84999990000" required maxlength="20"></div>
-          </div>
-          <div class="three" style="margin-top:8px">
-            <div><label>Palpite para o jogo</label><input id="matchReadonly" readonly></div>
-            <div><label id="labelA">Brasil</label><input id="palpiteA" type="number" min="0" max="30" required inputmode="numeric" placeholder="0"></div>
-            <div><label id="labelB">Escócia</label><input id="palpiteB" type="number" min="0" max="30" required inputmode="numeric" placeholder="0"></div>
-          </div>
-          <div class="actions"><button class="btn-green" type="submit" id="btnSalvar">Salvar palpite</button><button class="btn-light" type="reset">Limpar campos</button></div>
-        </form>
-        <div id="msg" class="notice ok hidden" style="margin-top:12px"></div>
-      </section>
-      <section class="card">
-        <h2>Como funciona</h2>
-        <div class="stats">
-          <div class="stat"><b>3</b><span>pontos por placar exato</span></div>
-          <div class="stat"><b>1</b><span>ponto por vencedor/empate</span></div>
-          <div class="stat"><b>1</b><span>palpite por pessoa em cada jogo</span></div>
-          <div class="stat"><b>0</b><span>cobrança ou prêmio em dinheiro</span></div>
-        </div>
-        <p class="muted">Depois que o administrador lançar o resultado, o sistema calcula os pontos do jogo e atualiza o ranking geral automaticamente.</p>
-      </section>
-    </div>
-  </section>
-
-  <section id="panel-palpites" class="panel">
-    <section class="card">
-      <div class="toolbar"><h2>Palpites do jogo</h2><div><input id="buscaPalpite" placeholder="Buscar nome..."></div></div>
-      <div id="resumoPalpites" class="stats"></div>
-      <div class="scroll"><table><thead><tr><th>Nome</th><th>Jogo</th><th>Palpite</th><th>Data</th><th class="admin-only">Admin</th></tr></thead><tbody id="tbodyPalpites"></tbody></table></div>
-      <div id="emptyPalpites" class="empty hidden">Nenhum palpite cadastrado para este jogo.</div>
+      <p id="statusJogo" class="nota">Aguardando informações do jogo.</p>
+      <p id="premioJogo" class="nota" style="font-weight:800;color:var(--azul);"></p>
+      <p id="contadorJogo" class="nota" style="font-weight:900;color:var(--vermelho);"></p>
     </section>
-  </section>
 
-  <section id="panel-ranking" class="panel">
-    <section class="card">
-      <div class="toolbar"><h2>Ranking geral</h2><button class="btn-light no-print" onclick="window.print()">Imprimir</button></div>
-      <p class="muted">Ranking somando todos os jogos que já têm resultado lançado.</p>
-      <div class="scroll"><table><thead><tr><th>Pos.</th><th>Nome</th><th>Pontos</th><th>Placar exato</th><th>Resultado</th><th>Jogos</th></tr></thead><tbody id="tbodyRanking"></tbody></table></div>
-      <div id="emptyRanking" class="empty hidden">Ainda não há pontuação. Lance o resultado de algum jogo no modo admin.</div>
+
+    <section class="card nao-imprimir">
+      <h2>📌 Aviso importante</h2>
+      <p class="nota" style="font-size:15px;color:var(--texto);">
+        Este bolão é apenas uma brincadeira entre amigos, sem cobrança de valor para participar.
+        A finalidade é somente diversão e confraternização.
+      </p>
     </section>
-  </section>
 
-  <section id="panel-admin" class="panel no-print">
     <section class="card">
-      <h2>Modo administrador</h2>
-      <div id="loginAdmin">
-        <p class="muted">Entre para cadastrar jogos, fechar palpites, lançar resultado, editar ou apagar palpites.</p>
-        <div class="two"><div><label for="senhaAdmin">Senha local</label><input id="senhaAdmin" type="password" placeholder="Senha do administrador"></div><div style="display:flex;align-items:end"><button class="full" id="btnEntrarAdmin">Entrar</button></div></div>
-        <p class="small muted">Senha inicial: <b>1234</b>. Troque no código antes de publicar.</p>
+      <h2>Adicionar palpite</h2>
+      <div class="linha">
+        <div><label for="nome">Nome</label><input id="nome" type="text" placeholder="Ex.: João Silva" autocomplete="off"></div>
+        <div><label for="telefone">Telefone</label><input id="telefone" type="tel" placeholder="Ex.: 84999990000" autocomplete="off"></div>
+        <div><label id="labelTimeA" for="timeA">Brasil</label><input id="timeA" type="number" min="0" max="99" placeholder="0"></div>
+        <div><label id="labelTimeB" for="timeB">Adversário</label><input id="timeB" type="number" min="0" max="99" placeholder="0"></div>
+        <button class="btn-principal" onclick="adicionarPalpite()">Salvar palpite</button>
       </div>
-      <div id="areaAdmin" class="admin-panel">
-        <div class="actions"><span class="tag tag-admin">Admin ativo</span><button class="btn-light" id="btnSairAdmin">Sair do admin</button></div>
-        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
-        <h3>Cadastrar novo jogo</h3>
-        <form id="formJogo">
-          <div class="two"><div><label>Time A</label><input id="novoTimeA" placeholder="Ex.: Brasil" required></div><div><label>Time B</label><input id="novoTimeB" placeholder="Ex.: Escócia" required></div></div>
-          <div class="two" style="margin-top:8px"><div><label>Data e horário</label><input id="novoData" type="datetime-local"></div><div><label>Status inicial</label><select id="novoAberto"><option value="true">Palpites abertos</option><option value="false">Palpites fechados</option></select></div></div>
-          <div class="actions"><button class="btn-green" type="submit">Adicionar jogo</button></div>
-        </form>
-        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
-        <h3>Controle do jogo selecionado</h3>
-        <div class="actions">
-          <button class="btn-green" id="btnAbrir">Abrir palpites</button>
-          <button class="btn-yellow" id="btnFechar">Fechar palpites</button>
-          <button class="btn-red" id="btnApagarJogo">Apagar jogo selecionado</button>
-        </div>
-        <form id="formResultado" style="margin-top:10px">
-          <div class="three"><div><label>Lançar resultado oficial</label><input id="resultadoMatch" readonly></div><div><label id="resLabelA">Brasil</label><input id="resultadoA" type="number" min="0" max="30" inputmode="numeric" placeholder="0"></div><div><label id="resLabelB">Escócia</label><input id="resultadoB" type="number" min="0" max="30" inputmode="numeric" placeholder="0"></div></div>
-          <div class="actions"><button type="submit">Salvar resultado e calcular ranking</button><button class="btn-light" type="button" id="btnLimparResultado">Limpar resultado</button></div>
-        </form>
-        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
-        <h3>Manutenção</h3>
-        <div class="actions"><button class="btn-light" id="btnExportar">Exportar backup JSON</button><button class="btn-red" id="btnLimparTudo">Limpar tudo</button></div>
-        <p class="small muted">A senha no HTML é apenas uma proteção simples de tela. Para segurança real em site público, use regras do Firestore e login.</p>
-      </div>
+      <p class="nota">O telefone é usado apenas para evitar palpite duplicado no mesmo jogo. Ele não aparece na lista pública.</p>
+      <div id="msgCadastro" class="mensagem"></div>
     </section>
-  </section>
-</main>
-<footer class="footer">Bolão recreativo • Use com responsabilidade • Sem apostas em dinheiro</footer>
 
-<script type="module">
-/*
-  CONFIGURAÇÃO DO FIREBASE
-  1) Crie um projeto Firebase separado para o bolão.
-  2) Ative Firestore Database.
-  3) Copie as configurações do app Web e cole abaixo.
-  4) Troque FIREBASE_ATIVO para true.
-*/
-const FIREBASE_ATIVO = true;
-const firebaseConfig = {
-  apiKey: "AIzaSyB83ayGfej9_UB-2YHkZ2j0YxJXYW_0ujY",
-  authDomain: "bolao-10f98.firebaseapp.com",
-  projectId: "bolao-10f98",
-  storageBucket: "bolao-10f98.firebasestorage.app",
-  messagingSenderId: "759333743522",
-  appId: "1:759333743522:web:7fd18968d3301d88a860fb"
-};
+    <section class="resumo">
+      <div class="box"><strong id="totalPalpites">0</strong><span>palpites neste jogo</span></div>
+      <div class="box"><strong id="resultadoAtual">-- x --</strong><span>resultado oficial</span></div>
+      <div class="box"><strong id="totalGanhadores">0</strong><span>placares exatos</span></div>
+      <div class="box"><strong id="jogosFinalizados">0</strong><span>jogos finalizados</span></div>
+    </section>
 
-/* Troque esta senha antes de publicar. Esta senha é uma proteção simples, não substitui regras do Firebase. */
-const SENHA_ADMIN = "1212";
+    <section class="card"><h2>🏆 Ranking deste jogo</h2><div id="rankingJogo" class="vazio">Quando houver resultado, o ranking deste jogo aparecerá aqui.</div></section>
+    <section class="card"><h2>⭐ Ranking geral</h2><p class="nota">Pontuação: 3 pontos para placar exato e 1 ponto para acertar vencedor ou empate.</p><div id="rankingGeral" class="vazio">Ainda não há jogos finalizados para formar ranking geral.</div></section>
+    <section class="card"><h2>Lista pública de palpites</h2><div style="overflow-x:auto"><table><thead><tr><th>Nº</th><th>Nome</th><th>Palpite</th><th class="ocultar-mobile">Situação</th></tr></thead><tbody id="tabelaPalpites"><tr><td colspan="4" class="vazio">Carregando...</td></tr></tbody></table></div></section>
+  </main>
 
-const DEFAULT_GAME = {
-  id: "brasil_escocia",
-  timeA: "Brasil",
-  timeB: "Escócia",
-  dataHora: "2026-06-24T19:00",
-  aberto: true,
-  encerrado: false,
-  resultadoA: null,
-  resultadoB: null,
-  criadoEm: Date.now()
-};
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-let db = null, useFirebase = false;
-let jogos = [], palpites = [], participantes = [];
-let jogoAtualId = DEFAULT_GAME.id;
-let admin = localStorage.getItem("bolao_admin") === "1";
-const $ = sel => document.querySelector(sel);
-const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const FIREBASE_ATIVO = true;
+    const firebaseConfig = {
+      apiKey: "AIzaSyB83ayGfej9_UB-2YHkZ2j0YxJXYW_0ujY",
+      authDomain: "bolao-10f98.firebaseapp.com",
+      projectId: "bolao-10f98",
+      storageBucket: "bolao-10f98.firebasestorage.app",
+      messagingSenderId: "759333743522",
+      appId: "1:759333743522:web:7fd18968d3301d88a860fb"
+    };
 
-async function start(){
-  if(FIREBASE_ATIVO && firebaseConfig.projectId && firebaseConfig.projectId !== "COLE_AQUI"){
-    try{
-      const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js");
-      const firestore = await import("https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js");
-      window.FS = firestore;
-      db = firestore.getFirestore(initializeApp(firebaseConfig));
-      useFirebase = true;
-      listenFirebase();
-    }catch(e){
-      console.error(e); useFirebase = false; $("#firebaseAlert").classList.remove("hidden"); loadLocal(); render();
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const jogosRef = collection(db, "bolao_jogos");
+    const palpitesRef = collection(db, "bolao_palpites");
+    let jogos = [];
+    let palpitesTodos = [];
+    let jogoAtualId = '';
+
+    const esc = txt => String(txt||"").replace(/[&<>'"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+    const telKey = txt => String(txt||'').replace(/\D/g,'');
+    const numeroValido = v => v !== '' && !isNaN(v) && Number(v) >= 0;
+    function msg(id,texto,erro=false){const el=document.getElementById(id);el.textContent=texto;el.className='mensagem'+(erro?' erro':'');el.style.display='block';setTimeout(()=>el.style.display='none',4500)}
+    const dataDoc = v => v?.toMillis ? v.toMillis() : (v ? new Date(v).getTime() : 0);
+
+
+    function toDataHoraBR(valor){
+      if(!valor) return '';
+      const d = valor?.toDate ? valor.toDate() : new Date(valor);
+      if(isNaN(d.getTime())) return '';
+      return d.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
     }
-  }else{ $("#firebaseAlert").classList.remove("hidden"); loadLocal(); render(); }
-  bindEvents();
-}
+    function prazoFechado(j){
+      if(!j?.fechaEm) return false;
+      const d = j.fechaEm?.toDate ? j.fechaEm.toDate() : new Date(j.fechaEm);
+      return !isNaN(d.getTime()) && Date.now() >= d.getTime();
+    }
 
-function listenFirebase(){
-  const { collection, onSnapshot, doc, setDoc } = window.FS;
-  onSnapshot(collection(db,"jogos"), async snap=>{
-    jogos = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.dataHora||"").localeCompare(b.dataHora||""));
-    if(!jogos.length){ await setDoc(doc(db,"jogos",DEFAULT_GAME.id), DEFAULT_GAME); return; }
-    if(!jogos.find(j=>j.id===jogoAtualId)) jogoAtualId = jogos[0].id;
-    render();
-  });
-  onSnapshot(collection(db,"palpites"), snap=>{ palpites = snap.docs.map(d=>({id:d.id,...d.data()})); render(); });
-  onSnapshot(collection(db,"participantes"), snap=>{ participantes = snap.docs.map(d=>({id:d.id,...d.data()})); render(); });
-}
+    function textoContador(j){
+      if(!j?.fechaEm) return '⏰ Horário de encerramento ainda não definido';
+      const d = j.fechaEm?.toDate ? j.fechaEm.toDate() : new Date(j.fechaEm);
+      if(isNaN(d.getTime())) return '';
+      const diff = d.getTime() - Date.now();
+      if(diff <= 0) return '🔒 Palpites encerrados';
+      const totalSeg = Math.floor(diff / 1000);
+      const dias = Math.floor(totalSeg / 86400);
+      const horas = Math.floor((totalSeg % 86400) / 3600);
+      const minutos = Math.floor((totalSeg % 3600) / 60);
+      const segundos = totalSeg % 60;
+      if(dias > 0) return `⏰ Faltam ${dias}d ${horas}h ${minutos}min`;
+      if(horas > 0) return `⏰ Faltam ${horas}h ${minutos}min ${segundos}s`;
+      return `⏰ Faltam ${minutos}min ${segundos}s`;
+    }
 
-function loadLocal(){
-  jogos = JSON.parse(localStorage.getItem("bolao_jogos")||"null") || [DEFAULT_GAME];
-  palpites = JSON.parse(localStorage.getItem("bolao_palpites")||"[]");
-  participantes = JSON.parse(localStorage.getItem("bolao_participantes")||"[]");
-  if(!jogos.find(j=>j.id===jogoAtualId)) jogoAtualId = jogos[0]?.id || DEFAULT_GAME.id;
-}
-function saveLocal(){ if(!useFirebase){ localStorage.setItem("bolao_jogos",JSON.stringify(jogos)); localStorage.setItem("bolao_palpites",JSON.stringify(palpites)); localStorage.setItem("bolao_participantes",JSON.stringify(participantes)); } }
+    async function garantirJogo(){
+      const ref = doc(db, 'bolao_jogos', 'brasil_escocia');
+      const snap = await getDoc(ref);
+      if(!snap.exists()) await setDoc(ref,{timeA:'Brasil',timeB:'Escócia',aberto:true,resultado:null,data:'',ordem:Date.now(),criadoEm:serverTimestamp()});
+    }
 
-function bindEvents(){
-  $$(".tab").forEach(btn=>btn.addEventListener("click",()=>{ $$(".tab").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); $$(".panel").forEach(p=>p.classList.remove("active")); $("#panel-"+btn.dataset.tab).classList.add("active"); render(); }));
-  $("#jogoAtual").addEventListener("change",e=>{ jogoAtualId=e.target.value; render(); });
-  $("#formPalpite").addEventListener("submit", salvarPalpite);
-  $("#buscaPalpite").addEventListener("input", renderPalpites);
-  $("#btnEntrarAdmin").addEventListener("click",()=>{ if($("#senhaAdmin").value===SENHA_ADMIN){admin=true;localStorage.setItem("bolao_admin","1");$("#senhaAdmin").value="";render();}else alert("Senha incorreta."); });
-  $("#btnSairAdmin").addEventListener("click",()=>{admin=false;localStorage.removeItem("bolao_admin");render();});
-  $("#formJogo").addEventListener("submit", adicionarJogo);
-  $("#btnAbrir").addEventListener("click",()=>setJogoStatus(true));
-  $("#btnFechar").addEventListener("click",()=>setJogoStatus(false));
-  $("#formResultado").addEventListener("submit", salvarResultado);
-  $("#btnLimparResultado").addEventListener("click", limparResultado);
-  $("#btnApagarJogo").addEventListener("click", apagarJogo);
-  $("#btnLimparTudo").addEventListener("click", limparTudo);
-  $("#btnExportar").addEventListener("click", exportarBackup);
-}
+    onSnapshot(jogosRef, snap=>{
+      jogos = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.ordem||dataDoc(b.criadoEm))-(a.ordem||dataDoc(a.criadoEm)));
+      jogoAtualId = jogos.find(j=>j.aberto && !prazoFechado(j))?.id || '';
+      renderizar();
+    }, err=>console.error(err));
 
-function currentGame(){ return jogos.find(j=>j.id===jogoAtualId) || jogos[0] || DEFAULT_GAME; }
-function normalizePhone(v){ return String(v||"").replace(/\D/g,""); }
-function normalizeName(v){ return String(v||"").trim().replace(/\s+/g," "); }
-function participantId(nome, whats){ return (normalizeName(nome).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"") || "participante") + "_" + normalizePhone(whats); }
-function guessId(pid, gid){ return `${gid}__${pid}`; }
-function gameTitle(j){ return `${j.timeA} x ${j.timeB}`; }
-function formatDate(ts){ if(!ts) return "-"; const d = typeof ts === "number" ? new Date(ts) : new Date(ts); return isNaN(d) ? "-" : d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); }
-function msg(text, type="ok"){ const el=$("#msg"); el.textContent=text; el.className="notice "+type; el.classList.remove("hidden"); setTimeout(()=>el.classList.add("hidden"),4500); }
+    onSnapshot(palpitesRef, snap=>{ palpitesTodos = snap.docs.map(d=>({id:d.id,...d.data()})); renderizar(); }, err=>console.error(err));
 
-async function upsert(collectionName, id, data){
-  if(useFirebase){ const { doc, setDoc } = window.FS; await setDoc(doc(db,collectionName,id), data, { merge:true }); }
-  else{
-    const arr = collectionName==="jogos"?jogos:collectionName==="palpites"?palpites:participantes;
-    const idx = arr.findIndex(x=>x.id===id); if(idx>=0) arr[idx] = {...arr[idx],...data,id}; else arr.push({...data,id}); saveLocal(); render();
-  }
-}
-async function removeDoc(collectionName, id){
-  if(useFirebase){ const { doc, deleteDoc } = window.FS; await deleteDoc(doc(db,collectionName,id)); }
-  else{ if(collectionName==="jogos") jogos=jogos.filter(x=>x.id!==id); if(collectionName==="palpites") palpites=palpites.filter(x=>x.id!==id); if(collectionName==="participantes") participantes=participantes.filter(x=>x.id!==id); saveLocal(); render(); }
-}
+    window.adicionarPalpite = async function(){
+      const jogo = jogos.find(j=>j.id===jogoAtualId);
+      if(!jogo){msg('msgCadastro','Nenhum jogo ativo para receber palpites.',true);return;}
+      if(!jogo.aberto || prazoFechado(jogo)){msg('msgCadastro','Os palpites para este jogo estão encerrados.',true);return;}
+      const nome=document.getElementById('nome').value.trim();
+      const telefone=telKey(document.getElementById('telefone').value);
+      const a=document.getElementById('timeA').value;
+      const b=document.getElementById('timeB').value;
+      if(!nome){msg('msgCadastro','Digite seu nome.',true);return;}
+      if(telefone.length < 10){msg('msgCadastro','Digite um telefone válido com DDD.',true);return;}
+      if(!numeroValido(a)||!numeroValido(b)){msg('msgCadastro','Digite o placar completo.',true);return;}
+      const palpiteId = `${jogoAtualId}_${telefone}`;
+      const ref = doc(db, 'bolao_palpites', palpiteId);
+      const existe = await getDoc(ref);
+      if(existe.exists()){msg('msgCadastro','Este telefone já cadastrou palpite neste jogo.',true);return;}
+      await setDoc(ref,{jogoId:jogoAtualId,nome,telefone,telefoneKey:telefone,timeA:Number(a),timeB:Number(b),criadoEm:serverTimestamp()});
+      document.getElementById('nome').value='';document.getElementById('telefone').value='';document.getElementById('timeA').value='';document.getElementById('timeB').value='';document.getElementById('nome').focus();
+      msg('msgCadastro','Palpite salvo! Todos já podem ver na lista.');
+    }
 
-async function salvarPalpite(e){
-  e.preventDefault(); const j=currentGame();
-  if(!j.aberto || j.encerrado){ msg("Os palpites deste jogo estão fechados.","danger-box"); return; }
-  const nome=normalizeName($("#nome").value), whats=normalizePhone($("#whats").value);
-  if(whats.length < 8){ msg("Informe um WhatsApp válido, só com números, para juntar os pontos.","danger-box"); return; }
-  const a=Number($("#palpiteA").value), b=Number($("#palpiteB").value);
-  if(a<0 || b<0 || Number.isNaN(a) || Number.isNaN(b)){ msg("Confira o placar informado.","danger-box"); return; }
-  const pid=participantId(nome,whats), gid=j.id, id=guessId(pid,gid);
-  if(palpites.some(p=>p.id===id)){ msg("Essa pessoa já tem palpite cadastrado para este jogo. Só o administrador pode editar.","danger-box"); return; }
-  await upsert("participantes",pid,{id:pid,nome,whats,atualizadoEm:Date.now()});
-  await upsert("palpites",id,{id,participanteId:pid,jogoId:gid,nome,whatsFinal:whats.slice(-4),palpiteA:a,palpiteB:b,criadoEm:Date.now(),pontos:0,tipoAcerto:"pendente"});
-  e.target.reset(); msg("Palpite cadastrado com sucesso!", "ok");
-}
+    function pontos(p,j){
+      if(!j.resultado) return 0;
+      const exato = p.timeA===j.resultado.timeA && p.timeB===j.resultado.timeB;
+      if(exato) return 3;
+      const rSaldo = Math.sign(j.resultado.timeA-j.resultado.timeB);
+      const pSaldo = Math.sign(p.timeA-p.timeB);
+      return rSaldo===pSaldo ? 1 : 0;
+    }
+    function situacao(p,j){
+      if(!j.resultado) return 'Aguardando resultado';
+      const pts = pontos(p,j);
+      if(pts===3) return '🏆 Placar exato';
+      if(pts===1) return '✅ Acertou vencedor/empate';
+      return 'Não pontuou';
+    }
+    function tabelaRanking(lista){
+      if(!lista.length) return '<div class="vazio">Ainda não há pontuação.</div>';
+      return `<div style="overflow-x:auto"><table><thead><tr><th>Pos.</th><th>Nome</th><th>Pontos</th><th class="ocultar-mobile">Exatos</th><th class="ocultar-mobile">Jogos pontuados</th></tr></thead><tbody>${lista.map((r,i)=>`<tr class="${i===0?'ganhador':''}"><td>${i+1}</td><td>${esc(r.nome)}</td><td><strong>${r.pontos}</strong></td><td class="ocultar-mobile">${r.exatos}</td><td class="ocultar-mobile">${r.jogos}</td></tr>`).join('')}</tbody></table></div>`;
+    }
+    function rankingDoJogo(j,palpites){
+      if(!j.resultado) return [];
+      return palpites.map(p=>({nome:p.nome,pontos:pontos(p,j),exatos:pontos(p,j)===3?1:0,jogos:pontos(p,j)>0?1:0})).filter(r=>r.pontos>0).sort((a,b)=>b.pontos-a.pontos || b.exatos-a.exatos || a.nome.localeCompare(b.nome));
+    }
+    function rankingGeral(){
+      const mapa = new Map();
+      const finalizados = jogos.filter(j=>j.resultado);
+      for(const p of palpitesTodos){
+        const j = finalizados.find(x=>x.id===p.jogoId);
+        if(!j) continue;
+        const pts = pontos(p,j);
+        if(pts<=0) continue;
+        const chave = p.telefoneKey || p.telefone || p.nome;
+        const atual = mapa.get(chave) || {nome:p.nome,pontos:0,exatos:0,jogos:0};
+        atual.nome = atual.nome || p.nome;
+        atual.pontos += pts;
+        atual.exatos += pts===3 ? 1 : 0;
+        atual.jogos += 1;
+        mapa.set(chave, atual);
+      }
+      return [...mapa.values()].sort((a,b)=>b.pontos-a.pontos || b.exatos-a.exatos || a.nome.localeCompare(b.nome));
+    }
 
-async function adicionarJogo(e){
-  e.preventDefault(); if(!admin) return;
-  const timeA=normalizeName($("#novoTimeA").value), timeB=normalizeName($("#novoTimeB").value); if(!timeA||!timeB) return;
-  const id=(timeA+"_"+timeB+"_"+Date.now()).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
-  await upsert("jogos",id,{id,timeA,timeB,dataHora:$("#novoData").value||"",aberto:$("#novoAberto").value==="true",encerrado:false,resultadoA:null,resultadoB:null,criadoEm:Date.now()});
-  jogoAtualId=id; e.target.reset(); render(); alert("Jogo cadastrado.");
-}
-async function setJogoStatus(aberto){ const j=currentGame(); if(!admin||!j.id) return; await upsert("jogos",j.id,{aberto}); }
-async function salvarResultado(e){
-  e.preventDefault(); const j=currentGame(); if(!admin||!j.id) return;
-  const ra=Number($("#resultadoA").value), rb=Number($("#resultadoB").value); if(Number.isNaN(ra)||Number.isNaN(rb)||ra<0||rb<0){ alert("Informe o resultado correto."); return; }
-  await upsert("jogos",j.id,{resultadoA:ra,resultadoB:rb,encerrado:true,aberto:false});
-  const lista=palpites.filter(p=>p.jogoId===j.id);
-  for(const p of lista){ const score=calcularPontos(p.palpiteA,p.palpiteB,ra,rb); await upsert("palpites",p.id,{pontos:score.pontos,tipoAcerto:score.tipo}); }
-  alert("Resultado salvo e ranking calculado.");
-}
-async function limparResultado(){ const j=currentGame(); if(!admin||!j.id) return; if(!confirm("Limpar o resultado deste jogo?")) return; await upsert("jogos",j.id,{resultadoA:null,resultadoB:null,encerrado:false}); for(const p of palpites.filter(p=>p.jogoId===j.id)){ await upsert("palpites",p.id,{pontos:0,tipoAcerto:"pendente"}); } }
-function calcularPontos(pa,pb,ra,rb){ if(pa===ra && pb===rb) return {pontos:3,tipo:"placar exato"}; const rp=Math.sign(pa-pb), rr=Math.sign(ra-rb); if(rp===rr) return {pontos:1,tipo:rr===0?"empate":"resultado"}; return {pontos:0,tipo:"erro"}; }
-async function apagarJogo(){ const j=currentGame(); if(!admin||!j.id) return; if(!confirm(`Apagar o jogo ${gameTitle(j)} e seus palpites?`)) return; for(const p of palpites.filter(p=>p.jogoId===j.id)){ await removeDoc("palpites",p.id); } await removeDoc("jogos",j.id); jogoAtualId=jogos.find(x=>x.id!==j.id)?.id || DEFAULT_GAME.id; }
-async function limparTudo(){ if(!admin) return; if(!confirm("Apagar todos os jogos, participantes e palpites deste bolão?")) return; if(useFirebase){ for(const p of palpites) await removeDoc("palpites",p.id); for(const p of participantes) await removeDoc("participantes",p.id); for(const j of jogos) await removeDoc("jogos",j.id); await upsert("jogos",DEFAULT_GAME.id,DEFAULT_GAME); } else { jogos=[DEFAULT_GAME]; palpites=[]; participantes=[]; saveLocal(); render(); } }
-function exportarBackup(){ const data={exportadoEm:new Date().toISOString(),jogos,palpites,participantes}; const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="backup_bolao_copa.json"; a.click(); URL.revokeObjectURL(a.href); }
+    function renderizar(){
+      const jogo = jogos.find(j=>j.id===jogoAtualId);
+      const tbody=document.getElementById('tabelaPalpites');
+      document.getElementById('rankingGeral').className='';
+      document.getElementById('rankingGeral').innerHTML = tabelaRanking(rankingGeral());
+      document.getElementById('jogosFinalizados').textContent = jogos.filter(j=>j.resultado).length;
 
-window.editarPalpite = async function(id){ if(!admin) return; const p=palpites.find(x=>x.id===id); if(!p) return; const nome=prompt("Nome:",p.nome); if(nome===null) return; const pa=prompt("Palpite time A:",p.palpiteA); if(pa===null) return; const pb=prompt("Palpite time B:",p.palpiteB); if(pb===null) return; const j=jogos.find(x=>x.id===p.jogoId); let patch={nome:normalizeName(nome),palpiteA:Number(pa),palpiteB:Number(pb)}; if(j?.encerrado) Object.assign(patch, calcularPontos(Number(pa),Number(pb),Number(j.resultadoA),Number(j.resultadoB))); await upsert("palpites",id,patch); }
-window.apagarPalpite = async function(id){ if(!admin) return; if(confirm("Apagar este palpite?")) await removeDoc("palpites",id); }
+      if(!jogo){
+        document.getElementById('tituloJogo').textContent = 'Nenhum jogo ativo';
+        document.getElementById('labelTimeA').textContent = 'Time A';
+        document.getElementById('labelTimeB').textContent = 'Time B';
+        document.getElementById('tagStatus').textContent = 'Sem jogo ativo';
+        document.getElementById('statusJogo').textContent = 'No momento não há jogo ativo para receber palpites.';
+        document.getElementById('premioJogo').textContent = '';
+        document.getElementById('contadorJogo').textContent = '';
+        document.getElementById('totalPalpites').textContent = '0';
+        document.getElementById('resultadoAtual').textContent = '-- x --';
+        document.getElementById('totalGanhadores').textContent = '0';
+        document.getElementById('rankingJogo').className='vazio';
+        document.getElementById('rankingJogo').innerHTML = 'Quando o administrador ativar um jogo, o ranking dele aparecerá aqui.';
+        tbody.innerHTML = '<tr><td colspan="4" class="vazio">Nenhum jogo ativo no momento.</td></tr>';
+        return;
+      }
 
-function render(){
-  document.body.classList.toggle("is-admin",admin); $("#loginAdmin").style.display=admin?"none":"block";
-  renderJogoSelect(); renderCurrentGameUI(); renderPalpites(); renderRanking();
-}
-function renderJogoSelect(){
-  const sel=$("#jogoAtual"); const old=sel.value||jogoAtualId; sel.innerHTML="";
-  jogos.sort((a,b)=>(a.dataHora||"").localeCompare(b.dataHora||"")).forEach(j=>{ const op=document.createElement("option"); op.value=j.id; op.textContent=gameTitle(j)+(j.encerrado?" • encerrado":j.aberto?" • aberto":" • fechado"); sel.appendChild(op); });
-  if(jogos.find(j=>j.id===old)) jogoAtualId=old; else jogoAtualId=jogos[0]?.id || DEFAULT_GAME.id; sel.value=jogoAtualId;
-}
-function renderCurrentGameUI(){
-  const j=currentGame(); $("#heroTitle").textContent=gameTitle(j); $("#heroFlagB").textContent = /esc[oó]cia/i.test(j.timeB) ? "🏴" : "⚽";
-  $("#matchReadonly").value=gameTitle(j); $("#labelA").textContent=j.timeA; $("#labelB").textContent=j.timeB; $("#resLabelA").textContent=j.timeA; $("#resLabelB").textContent=j.timeB; $("#resultadoMatch").value=gameTitle(j); $("#resultadoA").value=j.resultadoA ?? ""; $("#resultadoB").value=j.resultadoB ?? "";
-  const st=$("#statusJogo"); const count=palpites.filter(p=>p.jogoId===j.id).length;
-  let html=`<b>${gameTitle(j)}</b><br><span class="small">${j.dataHora?"Data: "+formatDate(j.dataHora):"Data não informada"} • ${count} palpite(s)</span><br>`;
-  if(j.encerrado) html+=`<span class="tag tag-closed">Encerrado</span> <b>Resultado: ${j.timeA} ${j.resultadoA} x ${j.resultadoB} ${j.timeB}</b>`;
-  else if(j.aberto) html+=`<span class="tag tag-ok">Palpites abertos</span>`; else html+=`<span class="tag tag-closed">Palpites fechados</span>`;
-  st.innerHTML=html; $("#btnSalvar").disabled = !j.aberto || j.encerrado;
-}
-function renderPalpites(){
-  const j=currentGame(); const busca=($("#buscaPalpite")?.value||"").toLowerCase();
-  const lista=palpites.filter(p=>p.jogoId===j.id && (!busca || (p.nome||"").toLowerCase().includes(busca))).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));
-  $("#resumoPalpites").innerHTML=`<div class="stat"><b>${palpites.filter(p=>p.jogoId===j.id).length}</b><span>palpites no jogo</span></div><div class="stat"><b>${j.encerrado?"Sim":"Não"}</b><span>resultado lançado</span></div><div class="stat"><b>${j.aberto&&!j.encerrado?"Aberto":"Fechado"}</b><span>situação</span></div><div class="stat"><b>${j.encerrado?lista.filter(p=>p.tipoAcerto==="placar exato").length:"-"}</b><span>placares exatos</span></div>`;
-  const tb=$("#tbodyPalpites"); tb.innerHTML="";
-  lista.forEach(p=>{ const tr=document.createElement("tr"); if(p.tipoAcerto==="placar exato") tr.classList.add("winner-row"); const tag = j.encerrado ? `<span class="tag ${p.pontos>0?'tag-ok':'tag-warn'}">${p.pontos} ponto(s) • ${p.tipoAcerto||''}</span>` : `<span class="tag">aguardando resultado</span>`; tr.innerHTML=`<td><b>${escapeHtml(p.nome)}</b></td><td>${escapeHtml(gameTitle(j))}</td><td><span class="placar">${j.timeA} ${p.palpiteA} x ${p.palpiteB} ${j.timeB}</span><br>${tag}</td><td class="nowrap">${formatDate(p.criadoEm)}</td><td class="admin-only"><button class="btn-light" onclick="editarPalpite('${p.id}')">Editar</button><button class="btn-red" onclick="apagarPalpite('${p.id}')">Apagar</button></td>`; tb.appendChild(tr); });
-  $("#emptyPalpites").classList.toggle("hidden", lista.length>0);
-}
-function renderRanking(){
-  const map=new Map();
-  palpites.forEach(p=>{ const j=jogos.find(x=>x.id===p.jogoId); if(!j?.encerrado) return; const id=p.participanteId||p.nome; if(!map.has(id)) map.set(id,{nome:p.nome,pontos:0,exatos:0,resultados:0,jogos:0}); const r=map.get(id); r.pontos += Number(p.pontos||0); r.jogos += 1; if(p.tipoAcerto==="placar exato") r.exatos += 1; else if((p.pontos||0)>0) r.resultados += 1; });
-  const ranking=Array.from(map.values()).sort((a,b)=>b.pontos-a.pontos || b.exatos-a.exatos || a.nome.localeCompare(b.nome));
-  const tb=$("#tbodyRanking"); tb.innerHTML=""; ranking.forEach((r,i)=>{ const tr=document.createElement("tr"); if(i===0) tr.classList.add("winner-row"); tr.innerHTML=`<td><b>${i+1}º</b></td><td><b>${escapeHtml(r.nome)}</b></td><td><span class="placar">${r.pontos}</span></td><td>${r.exatos}</td><td>${r.resultados}</td><td>${r.jogos}</td>`; tb.appendChild(tr); });
-  $("#emptyRanking").classList.toggle("hidden", ranking.length>0);
-}
-function escapeHtml(s){ return String(s??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
-start();
-</script>
+      const palpites = palpitesTodos.filter(p=>p.jogoId===jogo.id).sort((a,b)=>dataDoc(a.criadoEm)-dataDoc(b.criadoEm));
+      const ganhadores = jogo.resultado ? palpites.filter(p=>pontos(p,jogo)===3) : [];
+      document.getElementById('tituloJogo').textContent = `${jogo.timeA||'Brasil'} x ${jogo.timeB||'Adversário'}`;
+      document.getElementById('labelTimeA').textContent = jogo.timeA || 'Brasil';
+      document.getElementById('labelTimeB').textContent = jogo.timeB || 'Adversário';
+      document.getElementById('tagStatus').textContent = 'Aberto';
+      document.getElementById('statusJogo').textContent = '';
+      document.getElementById('premioJogo').textContent = `${jogo.premio ? `🎁 Prêmio: ${jogo.premio}` : ''}${jogo.fechaEm ? `   ⏰ Palpites até ${toDataHoraBR(jogo.fechaEm)}` : ''}`.trim();
+      document.getElementById('contadorJogo').textContent = textoContador(jogo);
+      document.getElementById('totalPalpites').textContent = palpites.length;
+      document.getElementById('resultadoAtual').textContent = jogo.resultado ? `${jogo.resultado.timeA} x ${jogo.resultado.timeB}` : '-- x --';
+      document.getElementById('totalGanhadores').textContent = ganhadores.length;
+      document.getElementById('rankingJogo').className='';
+      document.getElementById('rankingJogo').innerHTML = jogo.resultado ? tabelaRanking(rankingDoJogo(jogo,palpites)) : '<div class="vazio">Quando houver resultado, o ranking deste jogo aparecerá aqui.</div>';
+      tbody.innerHTML = palpites.length ? palpites.map((p,i)=>`<tr class="${pontos(p,jogo)===3?'ganhador':''}"><td>${i+1}</td><td>${esc(p.nome)}</td><td class="placar">${esc(jogo.timeA)} ${p.timeA} x ${p.timeB} ${esc(jogo.timeB)}</td><td class="ocultar-mobile">${situacao(p,jogo)}</td></tr>`).join('') : '<tr><td colspan="4" class="vazio">Nenhum palpite cadastrado neste jogo ainda.</td></tr>';
+    }
+    setInterval(renderizar, 1000);
+    garantirJogo();
+  </script>
 </body>
 </html>
