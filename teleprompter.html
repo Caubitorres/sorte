@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Teleprompter Pro - Modo Híbrido</title>
+    <title>OBS Teleprompter V6 - Velocidade Adaptativa</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         ::-webkit-scrollbar { display: none; }
@@ -15,26 +15,24 @@
 
     <!-- PAINEL DE CONFIGURAÇÃO -->
     <div id="setup-panel" class="p-6 bg-zinc-900 border-b border-zinc-800 flex flex-col gap-4 z-50">
-        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter Pro - V5 Híbrida</h1>
+        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V6 - Velocidade Adaptativa</h1>
         
-        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro completo aqui. O texto vai rolar de forma perfeitamente suave a 60fps. Se você parar de falar por um momento, a rolagem vai pausar automaticamente e esperar você continuar.</textarea>
+        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro aqui. O algoritmo agora vai ouvir o ritmo da sua voz. Se você falar mais rápido, a tela acelera. Se você falar mais devagar ou pausar, a tela diminui a velocidade automaticamente para se adequar perfeitamente ao seu ritmo.</textarea>
         
         <div class="flex flex-wrap gap-4 items-center justify-between text-sm">
             <div class="flex gap-4 flex-wrap">
                 <label>Fonte: <input type="number" id="font-size" value="44" class="w-16 bg-zinc-800 p-1 rounded text-center"> px</label>
                 <label>Margem: <input type="number" id="margin-size" value="20" class="w-16 bg-zinc-800 p-1 rounded text-center"> %</label>
-                <label>Velocidade: <input type="number" id="speed-input" value="1.5" step="0.1" class="w-16 bg-zinc-800 p-1 rounded text-center"> (Setas ↑ ↓)</label>
-                <label>Sensib. Microfone: <input type="number" id="sens-input" value="15" class="w-16 bg-zinc-800 p-1 rounded text-center" title="Valores menores deixam o microfone mais sensível a ruídos leves."> (5-50)</label>
+                <label>Velocidade Base: <input type="number" id="speed-input" value="1.5" step="0.1" class="w-16 bg-zinc-800 p-1 rounded text-center"></label>
             </div>
             
             <div class="flex gap-3">
                 <button id="btn-mirror-x" class="px-3 py-1 bg-zinc-800 rounded hover:bg-zinc-700">Espelhar X</button>
-                <button id="btn-voice-toggle" class="px-3 py-1 bg-zinc-800 rounded border border-green-500 text-green-400 font-semibold">Auto-Pause: ATIVO</button>
             </div>
         </div>
 
         <button id="btn-start" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded transition-colors cursor-pointer">
-            Iniciar Prompter
+            Iniciar Prompter Adaptativo
         </button>
     </div>
 
@@ -49,14 +47,12 @@
 
     <!-- BARRA DE STATUS -->
     <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/95 p-2 text-xs text-zinc-400 justify-between items-center z-50">
-        <div id="status-mode-text">Carregando...</div>
+        <div id="status-mode-text">Analisando ritmo da voz...</div>
         <div class="flex items-center gap-2">
-            <span>Nível do Som:</span>
-            <div class="w-24 bg-zinc-800 h-2 rounded overflow-hidden">
-                <div id="volume-bar" class="bg-green-500 h-full w-0 transition-all duration-75"></div>
-            </div>
+            <span>Velocidade IA Atual:</span>
+            <span id="current-speed-display" class="text-amber-400 font-bold">1.5</span>
         </div>
-        <div>[Espaço] Forçar Play/Pause | [Esc] Sair | [Setas ↑ ↓] Velocidade</div>
+        <div>[Espaço] Play/Pause | [Esc] Sair | [Setas ↑ ↓] Ajuste Manual Fino</div>
     </div>
 
     <script>
@@ -66,42 +62,23 @@
         const prompterViewport = document.getElementById('prompter-viewport');
         const prompterText = document.getElementById('prompter-text');
         const statusModeText = document.getElementById('status-mode-text');
-        const volumeBar = document.getElementById('volume-bar');
+        const currentSpeedDisplay = document.getElementById('current-speed-display');
         
         const btnStart = document.getElementById('btn-start');
         const btnMirrorX = document.getElementById('btn-mirror-x');
-        const btnVoiceToggle = document.getElementById('btn-voice-toggle');
         const fontSizeInput = document.getElementById('font-size');
         const marginSizeInput = document.getElementById('margin-size');
         const speedInput = document.getElementById('speed-input');
-        const sensInput = document.getElementById('sens-input');
 
-        // Estados
         let isRunning = false;
         let isPlaying = false; 
-        let autoPauseEnabled = true;
         let scrollSpeed = 1.5;
+        let baseSpeed = 1.5;
         let mirrorX = false;
         let animationFrameId = null;
 
-        // Controle de áudio nativo (Sem depender de IA externa)
-        let audioContext = null;
-        let analyser = null;
-        let microphone = null;
-        let javascriptNode = null;
-        let silenceTimestamp = Date.now();
-        let isUserSpeaking = false;
-
-        btnVoiceToggle.addEventListener('click', () => {
-            autoPauseEnabled = !autoPauseEnabled;
-            if (autoPauseEnabled) {
-                btnVoiceToggle.innerText = "Auto-Pause: ATIVO";
-                btnVoiceToggle.className = "px-3 py-1 bg-zinc-800 rounded border border-green-500 text-green-400 font-semibold";
-            } else {
-                btnVoiceToggle.innerText = "Auto-Pause: INATIVO";
-                btnVoiceToggle.className = "px-3 py-1 bg-zinc-800 rounded border border-zinc-600 text-zinc-400 font-semibold";
-            }
-        });
+        let recognition = null;
+        let lastSpeechTimestamp = Date.now();
 
         btnStart.addEventListener('click', () => {
             const rawText = scriptInput.value.trim();
@@ -111,7 +88,10 @@
             prompterText.style.fontSize = `${fontSizeInput.value}px`;
             prompterText.style.paddingLeft = `${marginSizeInput.value}%`;
             prompterText.style.paddingRight = `${marginSizeInput.value}%`;
-            scrollSpeed = parseFloat(speedInput.value);
+            
+            baseSpeed = parseFloat(speedInput.value);
+            scrollSpeed = baseSpeed;
+            currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
 
             setupPanel.classList.add('hidden');
             statusBar.classList.remove('hidden');
@@ -121,128 +101,115 @@
             isRunning = true;
             isPlaying = true;
 
-            if (autoPauseEnabled) {
-                initAudioDetection();
-            } else {
-                statusModeText.innerText = `⏱️ Rolagem Contínua (Vel: ${scrollSpeed})`;
-            }
-
-            // Inicia o motor de renderização da rolagem suave
+            initAdaptiveVoice();
             tick();
         });
 
-        // Motor de rolagem suave contínua (60fps estável)
+        // Motor de rolagem contínuo e estável
         function tick() {
             if (!isRunning) return;
 
             if (isPlaying) {
+                // Se a pessoa parar de falar por mais de 1.5 segundos, desacelera gradualmente até parar
+                const timeSinceLastSpeech = Date.now() - lastSpeechTimestamp;
+                if (timeSinceLastSpeech > 1500) {
+                    scrollSpeed = Math.max(0, scrollSpeed - 0.05); // Desaceleração suave
+                    statusModeText.innerText = "⏸️ Pausando por silêncio...";
+                }
+                
                 prompterViewport.scrollTop += scrollSpeed / 2;
+                currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
             }
 
             animationFrameId = requestAnimationFrame(tick);
         }
 
-        // Detector de Voz Analógico (Mede a amplitude do microfone em tempo real)
-        function initAudioDetection() {
-            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-            .then((stream) => {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                microphone = audioContext.createMediaStreamSource(stream);
-                javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+        // Lógica de adaptação de velocidade baseada no fluxo de fala
+        function initAdaptiveVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                statusModeText.innerText = "❌ Navegador não suporta IA de voz.";
+                return;
+            }
 
-                analyser.smoothingTimeConstant = 0.4;
-                analyser.fftSize = 1024;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.continuous = true;
+            recognition.interimResults = true;
 
-                microphone.connect(analyser);
-                analyser.connect(javascriptNode);
-                javascriptNode.connect(audioContext.destination);
+            recognition.onstart = () => {
+                statusModeText.innerText = "🎙️ Modo Adaptativo Ativo. Sincronizando com sua voz...";
+            };
 
-                javascriptNode.onaudioprocess = () => {
-                    const array = new Uint8Array(analyser.frequencyBinCount);
-                    analyser.getByteFrequencyData(array);
-                    let values = 0;
+            recognition.onresult = (event) => {
+                lastSpeechTimestamp = Date.now();
+                
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    interimTranscript += event.results[i][0].transcript;
+                }
 
-                    const length = array.length;
-                    for (let i = 0; i < length; i++) {
-                        values += array[i];
-                    }
+                // Conta quantas palavras foram processadas no último bloco de fala
+                const wordsCount = interimTranscript.trim().split(/\s+/).filter(w => w.length > 0).length;
 
-                    const averageVolume = values / length;
-                    
-                    // Renderiza a barrinha de volume na barra de status
-                    const barWidth = Math.min(100, (averageVolume * 2));
-                    volumeBar.style.width = `${barWidth}%`;
-
-                    const threshold = parseInt(sensInput.value) || 15;
-
-                    if (averageVolume > threshold) {
-                        // O usuário está falando
-                        silenceTimestamp = Date.now();
-                        if (!isUserSpeaking) {
-                            isUserSpeaking = true;
-                            if (autoPauseEnabled) {
-                                isPlaying = true;
-                                statusModeText.innerText = `🎙️ Lendo... (Vel: ${scrollSpeed})`;
-                                statusModeText.classList.remove('text-red-400');
-                                statusModeText.classList.add('text-green-400');
-                            }
-                        }
+                if (wordsCount > 0) {
+                    // SEGREDO DO CÁLCULO:
+                    // Se você está falando muitas palavras de uma vez só, a IA aumenta temporariamente a velocidade.
+                    // Se falar poucas palavras, ela mantém perto da velocidade base estável.
+                    if (wordsCount > 4) {
+                        scrollSpeed = Math.min(baseSpeed * 2.2, scrollSpeed + 0.12); // Acelera se estiver falando rápido
+                        statusModeText.innerText = "⚡ Você acelerou! Ajustando prompter...";
                     } else {
-                        // Silêncio detectado
-                        if (isUserSpeaking && (Date.now() - silenceTimestamp > 1200)) { // 1.2 segundos de tolerância
-                            isUserSpeaking = false;
-                            if (autoPauseEnabled) {
-                                isPlaying = false;
-                                statusModeText.innerText = `⏸️ Auto-Pausado (Aguardando voz...)`;
-                                statusModeText.classList.remove('text-green-400');
-                                statusModeText.classList.add('text-red-400');
-                            }
-                        }
+                        scrollSpeed = Math.max(baseSpeed * 0.6, scrollSpeed - 0.08); // Desacelera se o fluxo diminuir
+                        statusModeText.innerText = "🐢 Ritmo calmo. Ajustando prompter...";
                     }
-                };
-            })
-            .catch((err) => {
-                console.error("Erro ao acessar microfone:", err);
-                statusModeText.innerText = "❌ Falha ao acessar microfone.";
-                autoPauseEnabled = false;
-            });
+                    isPlaying = true;
+                }
+            };
+
+            recognition.onend = () => {
+                if (isPlaying && isRunning) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+
+            recognition.start();
         }
 
-        // Atalhos do teclado
+        // Controles manuais de emergência caso queira reajustar no meio
         window.addEventListener('keydown', (e) => {
             if (!isRunning) return;
 
             if (e.code === 'Space') {
                 e.preventDefault();
                 isPlaying = !isPlaying;
-                statusModeText.innerText = isPlaying ? `⏱️ Play manual (Vel: ${scrollSpeed})` : "⏸️ Pausado manual";
+                if(!isPlaying) {
+                    scrollSpeed = 0;
+                    statusModeText.innerText = "⏸️ Pausado Manualmente";
+                } else {
+                    scrollSpeed = baseSpeed;
+                }
             }
             
             if (e.code === 'Escape') {
                 isRunning = false;
                 isPlaying = false;
                 cancelAnimationFrame(animationFrameId);
-                
-                // Fecha conexões de áudio para limpar memória
-                if (audioContext) audioContext.close();
-                
+                if (recognition) recognition.stop();
                 setupPanel.classList.remove('hidden');
                 statusBar.classList.add('hidden');
             }
 
             if (e.code === 'ArrowUp') {
                 e.preventDefault();
-                scrollSpeed = Math.min(15, scrollSpeed + 0.1);
-                speedInput.value = scrollSpeed.toFixed(1);
-                if (isPlaying) statusModeText.innerText = `🎙️ Lendo... (Vel: ${scrollSpeed.toFixed(1)})`;
+                baseSpeed = Math.min(15, baseSpeed + 0.2);
+                scrollSpeed = baseSpeed;
             }
 
             if (e.code === 'ArrowDown') {
                 e.preventDefault();
-                scrollSpeed = Math.max(0.2, scrollSpeed - 0.1);
-                speedInput.value = scrollSpeed.toFixed(1);
-                if (isPlaying) statusModeText.innerText = `🎙️ Lendo... (Vel: ${scrollSpeed.toFixed(1)})`;
+                baseSpeed = Math.max(0.2, baseSpeed - 0.2);
+                scrollSpeed = baseSpeed;
             }
         });
 
