@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Teleprompter V6 - Velocidade Adaptativa</title>
+    <title>OBS Teleprompter V6.1 - Calibrado</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         ::-webkit-scrollbar { display: none; }
@@ -15,15 +15,15 @@
 
     <!-- PAINEL DE CONFIGURAÇÃO -->
     <div id="setup-panel" class="p-6 bg-zinc-900 border-b border-zinc-800 flex flex-col gap-4 z-50">
-        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V6 - Velocidade Adaptativa</h1>
+        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V6.1 - Ritmo Calibrado</h1>
         
-        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro aqui. O algoritmo agora vai ouvir o ritmo da sua voz. Se você falar mais rápido, a tela acelera. Se você falar mais devagar ou pausar, a tela diminui a velocidade automaticamente para se adequar perfeitamente ao seu ritmo.</textarea>
+        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro aqui. Esta versão foi calibrada com um teto de segurança. Mesmo que você acelere muito a fala, o texto tem um limite máximo de velocidade para nunca sumir da tela, mantendo uma transição suave e amortecida.</textarea>
         
         <div class="flex flex-wrap gap-4 items-center justify-between text-sm">
             <div class="flex gap-4 flex-wrap">
                 <label>Fonte: <input type="number" id="font-size" value="44" class="w-16 bg-zinc-800 p-1 rounded text-center"> px</label>
                 <label>Margem: <input type="number" id="margin-size" value="20" class="w-16 bg-zinc-800 p-1 rounded text-center"> %</label>
-                <label>Velocidade Base: <input type="number" id="speed-input" value="1.5" step="0.1" class="w-16 bg-zinc-800 p-1 rounded text-center"></label>
+                <label>Velocidade Manual (Ideal): <input type="number" id="speed-input" value="1.4" step="0.1" class="w-16 bg-zinc-800 p-1 rounded text-center" title="Ajuste para a velocidade que você lê normalmente."></label>
             </div>
             
             <div class="flex gap-3">
@@ -32,7 +32,7 @@
         </div>
 
         <button id="btn-start" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded transition-colors cursor-pointer">
-            Iniciar Prompter Adaptativo
+            Iniciar Prompter Calibrado
         </button>
     </div>
 
@@ -47,12 +47,12 @@
 
     <!-- BARRA DE STATUS -->
     <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/95 p-2 text-xs text-zinc-400 justify-between items-center z-50">
-        <div id="status-mode-text">Analisando ritmo da voz...</div>
+        <div id="status-mode-text">Sincronizando áudio...</div>
         <div class="flex items-center gap-2">
-            <span>Velocidade IA Atual:</span>
-            <span id="current-speed-display" class="text-amber-400 font-bold">1.5</span>
+            <span>Velocidade Atual:</span>
+            <span id="current-speed-display" class="text-amber-400 font-bold">1.4</span>
         </div>
-        <div>[Espaço] Play/Pause | [Esc] Sair | [Setas ↑ ↓] Ajuste Manual Fino</div>
+        <div>[Espaço] Play/Pause | [Esc] Sair | [Setas ↑ ↓] Ajusta Velocidade Base</div>
     </div>
 
     <script>
@@ -72,8 +72,9 @@
 
         let isRunning = false;
         let isPlaying = false; 
-        let scrollSpeed = 1.5;
-        let baseSpeed = 1.5;
+        let scrollSpeed = 1.4;
+        let baseSpeed = 1.4;
+        let targetSpeed = 1.4; // Velocidade que o algoritmo deseja alcançar
         let mirrorX = false;
         let animationFrameId = null;
 
@@ -91,6 +92,7 @@
             
             baseSpeed = parseFloat(speedInput.value);
             scrollSpeed = baseSpeed;
+            targetSpeed = baseSpeed;
             currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
 
             setupPanel.classList.add('hidden');
@@ -105,16 +107,24 @@
             tick();
         });
 
-        // Motor de rolagem contínuo e estável
+        // Motor com interpolação linear (Suaviza mudanças de velocidade)
         function tick() {
             if (!isRunning) return;
 
             if (isPlaying) {
-                // Se a pessoa parar de falar por mais de 1.5 segundos, desacelera gradualmente até parar
                 const timeSinceLastSpeech = Date.now() - lastSpeechTimestamp;
-                if (timeSinceLastSpeech > 1500) {
-                    scrollSpeed = Math.max(0, scrollSpeed - 0.05); // Desaceleração suave
-                    statusModeText.innerText = "⏸️ Pausando por silêncio...";
+                
+                if (timeSinceLastSpeech > 1200) { 
+                    // Se houver silêncio, joga o alvo para zero rapidamente (frenagem)
+                    targetSpeed = 0;
+                    statusModeText.innerText = "⏸️ Aguardando voz...";
+                }
+
+                // Efeito de Amortecimento (Acelera devagar, freia rápido)
+                if (scrollSpeed < targetSpeed) {
+                    scrollSpeed += (targetSpeed - scrollSpeed) * 0.05; // Aceleração suave
+                } else {
+                    scrollSpeed += (targetSpeed - scrollSpeed) * 0.15; // Frenagem mais ágil
                 }
                 
                 prompterViewport.scrollTop += scrollSpeed / 2;
@@ -124,13 +134,9 @@
             animationFrameId = requestAnimationFrame(tick);
         }
 
-        // Lógica de adaptação de velocidade baseada no fluxo de fala
         function initAdaptiveVoice() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                statusModeText.innerText = "❌ Navegador não suporta IA de voz.";
-                return;
-            }
+            if (!SpeechRecognition) return;
 
             recognition = new SpeechRecognition();
             recognition.lang = 'pt-BR';
@@ -138,7 +144,7 @@
             recognition.interimResults = true;
 
             recognition.onstart = () => {
-                statusModeText.innerText = "🎙️ Modo Adaptativo Ativo. Sincronizando com sua voz...";
+                statusModeText.innerText = "🎙️ Modo Ritmo Calibrado Ativo.";
             };
 
             recognition.onresult = (event) => {
@@ -149,19 +155,21 @@
                     interimTranscript += event.results[i][0].transcript;
                 }
 
-                // Conta quantas palavras foram processadas no último bloco de fala
                 const wordsCount = interimTranscript.trim().split(/\s+/).filter(w => w.length > 0).length;
 
                 if (wordsCount > 0) {
-                    // SEGREDO DO CÁLCULO:
-                    // Se você está falando muitas palavras de uma vez só, a IA aumenta temporariamente a velocidade.
-                    // Se falar poucas palavras, ela mantém perto da velocidade base estável.
-                    if (wordsCount > 4) {
-                        scrollSpeed = Math.min(baseSpeed * 2.2, scrollSpeed + 0.12); // Acelera se estiver falando rápido
-                        statusModeText.innerText = "⚡ Você acelerou! Ajustando prompter...";
+                    // TRAVAS DE SEGURANÇA E TETOS MÁXIMOS:
+                    const maxSpeedLimit = baseSpeed * 1.35; // Teto rígido: no máximo 35% mais rápido que a base
+                    const minSpeedLimit = baseSpeed * 0.65; // Chão rígido: no mínimo 65% da base ao falar devagar
+
+                    if (wordsCount > 5) {
+                        // Acelera o ALVO, mas respeita o limite máximo
+                        targetSpeed = Math.min(maxSpeedLimit, targetSpeed + 0.1);
+                        statusModeText.innerText = "⚡ Acompanhando ritmo...";
                     } else {
-                        scrollSpeed = Math.max(baseSpeed * 0.6, scrollSpeed - 0.08); // Desacelera se o fluxo diminuir
-                        statusModeText.innerText = "🐢 Ritmo calmo. Ajustando prompter...";
+                        // Desacelera o ALVO de forma controlada
+                        targetSpeed = Math.max(minSpeedLimit, targetSpeed - 0.05);
+                        statusModeText.innerText = "🐢 Ritmo estável...";
                     }
                     isPlaying = true;
                 }
@@ -176,7 +184,6 @@
             recognition.start();
         }
 
-        // Controles manuais de emergência caso queira reajustar no meio
         window.addEventListener('keydown', (e) => {
             if (!isRunning) return;
 
@@ -184,32 +191,33 @@
                 e.preventDefault();
                 isPlaying = !isPlaying;
                 if(!isPlaying) {
+                    targetSpeed = 0;
                     scrollSpeed = 0;
-                    statusModeText.innerText = "⏸️ Pausado Manualmente";
+                    statusModeText.innerText = "⏸️ Pausado";
                 } else {
+                    targetSpeed = baseSpeed;
                     scrollSpeed = baseSpeed;
                 }
             }
             
             if (e.code === 'Escape') {
-                isRunning = false;
-                isPlaying = false;
+                isRunning = false; isPlaying = false;
                 cancelAnimationFrame(animationFrameId);
                 if (recognition) recognition.stop();
                 setupPanel.classList.remove('hidden');
                 statusBar.classList.add('hidden');
             }
 
+            // Setas mudam a base de conforto em tempo real
             if (e.code === 'ArrowUp') {
                 e.preventDefault();
-                baseSpeed = Math.min(15, baseSpeed + 0.2);
-                scrollSpeed = baseSpeed;
+                baseSpeed = Math.min(10, baseSpeed + 0.1);
+                targetSpeed = baseSpeed;
             }
-
             if (e.code === 'ArrowDown') {
                 e.preventDefault();
-                baseSpeed = Math.max(0.2, baseSpeed - 0.2);
-                scrollSpeed = baseSpeed;
+                baseSpeed = Math.max(0.2, baseSpeed - 0.1);
+                targetSpeed = baseSpeed;
             }
         });
 
