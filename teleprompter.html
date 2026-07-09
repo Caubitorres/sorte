@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS Teleprompter Smart Voice</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        body { overflow: hidden; background-color: #000; color: #fff; }
+        .mirror-x { transform: scaleX(-1); }
+        /* Destaque para a palavra atual que a IA reconheceu */
+        .word-highlight { color: #f59e0b; font-weight: bold; transition: color 0.2s; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col font-sans select-none">
+
+    <div id="setup-panel" class="p-6 bg-zinc-900 border-b border-zinc-800 flex flex-col gap-4 z-50">
+        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter Inteligente</h1>
+        
+        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui..."></textarea>
+        
+        <div class="flex flex-wrap gap-4 items-center justify-between text-sm">
+            <div class="flex gap-4">
+                <label>Fonte: <input type="number" id="font-size" value="42" class="w-16 bg-zinc-800 p-1 rounded text-center"> px</label>
+                <label>Margem: <input type="number" id="margin-size" value="25" class="w-16 bg-zinc-800 p-1 rounded text-center"> %</label>
+            </div>
+            
+            <div class="flex gap-3">
+                <button id="btn-mirror-x" class="px-3 py-1 bg-zinc-800 rounded hover:bg-zinc-700">Espelhar X</button>
+                <button id="btn-mode" class="px-3 py-1 bg-zinc-800 rounded border border-blue-500 text-blue-400 hover:bg-zinc-800/50 font-semibold">Modo: Tempo Fixo</button>
+            </div>
+        </div>
+
+        <button id="btn-start" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded transition-colors cursor-pointer">
+            Iniciar Prompter
+        </button>
+    </div>
+
+    <div class="relative flex-1 w-full overflow-hidden flex items-center justify-center">
+        <div id="center-indicator" class="absolute left-0 right-0 h-16 border-t border-b border-dashed border-amber-500/30 bg-amber-500/5 pointer-events-none z-40"></div>
+
+        <div id="prompter-viewport" class="w-full h-full overflow-y-scroll scroll-smooth" style="padding-top: 40vh; padding-bottom: 60vh;">
+            <div id="prompter-text" class="mx-auto text-center font-medium leading-relaxed break-words tracking-wide">
+                Seu texto aparecerá aqui palavra por palavra.
+            </div>
+        </div>
+    </div>
+
+    <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/90 p-2 text-xs text-zinc-400 justify-between items-center z-50">
+        <div id="status-mode-text">Modo: Tempo Fixo (Setas ↑ ↓ ajustam velocidade)</div>
+        <div>[Espaço] Play/Pause | [Esc] Sair</div>
+    </div>
+
+    <script>
+        const setupPanel = document.getElementById('setup-panel');
+        const statusBar = document.getElementById('status-bar');
+        const scriptInput = document.getElementById('script-input');
+        const prompterViewport = document.getElementById('prompter-viewport');
+        const prompterText = document.getElementById('prompter-text');
+        const statusModeText = document.getElementById('status-mode-text');
+        
+        const btnStart = document.getElementById('btn-start');
+        const btnMirrorX = document.getElementById('btn-mirror-x');
+        const btnMode = document.getElementById('btn-mode');
+        const fontSizeInput = document.getElementById('font-size');
+        const marginSizeInput = document.getElementById('margin-size');
+
+        let isRunning = false;
+        let isPlaying = false;
+        let useVoiceMode = false;
+        let scrollSpeed = 2; 
+        let animationFrameId = null;
+        let mirrorX = false;
+
+        // Variáveis da Web Speech API
+        let recognition = null;
+        let wordsArray = [];
+        let currentWordIndex = 0;
+
+        // Configura a alternância de modos (Tempo vs Voz)
+        btnMode.addEventListener('click', () => {
+            useVoiceMode = !useVoiceMode;
+            if (useVoiceMode) {
+                btnMode.innerText = "Modo: Voz (IA Ativa)";
+                btnMode.classList.remove('border-blue-500', 'text-blue-400');
+                btnMode.classList.add('border-green-500', 'text-green-400');
+            } else {
+                btnMode.innerText = "Modo: Tempo Fixo";
+                btnMode.classList.remove('border-green-500', 'text-green-400');
+                btnMode.classList.add('border-blue-500', 'text-blue-400');
+            }
+        });
+
+        // Inicializa o Prompter
+        btnStart.addEventListener('click', () => {
+            const text = scriptInput.value.trim() || prompterText.innerText;
+            
+            // Quebra o texto em spans de palavras para podermos rastrear/destacar individualmente
+            wordsArray = text.split(/\s+/);
+            prompterText.innerHTML = wordsArray.map((word, id) => `<span id="word-${id}">${word}</span>`).join(' ');
+
+            prompterText.style.fontSize = `${fontSizeInput.value}px`;
+            prompterText.style.paddingLeft = `${marginSizeInput.value}%`;
+            prompterText.style.paddingRight = `${marginSizeInput.value}%`;
+
+            setupPanel.classList.add('hidden');
+            statusBar.classList.remove('hidden');
+            statusBar.classList.add('flex');
+            
+            prompterViewport.scrollTop = 0;
+            currentWordIndex = 0;
+            isRunning = true;
+            isPlaying = true;
+
+            if (useVoiceMode) {
+                statusModeText.innerText = "Modo: Voz ativo. Fale para rolar.";
+                initVoiceRecognition();
+            } else {
+                statusModeText.innerText = "Modo: Tempo Fixo (Use as Setas ↑ ↓ para velocidade)";
+                startScrollByTime();
+            }
+        });
+
+        // MODO 1: Rolagem por Tempo Fixo
+        function startScrollByTime() {
+            if (!isPlaying || useVoiceMode) return;
+            prompterViewport.scrollTop += scrollSpeed / 2;
+            animationFrameId = requestAnimationFrame(startScrollByTime);
+        }
+
+        // MODO 2: Reconhecimento de Voz (Web Speech API)
+        function initVoiceRecognition() {
+            window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!window.SpeechRecognition) {
+                alert("Seu navegador ou o painel do OBS não suporta reconhecimento de voz. Use o modo Tempo Fixo.");
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+
+                // Limpa o texto falado para comparar
+                const spokenWords = interimTranscript.toLowerCase().split(/\s+/);
+                
+                // Procura a palavra falada no nosso roteiro (busca simples nas próximas 10 palavras)
+                for (let sw of spokenWords) {
+                    if (!sw) continue;
+                    for (let i = currentWordIndex; i < Math.min(currentWordIndex + 10, wordsArray.length); i++) {
+                        const scriptWord = wordsArray[i].toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+                        if (scriptWord.includes(sw) || sw.includes(scriptWord)) {
+                            highlightAndScrollToWord(i);
+                            break;
+                        }
+                    }
+                }
+            };
+
+            recognition.onend = () => {
+                // Reinicia o microfone se ele fechar sozinho e o app ainda estiver rodando
+                if (isPlaying && useVoiceMode) recognition.start();
+            };
+
+            recognition.start();
+        }
+
+        function highlightAndScrollToWord(index) {
+            // Remove destaque anterior
+            const prevWord = document.getElementById(`word-${currentWordIndex}`);
+            if (prevWord) prevWord.classList.remove('word-highlight');
+
+            currentWordIndex = index;
+            
+            // Adiciona novo destaque
+            const currentWordEl = document.getElementById(`word-${index}`);
+            if (currentWordEl) {
+                currentWordEl.classList.add('word-highlight');
+                
+                // Rola a tela suavemente para alinhar a palavra atual com o centro
+                const offsetTarget = currentWordEl.offsetTop - (prompterViewport.clientHeight * 0.4);
+                prompterViewport.scrollTo({ top: offsetTarget, behavior: 'smooth' });
+            }
+        }
+
+        // Atalhos de Teclado
+        window.addEventListener('keydown', (e) => {
+            if (!isRunning) return;
+
+            if (e.code === 'Space') {
+                e.preventDefault();
+                isPlaying = !isPlaying;
+                if (isPlaying) {
+                    if (useVoiceMode && recognition) recognition.start();
+                    else startScrollByTime();
+                } else {
+                    if (recognition) recognition.stop();
+                    cancelAnimationFrame(animationFrameId);
+                }
+            }
+            
+            if (e.code === 'Escape') {
+                isPlaying = false;
+                isRunning = false;
+                if (recognition) recognition.stop();
+                cancelAnimationFrame(animationFrameId);
+                setupPanel.classList.remove('hidden');
+                statusBar.classList.add('hidden');
+                statusBar.classList.remove('flex');
+            }
+
+            // Velocidade (Apenas no modo Tempo Fixo)
+            if (!useVoiceMode) {
+                if (e.code === 'ArrowUp') { e.preventDefault(); scrollSpeed = Math.min(15, scrollSpeed + 0.5); }
+                if (e.code === 'ArrowDown') { e.preventDefault(); scrollSpeed = Math.max(0.5, scrollSpeed - 0.5); }
+            }
+        });
+
+        // Espelhamento
+        btnMirrorX.addEventListener('click', () => {
+            mirrorX = !mirrorX;
+            prompterViewport.classList.toggle('mirror-x', mirrorX);
+            btnMirrorX.classList.toggle('bg-amber-500', mirrorX);
+            btnMirrorX.classList.toggle('text-black', mirrorX);
+        });
+    </script>
+</body>
+</html>
