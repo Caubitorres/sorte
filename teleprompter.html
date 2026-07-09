@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Teleprompter V8 - Âncora de Ritmo</title>
+    <title>OBS Teleprompter V9 - O Equilíbrio Perfeito</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         ::-webkit-scrollbar { display: none; }
@@ -17,19 +17,20 @@
 
     <!-- PAINEL DE CONFIGURAÇÃO -->
     <div id="setup-panel" class="p-6 bg-zinc-900 border-b border-zinc-800 flex flex-col gap-4 z-50">
-        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V8 - Controle por Âncora</h1>
+        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V9 - Combo Perfeito</h1>
         
-        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro aqui separado por parágrafos ou linhas curtas. 
-Esta versão elimina o cálculo automático da IA que causava trancos.
-O texto rola de forma contínua e perfeitamente suave.
-Se o texto adiantar ou atrasar em relação à sua fala, basta Clicar na linha que você está lendo.
-O prompter vai centralizar o texto na hora e reajustar o passo para o seu ritmo atual.</textarea>
+        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro aqui dividido por linhas.
+Esta versão junta o controle por clique com o auto-pause por voz.
+O texto rola de forma contínua enquanto você estiver falando.
+Se você parar de falar, o texto para de subir imediatamente.
+Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
         
         <div class="flex flex-wrap gap-4 items-center justify-between text-sm">
             <div class="flex gap-4 flex-wrap">
                 <label>Fonte: <input type="number" id="font-size" value="44" class="w-16 bg-zinc-800 p-1 rounded text-center"> px</label>
                 <label>Margem: <input type="number" id="margin-size" value="20" class="w-16 bg-zinc-800 p-1 rounded text-center"> %</label>
                 <label>Velocidade Inicial: <input type="number" id="speed-input" value="1.2" step="0.1" class="w-16 bg-zinc-800 p-1 rounded text-center"></label>
+                <label>Sensibilidade: <input type="number" id="sens-input" value="12" class="w-16 bg-zinc-800 p-1 rounded text-center"> (5-50)</label>
             </div>
             
             <div class="flex gap-3">
@@ -38,13 +39,12 @@ O prompter vai centralizar o texto na hora e reajustar o passo para o seu ritmo 
         </div>
 
         <button id="btn-start" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded transition-colors cursor-pointer">
-            Iniciar Prompter Profissional
+            Iniciar Prompter Inteligente
         </button>
     </div>
 
     <!-- ÁREA DO PROMPTER -->
     <div class="relative flex-1 w-full overflow-hidden flex items-center justify-center">
-        <!-- Marcador Central de Leitura -->
         <div id="center-indicator" class="absolute left-0 right-0 h-24 border-t border-b border-dashed border-amber-500/30 bg-amber-500/5 pointer-events-none z-40"></div>
 
         <div id="prompter-viewport" class="w-full h-full overflow-y-scroll scroll-smooth" style="padding-top: 42vh; padding-bottom: 60vh;">
@@ -54,12 +54,16 @@ O prompter vai centralizar o texto na hora e reajustar o passo para o seu ritmo 
 
     <!-- BARRA DE STATUS -->
     <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/95 p-2 text-xs text-zinc-400 justify-between items-center z-50">
-        <div id="status-mode-text">🚀 Rolagem Estável Ativa</div>
+        <div id="status-mode-text">🎙️ Ativando microfone...</div>
         <div class="flex items-center gap-2">
-            <span>Velocidade de Fluxo:</span>
+            <span>Som:</span>
+            <div class="w-20 bg-zinc-800 h-2 rounded overflow-hidden">
+                <div id="volume-bar" class="bg-green-500 h-full w-0 transition-all duration-75"></div>
+            </div>
+            <span>Velocidade:</span>
             <span id="current-speed-display" class="text-amber-400 font-bold">1.2</span>
         </div>
-        <div>[Clique na Linha] Sincronizar Ritmo | [Espaço] Play/Pause | [Esc] Sair | [Setas ↑ ↓] Ajuste Fino</div>
+        <div>[Clique] Sincronizar | [Espaço] Pausa Geral | [Esc] Sair | [Setas ↑ ↓] Velocidade</div>
     </div>
 
     <script>
@@ -70,20 +74,28 @@ O prompter vai centralizar o texto na hora e reajustar o passo para o seu ritmo 
         const prompterText = document.getElementById('prompter-text');
         const statusModeText = document.getElementById('status-mode-text');
         const currentSpeedDisplay = document.getElementById('current-speed-display');
+        const volumeBar = document.getElementById('volume-bar');
         
         const btnStart = document.getElementById('btn-start');
         const btnMirrorX = document.getElementById('btn-mirror-x');
         const fontSizeInput = document.getElementById('font-size');
         const marginSizeInput = document.getElementById('margin-size');
         const speedInput = document.getElementById('speed-input');
+        const sensInput = document.getElementById('sens-input');
 
         let isRunning = false;
         let isPlaying = false; 
+        let voiceDetected = false;
         let scrollSpeed = 1.2;
         let mirrorX = false;
         let animationFrameId = null;
         
-        // Variáveis para cálculo de ritmo inteligente por clique
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let javascriptNode = null;
+        let silenceTimestamp = Date.now();
+
         let lastClickTimestamp = null;
         let lastClickScrollTop = 0;
 
@@ -91,9 +103,7 @@ O prompter vai centralizar o texto na hora e reajustar o passo para o seu ritmo 
             const rawText = scriptInput.value.trim();
             if(!rawText) return alert("Por favor, digite um texto.");
 
-            // Divide o texto por quebras de linha para criar "âncoras de clique" clicáveis
             const lines = rawText.split('\n').filter(line => line.trim().length > 0);
-            
             prompterText.innerHTML = lines.map((line, index) => {
                 return `<div id="line-${index}" class="line-wrapper py-2 px-4 rounded" onclick="anchorToLine(${index})">${line}</div>`;
             }).join('');
@@ -116,52 +126,97 @@ O prompter vai centralizar o texto na hora e reajustar o passo para o seu ritmo 
             lastClickTimestamp = Date.now();
             lastClickScrollTop = 0;
 
+            initAudioDetection();
             tick();
         });
 
-        // Motor de renderização contínuo e estável (Sem oscilação de IA externa)
+        // Motor de rolagem inteligente (Só anda se o player geral estiver ativo E houver voz ativa)
         function tick() {
             if (!isRunning) return;
 
-            if (isPlaying) {
+            if (isPlaying && voiceDetected) {
                 prompterViewport.scrollTop += scrollSpeed / 2;
             }
 
             animationFrameId = requestAnimationFrame(tick);
         }
 
-        // Função mágica de ancoragem e recalibração instantânea
+        // Detector analógico de presença de áudio
+        function initAudioDetection() {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+            .then((stream) => {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = stream;
+                const source = audioContext.createMediaStreamSource(stream);
+                javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+                analyser.smoothingTimeConstant = 0.3;
+                analyser.fftSize = 512;
+
+                source.connect(analyser);
+                analyser.connect(javascriptNode);
+                javascriptNode.connect(audioContext.destination);
+
+                javascriptNode.onaudioprocess = () => {
+                    if (!isRunning) return;
+                    const array = new Uint8Array(analyser.frequencyBinCount);
+                    analyser.getByteFrequencyData(array);
+                    let values = 0;
+
+                    for (let i = 0; i < array.length; i++) values += array[i];
+                    const averageVolume = values / array.length;
+                    
+                    volumeBar.style.width = `${Math.min(100, averageVolume * 2.5)}%`;
+                    const threshold = parseInt(sensInput.value) || 12;
+
+                    if (averageVolume > threshold) {
+                        silenceTimestamp = Date.now();
+                        if (!voiceDetected) {
+                            voiceDetected = true;
+                            if (isPlaying) statusModeText.innerText = `🎙️ Rolando... (Fale)`;
+                        }
+                    } else {
+                        // Se houver silêncio por mais de 800ms, congela a tela na hora!
+                        if (voiceDetected && (Date.now() - silenceTimestamp > 800)) {
+                            voiceDetected = false;
+                            if (isPlaying) statusModeText.innerText = `⏸️ Pausado por silêncio...`;
+                        }
+                    }
+                };
+            }).catch(err => {
+                console.error(err);
+                statusModeText.innerText = "❌ Erro no microfone.";
+                voiceDetected = true; // Fallback para não travar totalmente o app se falhar o mic
+            });
+        }
+
+        // Função de clique para ancorar e recalibrar o ritmo
         window.anchorToLine = function(index) {
             const lineElement = document.getElementById(`line-${index}`);
             if (!lineElement) return;
 
             const now = Date.now();
-            const currentScroll = prompterViewport.scrollTop;
-            
-            // Centraliza a linha clicada exatamente no meio do marcador do teleprompter
             const targetOffset = lineElement.offsetTop - (prompterViewport.clientHeight * 0.42);
             prompterViewport.scrollTop = targetOffset;
 
-            // RECALIBRAÇÃO AUTOMÁTICA DE VELOCIDADE:
-            // Calcula a distância real percorrida em pixels e divide pelo tempo gasto para ler.
             if (lastClickTimestamp && now > lastClickTimestamp) {
                 const pixelDelta = targetOffset - lastClickScrollTop;
                 const timeDeltaSeconds = (now - lastClickTimestamp) / 1000;
 
                 if (pixelDelta > 50 && timeDeltaSeconds > 1) {
-                    // Descobre a velocidade exata ideal em pixels por frame para o seu ritmo de leitura
                     const calculatedSpeed = (pixelDelta / timeDeltaSeconds) * (2 / 60); 
-                    
-                    // Limites de segurança para evitar velocidades absurdas
-                    scrollSpeed = Math.max(0.4, Math.min(6.0, calculatedSpeed));
+                    scrollSpeed = Math.max(0.4, Math.min(5.0, calculatedSpeed));
                     currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
-                    statusModeText.innerText = `🎯 Ritmo recalibrado para seu estilo!`;
                 }
             }
 
-            // Atualiza os registros para o próximo clique
             lastClickTimestamp = now;
             lastClickScrollTop = targetOffset;
+            
+            // Força a detecção a acordar no clique para o texto voltar a fluir
+            silenceTimestamp = now;
+            voiceDetected = true;
         };
 
         window.addEventListener('keydown', (e) => {
@@ -170,20 +225,21 @@ O prompter vai centralizar o texto na hora e reajustar o passo para o seu ritmo 
             if (e.code === 'Space') {
                 e.preventDefault();
                 isPlaying = !isPlaying;
-                statusModeText.innerText = isPlaying ? "🚀 Rolagem Ativa" : "⏸️ Pausado";
+                statusModeText.innerText = isPlaying ? "🚀 Rolagem Monitorada" : "⏸️ Pausado Geral";
             }
             
             if (e.code === 'Escape') {
                 isRunning = false;
                 isPlaying = false;
                 cancelAnimationFrame(animationFrameId);
+                if (audioContext) audioContext.close();
                 setupPanel.classList.remove('hidden');
                 statusBar.classList.add('hidden');
             }
 
             if (e.code === 'ArrowUp') {
                 e.preventDefault();
-                scrollSpeed = Math.min(15, scrollSpeed + 0.1);
+                scrollSpeed = Math.min(10, scrollSpeed + 0.1);
                 currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
             }
 
