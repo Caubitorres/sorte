@@ -3,27 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Teleprompter V6.1 - Calibrado</title>
+    <title>OBS Teleprompter V8 - Âncora de Ritmo</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         ::-webkit-scrollbar { display: none; }
         body { overflow: hidden; background-color: #000; color: #fff; }
         .mirror-x { transform: scaleX(-1); }
+        .line-wrapper { transition: background-color 0.2s; cursor: pointer; }
+        .line-wrapper:hover { background-color: rgba(245, 158, 11, 0.1); }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col font-sans select-none">
 
     <!-- PAINEL DE CONFIGURAÇÃO -->
     <div id="setup-panel" class="p-6 bg-zinc-900 border-b border-zinc-800 flex flex-col gap-4 z-50">
-        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V6.1 - Ritmo Calibrado</h1>
+        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V8 - Controle por Âncora</h1>
         
-        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro aqui. Esta versão foi calibrada com um teto de segurança. Mesmo que você acelere muito a fala, o texto tem um limite máximo de velocidade para nunca sumir da tela, mantendo uma transição suave e amortecida.</textarea>
+        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro aqui separado por parágrafos ou linhas curtas. 
+Esta versão elimina o cálculo automático da IA que causava trancos.
+O texto rola de forma contínua e perfeitamente suave.
+Se o texto adiantar ou atrasar em relação à sua fala, basta Clicar na linha que você está lendo.
+O prompter vai centralizar o texto na hora e reajustar o passo para o seu ritmo atual.</textarea>
         
         <div class="flex flex-wrap gap-4 items-center justify-between text-sm">
             <div class="flex gap-4 flex-wrap">
                 <label>Fonte: <input type="number" id="font-size" value="44" class="w-16 bg-zinc-800 p-1 rounded text-center"> px</label>
                 <label>Margem: <input type="number" id="margin-size" value="20" class="w-16 bg-zinc-800 p-1 rounded text-center"> %</label>
-                <label>Velocidade Manual (Ideal): <input type="number" id="speed-input" value="1.4" step="0.1" class="w-16 bg-zinc-800 p-1 rounded text-center" title="Ajuste para a velocidade que você lê normalmente."></label>
+                <label>Velocidade Inicial: <input type="number" id="speed-input" value="1.2" step="0.1" class="w-16 bg-zinc-800 p-1 rounded text-center"></label>
             </div>
             
             <div class="flex gap-3">
@@ -32,27 +38,28 @@
         </div>
 
         <button id="btn-start" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded transition-colors cursor-pointer">
-            Iniciar Prompter Calibrado
+            Iniciar Prompter Profissional
         </button>
     </div>
 
     <!-- ÁREA DO PROMPTER -->
     <div class="relative flex-1 w-full overflow-hidden flex items-center justify-center">
-        <div id="center-indicator" class="absolute left-0 right-0 h-24 border-t border-b border-dashed border-amber-500/20 bg-amber-500/5 pointer-events-none z-40"></div>
+        <!-- Marcador Central de Leitura -->
+        <div id="center-indicator" class="absolute left-0 right-0 h-24 border-t border-b border-dashed border-amber-500/30 bg-amber-500/5 pointer-events-none z-40"></div>
 
-        <div id="prompter-viewport" class="w-full h-full overflow-y-scroll" style="padding-top: 42vh; padding-bottom: 60vh;">
-            <div id="prompter-text" class="mx-auto text-center font-medium leading-relaxed break-words tracking-wide whitespace-pre-wrap"></div>
+        <div id="prompter-viewport" class="w-full h-full overflow-y-scroll scroll-smooth" style="padding-top: 42vh; padding-bottom: 60vh;">
+            <div id="prompter-text" class="mx-auto text-center font-medium leading-relaxed break-words tracking-wide flex flex-col gap-6"></div>
         </div>
     </div>
 
     <!-- BARRA DE STATUS -->
     <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/95 p-2 text-xs text-zinc-400 justify-between items-center z-50">
-        <div id="status-mode-text">Sincronizando áudio...</div>
+        <div id="status-mode-text">🚀 Rolagem Estável Ativa</div>
         <div class="flex items-center gap-2">
-            <span>Velocidade Atual:</span>
-            <span id="current-speed-display" class="text-amber-400 font-bold">1.4</span>
+            <span>Velocidade de Fluxo:</span>
+            <span id="current-speed-display" class="text-amber-400 font-bold">1.2</span>
         </div>
-        <div>[Espaço] Play/Pause | [Esc] Sair | [Setas ↑ ↓] Ajusta Velocidade Base</div>
+        <div>[Clique na Linha] Sincronizar Ritmo | [Espaço] Play/Pause | [Esc] Sair | [Setas ↑ ↓] Ajuste Fino</div>
     </div>
 
     <script>
@@ -72,27 +79,30 @@
 
         let isRunning = false;
         let isPlaying = false; 
-        let scrollSpeed = 1.4;
-        let baseSpeed = 1.4;
-        let targetSpeed = 1.4; // Velocidade que o algoritmo deseja alcançar
+        let scrollSpeed = 1.2;
         let mirrorX = false;
         let animationFrameId = null;
-
-        let recognition = null;
-        let lastSpeechTimestamp = Date.now();
+        
+        // Variáveis para cálculo de ritmo inteligente por clique
+        let lastClickTimestamp = null;
+        let lastClickScrollTop = 0;
 
         btnStart.addEventListener('click', () => {
             const rawText = scriptInput.value.trim();
             if(!rawText) return alert("Por favor, digite um texto.");
 
-            prompterText.textContent = rawText;
+            // Divide o texto por quebras de linha para criar "âncoras de clique" clicáveis
+            const lines = rawText.split('\n').filter(line => line.trim().length > 0);
+            
+            prompterText.innerHTML = lines.map((line, index) => {
+                return `<div id="line-${index}" class="line-wrapper py-2 px-4 rounded" onclick="anchorToLine(${index})">${line}</div>`;
+            }).join('');
+
             prompterText.style.fontSize = `${fontSizeInput.value}px`;
             prompterText.style.paddingLeft = `${marginSizeInput.value}%`;
             prompterText.style.paddingRight = `${marginSizeInput.value}%`;
             
-            baseSpeed = parseFloat(speedInput.value);
-            scrollSpeed = baseSpeed;
-            targetSpeed = baseSpeed;
+            scrollSpeed = parseFloat(speedInput.value);
             currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
 
             setupPanel.classList.add('hidden');
@@ -102,87 +112,57 @@
             prompterViewport.scrollTop = 0;
             isRunning = true;
             isPlaying = true;
+            
+            lastClickTimestamp = Date.now();
+            lastClickScrollTop = 0;
 
-            initAdaptiveVoice();
             tick();
         });
 
-        // Motor com interpolação linear (Suaviza mudanças de velocidade)
+        // Motor de renderização contínuo e estável (Sem oscilação de IA externa)
         function tick() {
             if (!isRunning) return;
 
             if (isPlaying) {
-                const timeSinceLastSpeech = Date.now() - lastSpeechTimestamp;
-                
-                if (timeSinceLastSpeech > 1200) { 
-                    // Se houver silêncio, joga o alvo para zero rapidamente (frenagem)
-                    targetSpeed = 0;
-                    statusModeText.innerText = "⏸️ Aguardando voz...";
-                }
-
-                // Efeito de Amortecimento (Acelera devagar, freia rápido)
-                if (scrollSpeed < targetSpeed) {
-                    scrollSpeed += (targetSpeed - scrollSpeed) * 0.05; // Aceleração suave
-                } else {
-                    scrollSpeed += (targetSpeed - scrollSpeed) * 0.15; // Frenagem mais ágil
-                }
-                
                 prompterViewport.scrollTop += scrollSpeed / 2;
-                currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
             }
 
             animationFrameId = requestAnimationFrame(tick);
         }
 
-        function initAdaptiveVoice() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) return;
+        // Função mágica de ancoragem e recalibração instantânea
+        window.anchorToLine = function(index) {
+            const lineElement = document.getElementById(`line-${index}`);
+            if (!lineElement) return;
 
-            recognition = new SpeechRecognition();
-            recognition.lang = 'pt-BR';
-            recognition.continuous = true;
-            recognition.interimResults = true;
+            const now = Date.now();
+            const currentScroll = prompterViewport.scrollTop;
+            
+            // Centraliza a linha clicada exatamente no meio do marcador do teleprompter
+            const targetOffset = lineElement.offsetTop - (prompterViewport.clientHeight * 0.42);
+            prompterViewport.scrollTop = targetOffset;
 
-            recognition.onstart = () => {
-                statusModeText.innerText = "🎙️ Modo Ritmo Calibrado Ativo.";
-            };
+            // RECALIBRAÇÃO AUTOMÁTICA DE VELOCIDADE:
+            // Calcula a distância real percorrida em pixels e divide pelo tempo gasto para ler.
+            if (lastClickTimestamp && now > lastClickTimestamp) {
+                const pixelDelta = targetOffset - lastClickScrollTop;
+                const timeDeltaSeconds = (now - lastClickTimestamp) / 1000;
 
-            recognition.onresult = (event) => {
-                lastSpeechTimestamp = Date.now();
-                
-                let interimTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    interimTranscript += event.results[i][0].transcript;
+                if (pixelDelta > 50 && timeDeltaSeconds > 1) {
+                    // Descobre a velocidade exata ideal em pixels por frame para o seu ritmo de leitura
+                    const calculatedSpeed = (pixelDelta / timeDeltaSeconds) * (2 / 60); 
+                    
+                    // Limites de segurança para evitar velocidades absurdas
+                    scrollSpeed = Math.max(0.4, Math.min(6.0, calculatedSpeed));
+                    currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
+                    statusModeText.innerText = `🎯 Ritmo recalibrado para seu estilo!`;
                 }
+            }
 
-                const wordsCount = interimTranscript.trim().split(/\s+/).filter(w => w.length > 0).length;
-
-                if (wordsCount > 0) {
-                    // TRAVAS DE SEGURANÇA E TETOS MÁXIMOS:
-                    const maxSpeedLimit = baseSpeed * 1.35; // Teto rígido: no máximo 35% mais rápido que a base
-                    const minSpeedLimit = baseSpeed * 0.65; // Chão rígido: no mínimo 65% da base ao falar devagar
-
-                    if (wordsCount > 5) {
-                        // Acelera o ALVO, mas respeita o limite máximo
-                        targetSpeed = Math.min(maxSpeedLimit, targetSpeed + 0.1);
-                        statusModeText.innerText = "⚡ Acompanhando ritmo...";
-                    } else {
-                        // Desacelera o ALVO de forma controlada
-                        targetSpeed = Math.max(minSpeedLimit, targetSpeed - 0.05);
-                        statusModeText.innerText = "🐢 Ritmo estável...";
-                    }
-                    isPlaying = true;
-                }
-            };
-
-            recognition.onend = () => {
-                if (isPlaying && isRunning) {
-                    try { recognition.start(); } catch(e) {}
-                }
-            };
-
-            recognition.start();
-        }
+            // Atualiza os registros para o próximo clique
+            lastClickTimestamp = now;
+            lastClickScrollTop = targetOffset;
+        };
 
         window.addEventListener('keydown', (e) => {
             if (!isRunning) return;
@@ -190,34 +170,27 @@
             if (e.code === 'Space') {
                 e.preventDefault();
                 isPlaying = !isPlaying;
-                if(!isPlaying) {
-                    targetSpeed = 0;
-                    scrollSpeed = 0;
-                    statusModeText.innerText = "⏸️ Pausado";
-                } else {
-                    targetSpeed = baseSpeed;
-                    scrollSpeed = baseSpeed;
-                }
+                statusModeText.innerText = isPlaying ? "🚀 Rolagem Ativa" : "⏸️ Pausado";
             }
             
             if (e.code === 'Escape') {
-                isRunning = false; isPlaying = false;
+                isRunning = false;
+                isPlaying = false;
                 cancelAnimationFrame(animationFrameId);
-                if (recognition) recognition.stop();
                 setupPanel.classList.remove('hidden');
                 statusBar.classList.add('hidden');
             }
 
-            // Setas mudam a base de conforto em tempo real
             if (e.code === 'ArrowUp') {
                 e.preventDefault();
-                baseSpeed = Math.min(10, baseSpeed + 0.1);
-                targetSpeed = baseSpeed;
+                scrollSpeed = Math.min(15, scrollSpeed + 0.1);
+                currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
             }
+
             if (e.code === 'ArrowDown') {
                 e.preventDefault();
-                baseSpeed = Math.max(0.2, baseSpeed - 0.1);
-                targetSpeed = baseSpeed;
+                scrollSpeed = Math.max(0.1, scrollSpeed - 0.1);
+                currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
             }
         });
 
