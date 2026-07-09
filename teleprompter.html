@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Teleprompter Smart Voice V2</title>
+    <title>OBS Teleprompter Smart Voice V3 Blindada</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         ::-webkit-scrollbar { display: none; }
         body { overflow: hidden; background-color: #000; color: #fff; }
         .mirror-x { transform: scaleX(-1); }
-        .word-highlight { color: #f59e0b; font-weight: bold; background-color: rgba(245, 158, 11, 0.1); border-radius: 4px; transition: all 0.2s; }
+        .word-highlight { color: #f59e0b; font-weight: bold; background-color: rgba(245, 158, 11, 0.1); border-radius: 4px; transition: all 0.2s ease-in-out; }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col font-sans select-none">
 
     <div id="setup-panel" class="p-6 bg-zinc-900 border-b border-zinc-800 flex flex-col gap-4 z-50">
-        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter Inteligente V2</h1>
+        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V3 Blindada</h1>
         
         <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Seu texto aparecerá aqui palavra por palavra assim que você começar a falar perto do microfone.</textarea>
         
         <div class="flex flex-wrap gap-4 items-center justify-between text-sm">
             <div class="flex gap-4">
-                <label>Fonte: <input type="number" id="font-size" value="42" class="w-16 bg-zinc-800 p-1 rounded text-center"> px</label>
+                <label>Fonte: <input type="number" id="font-size" value="44" class="w-16 bg-zinc-800 p-1 rounded text-center"> px</label>
                 <label>Margem: <input type="number" id="margin-size" value="25" class="w-16 bg-zinc-800 p-1 rounded text-center"> %</label>
             </div>
             
@@ -37,7 +37,7 @@
     </div>
 
     <div class="relative flex-1 w-full overflow-hidden flex items-center justify-center">
-        <div id="center-indicator" class="absolute left-0 right-0 h-20 border-t border-b border-dashed border-amber-500/30 bg-amber-500/5 pointer-events-none z-40"></div>
+        <div id="center-indicator" class="absolute left-0 right-0 h-24 border-t border-b border-dashed border-amber-500/30 bg-amber-500/5 pointer-events-none z-40"></div>
 
         <div id="prompter-viewport" class="w-full h-full overflow-y-scroll scroll-smooth" style="padding-top: 40vh; padding-bottom: 60vh;">
             <div id="prompter-text" class="mx-auto text-center font-medium leading-relaxed break-words tracking-wide"></div>
@@ -45,8 +45,8 @@
     </div>
 
     <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/90 p-2 text-xs text-zinc-400 justify-between items-center z-50">
-        <div id="status-mode-text">Aguardando áudio...</div>
-        <div>[Espaço] Play/Pause | [Esc] Sair</div>
+        <div id="status-mode-text">Aguardando conexão do microfone...</div>
+        <div>[Espaço] Play/Pause | [Esc] Sair | Fale Claramente</div>
     </div>
 
     <script>
@@ -65,7 +65,7 @@
 
         let isRunning = false;
         let isPlaying = false;
-        let useVoiceMode = true; // Padrão agora é o modo voz
+        let useVoiceMode = true; 
         let scrollSpeed = 2; 
         let animationFrameId = null;
         let mirrorX = false;
@@ -74,7 +74,6 @@
         let wordsArray = [];
         let currentWordIndex = 0;
 
-        // Alternar modos
         btnMode.addEventListener('click', () => {
             useVoiceMode = !useVoiceMode;
             if (useVoiceMode) {
@@ -86,11 +85,11 @@
             }
         });
 
-        // Função para limpar string (remover acentos e pontuação) para comparação precisa
+        // Função de limpeza robusta
         function cleanString(str) {
             return str.toLowerCase()
               .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
-              .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g,"")   // Remove pontuação
+              .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g,"")   // Remove pontuação de roteiro
               .trim();
         }
 
@@ -98,13 +97,9 @@
             const rawText = scriptInput.value.trim();
             if(!rawText) return alert("Por favor, digite um texto antes.");
 
-            // Divide o texto tratando quebras de linha e espaços múltiplos
             wordsArray = rawText.split(/\s+/).filter(w => w.length > 0);
-            
-            // Monta o HTML com IDs limpos
-            prompterText.innerHTML = wordsArray.map((word, id) => `<span id="word-${id}" class="inline-block mx-1">${word}</span>`).join(' ');
+            prompterText.innerHTML = wordsArray.map((word, id) => `<span id="word-${id}" class="inline-block mx-1 transition-all duration-200">${word}</span>`).join(' ');
 
-            // Estilização dinâmica
             prompterText.style.fontSize = `${fontSizeInput.value}px`;
             prompterText.style.paddingLeft = `${marginSizeInput.value}%`;
             prompterText.style.paddingRight = `${marginSizeInput.value}%`;
@@ -119,10 +114,10 @@
             isPlaying = true;
 
             if (useVoiceMode) {
-                statusModeText.innerText = "🎙️ Modo Voz Ativo. Pode começar a falar...";
+                statusModeText.innerText = "🎙️ Modo Voz Ativo. Fale de forma clara.";
                 initVoiceRecognition();
             } else {
-                statusModeText.innerText = "⏱️ Modo Tempo Fixo Ativo (Setas ↑ ↓ ajustam)";
+                statusModeText.innerText = "⏱️ Modo Tempo Fixo (Use setas)";
                 startScrollByTime();
             }
         });
@@ -133,13 +128,13 @@
             animationFrameId = requestAnimationFrame(startScrollByTime);
         }
 
-        // Reconhecimento de Voz Aprimorado
+        // Reconhecimento de Voz "Blindado"
         function initVoiceRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             
             if (!SpeechRecognition) {
-                statusModeText.innerText = "❌ Navegador não suporta reconhecimento de voz.";
-                alert("Seu navegador atual não possui suporte para a Web Speech API.");
+                statusModeText.innerText = "❌ Navegador não suporta.";
+                alert("Este navegador não possui suporte para reconhecimento de voz.");
                 return;
             }
 
@@ -151,14 +146,12 @@
             recognition.interimResults = true;
 
             recognition.onstart = () => {
-                statusModeText.innerText = "🎙️ Microfone conectado. Fale agora.";
+                statusModeText.innerText = "🎙️ Ouvindo. Fale claramente.";
             };
 
             recognition.onerror = (event) => {
-                console.error("Erro no reconhecimento:", event.error);
-                if(event.error === 'not-allowed') {
-                    statusModeText.innerText = "❌ Permissão de microfone negada pelo navegador.";
-                }
+                console.error("Erro:", event.error);
+                if(event.error === 'not-allowed') { statusModeText.innerText = "❌ Permissão negada."; }
             };
 
             recognition.onresult = (event) => {
@@ -167,14 +160,19 @@
                     transcript += event.results[i][0].transcript;
                 }
 
-                // Captura as últimas palavras ditas para comparar
-                const spokenWords = transcript.split(/\s+/).map(cleanString).filter(w => w.length > 0);
-                
-                // Janela de busca: varre até as próximas 15 palavras do roteiro
-                for (let sw of spokenWords) {
-                    for (let i = currentWordIndex; i < Math.min(currentWordIndex + 15, wordsArray.length); i++) {
+                // Limpeza agressiva do texto falado para correspondência
+                const spokenWordsCleaned = transcript.toLowerCase()
+                    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, " ") // Troca pontuações por espaços
+                    .split(/\s+/) // Divide por múltiplos espaços
+                    .filter(w => w.length > 0)
+                    .map(cleanString); // Limpa acentos
+
+                // MELHORIA CRUCIAL: Janela de busca aumentada para 30 palavras
+                for (let sw of spokenWordsCleaned) {
+                    for (let i = currentWordIndex; i < Math.min(currentWordIndex + 30, wordsArray.length); i++) {
                         const scriptWordClean = cleanString(wordsArray[i]);
                         
+                        // Busca mais agressiva (inclusive correspondência parcial)
                         if (scriptWordClean === sw || scriptWordClean.includes(sw) || sw.includes(scriptWordClean)) {
                             highlightAndScrollToWord(i);
                             break;
@@ -184,7 +182,6 @@
             };
 
             recognition.onend = () => {
-                // Força o microfone a ficar ligado se o app ainda estiver ativo
                 if (isPlaying && useVoiceMode && isRunning) {
                     try { recognition.start(); } catch(e) { console.log(e); }
                 }
@@ -194,24 +191,24 @@
         }
 
         function highlightAndScrollToWord(index) {
-            // Remove destaque do índice atual
+            // Remove destaque do anterior
             const prevWord = document.getElementById(`word-${currentWordIndex}`);
             if (prevWord) prevWord.classList.remove('word-highlight');
 
             currentWordIndex = index;
             
-            // Aplica o novo destaque
+            // Aplica novo destaque
             const currentWordEl = document.getElementById(`word-${index}`);
             if (currentWordEl) {
                 currentWordEl.classList.add('word-highlight');
                 
-                // Centralização vertical refinada
+                // MELHORIA CRUCIAL: Centralização refinada (palavra atual ligeiramente acima do centro)
                 const offsetTarget = currentWordEl.offsetTop - (prompterViewport.clientHeight * 0.35);
                 prompterViewport.scrollTo({ top: offsetTarget, behavior: 'smooth' });
             }
         }
 
-        // Atalhos globais
+        // Atalhos
         window.addEventListener('keydown', (e) => {
             if (!isRunning) return;
 
@@ -221,6 +218,7 @@
                 if (isPlaying) {
                     if (useVoiceMode) initVoiceRecognition();
                     else startScrollByTime();
+                    statusModeText.innerText = useVoiceMode ? "🎙️ Voz Ativa" : "⏱️ Tempo Fixo";
                 } else {
                     if (recognition) recognition.stop();
                     cancelAnimationFrame(animationFrameId);
