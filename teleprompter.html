@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Teleprompter Smart Voice V3 Blindada</title>
+    <title>OBS Teleprompter Smart Voice V4 Anti-Pulo</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         ::-webkit-scrollbar { display: none; }
         body { overflow: hidden; background-color: #000; color: #fff; }
         .mirror-x { transform: scaleX(-1); }
-        .word-highlight { color: #f59e0b; font-weight: bold; background-color: rgba(245, 158, 11, 0.1); border-radius: 4px; transition: all 0.2s ease-in-out; }
+        .word-highlight { color: #f59e0b; font-weight: bold; background-color: rgba(245, 158, 11, 0.1); border-radius: 4px; transition: all 0.15s ease-in-out; }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col font-sans select-none">
 
     <div id="setup-panel" class="p-6 bg-zinc-900 border-b border-zinc-800 flex flex-col gap-4 z-50">
-        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V3 Blindada</h1>
+        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V4 Anti-Pulo</h1>
         
         <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Seu texto aparecerá aqui palavra por palavra assim que você começar a falar perto do microfone.</textarea>
         
@@ -45,8 +45,8 @@
     </div>
 
     <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/90 p-2 text-xs text-zinc-400 justify-between items-center z-50">
-        <div id="status-mode-text">Aguardando conexão do microfone...</div>
-        <div>[Espaço] Play/Pause | [Esc] Sair | Fale Claramente</div>
+        <div id="status-mode-text">Aguardando microfone...</div>
+        <div>[Espaço] Play/Pause | [Esc] Sair</div>
     </div>
 
     <script>
@@ -85,20 +85,19 @@
             }
         });
 
-        // Função de limpeza robusta
         function cleanString(str) {
             return str.toLowerCase()
-              .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
-              .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g,"")   // Remove pontuação de roteiro
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+              .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g,"")
               .trim();
         }
 
         btnStart.addEventListener('click', () => {
             const rawText = scriptInput.value.trim();
-            if(!rawText) return alert("Por favor, digite um texto antes.");
+            if(!rawText) return alert("Por favor, digite um texto.");
 
             wordsArray = rawText.split(/\s+/).filter(w => w.length > 0);
-            prompterText.innerHTML = wordsArray.map((word, id) => `<span id="word-${id}" class="inline-block mx-1 transition-all duration-200">${word}</span>`).join(' ');
+            prompterText.innerHTML = wordsArray.map((word, id) => `<span id="word-${id}" class="inline-block mx-1 transition-all duration-150">${word}</span>`).join(' ');
 
             prompterText.style.fontSize = `${fontSizeInput.value}px`;
             prompterText.style.paddingLeft = `${marginSizeInput.value}%`;
@@ -114,10 +113,10 @@
             isPlaying = true;
 
             if (useVoiceMode) {
-                statusModeText.innerText = "🎙️ Modo Voz Ativo. Fale de forma clara.";
+                statusModeText.innerText = "🎙️ Modo Voz Ativo.";
                 initVoiceRecognition();
             } else {
-                statusModeText.innerText = "⏱️ Modo Tempo Fixo (Use setas)";
+                statusModeText.innerText = "⏱️ Modo Tempo Fixo.";
                 startScrollByTime();
             }
         });
@@ -128,15 +127,9 @@
             animationFrameId = requestAnimationFrame(startScrollByTime);
         }
 
-        // Reconhecimento de Voz "Blindado"
         function initVoiceRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            
-            if (!SpeechRecognition) {
-                statusModeText.innerText = "❌ Navegador não suporta.";
-                alert("Este navegador não possui suporte para reconhecimento de voz.");
-                return;
-            }
+            if (!SpeechRecognition) return alert("Navegador incompatível.");
 
             if(recognition) { recognition.abort(); }
 
@@ -145,35 +138,27 @@
             recognition.continuous = true;
             recognition.interimResults = true;
 
-            recognition.onstart = () => {
-                statusModeText.innerText = "🎙️ Ouvindo. Fale claramente.";
-            };
-
-            recognition.onerror = (event) => {
-                console.error("Erro:", event.error);
-                if(event.error === 'not-allowed') { statusModeText.innerText = "❌ Permissão negada."; }
-            };
-
             recognition.onresult = (event) => {
                 let transcript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     transcript += event.results[i][0].transcript;
                 }
 
-                // Limpeza agressiva do texto falado para correspondência
                 const spokenWordsCleaned = transcript.toLowerCase()
-                    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, " ") // Troca pontuações por espaços
-                    .split(/\s+/) // Divide por múltiplos espaços
+                    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, " ")
+                    .split(/\s+/)
                     .filter(w => w.length > 0)
-                    .map(cleanString); // Limpa acentos
+                    .map(cleanString);
 
-                // MELHORIA CRUCIAL: Janela de busca aumentada para 30 palavras
                 for (let sw of spokenWordsCleaned) {
-                    for (let i = currentWordIndex; i < Math.min(currentWordIndex + 30, wordsArray.length); i++) {
+                    // ESTRATÉGIA ANTI-PULO: Ignorar palavras muito curtas de conexão (de, o, a, que, em...)
+                    if (sw.length <= 3) continue; 
+
+                    // Busca focada: varre apenas as próximas 20 palavras do roteiro
+                    for (let i = currentWordIndex; i < Math.min(currentWordIndex + 20, wordsArray.length); i++) {
                         const scriptWordClean = cleanString(wordsArray[i]);
                         
-                        // Busca mais agressiva (inclusive correspondência parcial)
-                        if (scriptWordClean === sw || scriptWordClean.includes(sw) || sw.includes(scriptWordClean)) {
+                        if (scriptWordClean === sw || scriptWordClean.includes(sw)) {
                             highlightAndScrollToWord(i);
                             break;
                         }
@@ -183,7 +168,7 @@
 
             recognition.onend = () => {
                 if (isPlaying && useVoiceMode && isRunning) {
-                    try { recognition.start(); } catch(e) { console.log(e); }
+                    try { recognition.start(); } catch(e) {}
                 }
             };
 
@@ -191,24 +176,19 @@
         }
 
         function highlightAndScrollToWord(index) {
-            // Remove destaque do anterior
             const prevWord = document.getElementById(`word-${currentWordIndex}`);
             if (prevWord) prevWord.classList.remove('word-highlight');
 
             currentWordIndex = index;
             
-            // Aplica novo destaque
             const currentWordEl = document.getElementById(`word-${index}`);
             if (currentWordEl) {
                 currentWordEl.classList.add('word-highlight');
-                
-                // MELHORIA CRUCIAL: Centralização refinada (palavra atual ligeiramente acima do centro)
                 const offsetTarget = currentWordEl.offsetTop - (prompterViewport.clientHeight * 0.35);
                 prompterViewport.scrollTo({ top: offsetTarget, behavior: 'smooth' });
             }
         }
 
-        // Atalhos
         window.addEventListener('keydown', (e) => {
             if (!isRunning) return;
 
@@ -218,11 +198,9 @@
                 if (isPlaying) {
                     if (useVoiceMode) initVoiceRecognition();
                     else startScrollByTime();
-                    statusModeText.innerText = useVoiceMode ? "🎙️ Voz Ativa" : "⏱️ Tempo Fixo";
                 } else {
                     if (recognition) recognition.stop();
                     cancelAnimationFrame(animationFrameId);
-                    statusModeText.innerText = "⏸️ Pausado";
                 }
             }
             
@@ -234,14 +212,8 @@
                 setupPanel.classList.remove('hidden');
                 statusBar.classList.add('hidden');
             }
-
-            if (!useVoiceMode) {
-                if (e.code === 'ArrowUp') { e.preventDefault(); scrollSpeed = Math.min(15, scrollSpeed + 0.5); }
-                if (e.code === 'ArrowDown') { e.preventDefault(); scrollSpeed = Math.max(0.5, scrollSpeed - 0.5); }
-            }
         });
 
-        // Espelhar
         btnMirrorX.addEventListener('click', () => {
             mirrorX = !mirrorX;
             prompterViewport.classList.toggle('mirror-x', mirrorX);
