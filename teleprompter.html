@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Teleprompter V9 - O Equilíbrio Perfeito</title>
+    <title>OBS Teleprompter V10 - Sincronia Perfeita</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         ::-webkit-scrollbar { display: none; }
         body { overflow: hidden; background-color: #000; color: #fff; }
         .mirror-x { transform: scaleX(-1); }
-        .line-wrapper { transition: background-color 0.2s; cursor: pointer; }
+        .line-wrapper { transition: background-color 0.2s, color 0.2s; cursor: pointer; }
         .line-wrapper:hover { background-color: rgba(245, 158, 11, 0.1); }
     </style>
 </head>
@@ -17,20 +17,19 @@
 
     <!-- PAINEL DE CONFIGURAÇÃO -->
     <div id="setup-panel" class="p-6 bg-zinc-900 border-b border-zinc-800 flex flex-col gap-4 z-50">
-        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V9 - Combo Perfeito</h1>
+        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V10 - Ritmo Maleável</h1>
         
         <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro aqui dividido por linhas.
-Esta versão junta o controle por clique com o auto-pause por voz.
-O texto rola de forma contínua enquanto você estiver falando.
-Se você parar de falar, o texto para de subir imediatamente.
-Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
+Esta versão aprende o seu ritmo dinamicamente.
+Se falar mais devagar, clique na linha atual para calibrar a velocidade para menos.
+O motor de voz vai pausar o texto imediatamente se você ficar em silêncio absoluto.</textarea>
         
         <div class="flex flex-wrap gap-4 items-center justify-between text-sm">
             <div class="flex gap-4 flex-wrap">
                 <label>Fonte: <input type="number" id="font-size" value="44" class="w-16 bg-zinc-800 p-1 rounded text-center"> px</label>
                 <label>Margem: <input type="number" id="margin-size" value="20" class="w-16 bg-zinc-800 p-1 rounded text-center"> %</label>
                 <label>Velocidade Inicial: <input type="number" id="speed-input" value="1.2" step="0.1" class="w-16 bg-zinc-800 p-1 rounded text-center"></label>
-                <label>Sensibilidade: <input type="number" id="sens-input" value="12" class="w-16 bg-zinc-800 p-1 rounded text-center"> (5-50)</label>
+                <label>Sensibilidade Mic: <input type="number" id="sens-input" value="12" class="w-16 bg-zinc-800 p-1 rounded text-center"> (5-50)</label>
             </div>
             
             <div class="flex gap-3">
@@ -39,7 +38,7 @@ Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
         </div>
 
         <button id="btn-start" class="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold py-2 rounded transition-colors cursor-pointer">
-            Iniciar Prompter Inteligente
+            Iniciar Prompter Sincronizado
         </button>
     </div>
 
@@ -47,23 +46,23 @@ Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
     <div class="relative flex-1 w-full overflow-hidden flex items-center justify-center">
         <div id="center-indicator" class="absolute left-0 right-0 h-24 border-t border-b border-dashed border-amber-500/30 bg-amber-500/5 pointer-events-none z-40"></div>
 
-        <div id="prompter-viewport" class="w-full h-full overflow-y-scroll scroll-smooth" style="padding-top: 42vh; padding-bottom: 60vh;">
+        <div id="prompter-viewport" class="w-full h-full overflow-y-scroll" style="padding-top: 42vh; padding-bottom: 60vh;">
             <div id="prompter-text" class="mx-auto text-center font-medium leading-relaxed break-words tracking-wide flex flex-col gap-6"></div>
         </div>
     </div>
 
     <!-- BARRA DE STATUS -->
     <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/95 p-2 text-xs text-zinc-400 justify-between items-center z-50">
-        <div id="status-mode-text">🎙️ Ativando microfone...</div>
+        <div id="status-mode-text">🎙️ Monitorando voz...</div>
         <div class="flex items-center gap-2">
             <span>Som:</span>
-            <div class="w-20 bg-zinc-800 h-2 rounded overflow-hidden">
-                <div id="volume-bar" class="bg-green-500 h-full w-0 transition-all duration-75"></div>
+            <div class="w-16 bg-zinc-800 h-2 rounded overflow-hidden">
+                <div id="volume-bar" class="bg-green-500 h-full w-0"></div>
             </div>
-            <span>Velocidade:</span>
+            <span>Velocidade Atual:</span>
             <span id="current-speed-display" class="text-amber-400 font-bold">1.2</span>
         </div>
-        <div>[Clique] Sincronizar | [Espaço] Pausa Geral | [Esc] Sair | [Setas ↑ ↓] Velocidade</div>
+        <div>[Clique na Linha] Recalibrar Velocidade | [Espaço] Play/Pause | [Setas ↑ ↓] Ajuste Manual</div>
     </div>
 
     <script>
@@ -86,7 +85,10 @@ Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
         let isRunning = false;
         let isPlaying = false; 
         let voiceDetected = false;
-        let scrollSpeed = 1.2;
+        
+        let scrollSpeed = 1.2;  // Velocidade física atual
+        let targetSpeed = 1.2;  // Velocidade ideal calculada pelo seu ritmo
+        
         let mirrorX = false;
         let animationFrameId = null;
         
@@ -105,15 +107,16 @@ Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
 
             const lines = rawText.split('\n').filter(line => line.trim().length > 0);
             prompterText.innerHTML = lines.map((line, index) => {
-                return `<div id="line-${index}" class="line-wrapper py-2 px-4 rounded" onclick="anchorToLine(${index})">${line}</div>`;
+                return `<div id="line-${index}" class="line-wrapper py-2 px-4 rounded text-zinc-300" onclick="anchorToLine(${index})">${line}</div>`;
             }).join('');
 
             prompterText.style.fontSize = `${fontSizeInput.value}px`;
             prompterText.style.paddingLeft = `${marginSizeInput.value}%`;
             prompterText.style.paddingRight = `${marginSizeInput.value}%`;
             
-            scrollSpeed = parseFloat(speedInput.value);
-            currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
+            targetSpeed = parseFloat(speedInput.value);
+            scrollSpeed = targetSpeed;
+            currentSpeedDisplay.innerText = scrollSpeed.toFixed(2);
 
             setupPanel.classList.add('hidden');
             statusBar.classList.remove('hidden');
@@ -130,18 +133,20 @@ Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
             tick();
         });
 
-        // Motor de rolagem inteligente (Só anda se o player geral estiver ativo E houver voz ativa)
+        // Motor com transição suave de velocidade (Interpolação linear)
         function tick() {
             if (!isRunning) return;
 
             if (isPlaying && voiceDetected) {
+                // Aproxima suavemente a velocidade de rolagem da velocidade ideal calculada (targetSpeed)
+                scrollSpeed += (targetSpeed - scrollSpeed) * 0.05;
                 prompterViewport.scrollTop += scrollSpeed / 2;
+                currentSpeedDisplay.innerText = scrollSpeed.toFixed(2);
             }
 
             animationFrameId = requestAnimationFrame(tick);
         }
 
-        // Detector analógico de presença de áudio
         function initAudioDetection() {
             navigator.mediaDevices.getUserMedia({ audio: true, video: false })
             .then((stream) => {
@@ -174,24 +179,24 @@ Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
                         silenceTimestamp = Date.now();
                         if (!voiceDetected) {
                             voiceDetected = true;
-                            if (isPlaying) statusModeText.innerText = `🎙️ Rolando... (Fale)`;
+                            if (isPlaying) statusModeText.innerText = `🎙️ Lendo...`;
                         }
                     } else {
-                        // Se houver silêncio por mais de 800ms, congela a tela na hora!
-                        if (voiceDetected && (Date.now() - silenceTimestamp > 800)) {
+                        // Trava o texto em silêncio após 700ms
+                        if (voiceDetected && (Date.now() - silenceTimestamp > 700)) {
                             voiceDetected = false;
-                            if (isPlaying) statusModeText.innerText = `⏸️ Pausado por silêncio...`;
+                            if (isPlaying) statusModeText.innerText = `⏸️ Pausado por silêncio`;
                         }
                     }
                 };
             }).catch(err => {
                 console.error(err);
-                statusModeText.innerText = "❌ Erro no microfone.";
-                voiceDetected = true; // Fallback para não travar totalmente o app se falhar o mic
+                statusModeText.innerText = "❌ Sem Mic.";
+                voiceDetected = true;
             });
         }
 
-        // Função de clique para ancorar e recalibrar o ritmo
+        // Função de clique inteligente: Ajusta posição e amortece velocidade para o ritmo atual
         window.anchorToLine = function(index) {
             const lineElement = document.getElementById(`line-${index}`);
             if (!lineElement) return;
@@ -200,21 +205,26 @@ Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
             const targetOffset = lineElement.offsetTop - (prompterViewport.clientHeight * 0.42);
             prompterViewport.scrollTop = targetOffset;
 
+            // Destaca visualmente a linha atual
+            document.querySelectorAll('.line-wrapper').forEach(el => el.classList.replace('text-amber-400', 'text-zinc-300'));
+            lineElement.classList.replace('text-zinc-300', 'text-amber-400');
+
             if (lastClickTimestamp && now > lastClickTimestamp) {
                 const pixelDelta = targetOffset - lastClickScrollTop;
                 const timeDeltaSeconds = (now - lastClickTimestamp) / 1000;
 
-                if (pixelDelta > 50 && timeDeltaSeconds > 1) {
+                if (pixelDelta > 30 && timeDeltaSeconds > 0.8) {
+                    // Descobre matematicamente a velocidade necessária para aquele intervalo de tempo
                     const calculatedSpeed = (pixelDelta / timeDeltaSeconds) * (2 / 60); 
-                    scrollSpeed = Math.max(0.4, Math.min(5.0, calculatedSpeed));
-                    currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
+                    
+                    // Altera a meta de velocidade (com limites seguros entre 0.3 e 4.5)
+                    targetSpeed = Math.max(0.3, Math.min(4.5, calculatedSpeed));
+                    statusModeText.innerText = `🎯 Velocidade recalculada suavemente`;
                 }
             }
 
             lastClickTimestamp = now;
             lastClickScrollTop = targetOffset;
-            
-            // Força a detecção a acordar no clique para o texto voltar a fluir
             silenceTimestamp = now;
             voiceDetected = true;
         };
@@ -225,7 +235,7 @@ Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
             if (e.code === 'Space') {
                 e.preventDefault();
                 isPlaying = !isPlaying;
-                statusModeText.innerText = isPlaying ? "🚀 Rolagem Monitorada" : "⏸️ Pausado Geral";
+                statusModeText.innerText = isPlaying ? "🚀 Ativo" : "⏸️ Pausado Geral";
             }
             
             if (e.code === 'Escape') {
@@ -239,14 +249,12 @@ Se precisar corrigir a posição, basta clicar na linha atual.</textarea>
 
             if (e.code === 'ArrowUp') {
                 e.preventDefault();
-                scrollSpeed = Math.min(10, scrollSpeed + 0.1);
-                currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
+                targetSpeed = Math.min(10, targetSpeed + 0.1);
             }
 
             if (e.code === 'ArrowDown') {
                 e.preventDefault();
-                scrollSpeed = Math.max(0.1, scrollSpeed - 0.1);
-                currentSpeedDisplay.innerText = scrollSpeed.toFixed(1);
+                targetSpeed = Math.max(0.1, targetSpeed - 0.1);
             }
         });
 
