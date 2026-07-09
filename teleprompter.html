@@ -3,31 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OBS Teleprompter Smart Voice V4 Anti-Pulo</title>
+    <title>OBS Teleprompter Pro - Modo Híbrido</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
         ::-webkit-scrollbar { display: none; }
         body { overflow: hidden; background-color: #000; color: #fff; }
         .mirror-x { transform: scaleX(-1); }
-        .word-highlight { color: #f59e0b; font-weight: bold; background-color: rgba(245, 158, 11, 0.1); border-radius: 4px; transition: all 0.15s ease-in-out; }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col font-sans select-none">
 
+    <!-- PAINEL DE CONFIGURAÇÃO -->
     <div id="setup-panel" class="p-6 bg-zinc-900 border-b border-zinc-800 flex flex-col gap-4 z-50">
-        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter V4 Anti-Pulo</h1>
+        <h1 class="text-xl font-bold text-amber-400">OBS Teleprompter Pro - V5 Híbrida</h1>
         
-        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Seu texto aparecerá aqui palavra por palavra assim que você começar a falar perto do microfone.</textarea>
+        <textarea id="script-input" class="w-full h-32 p-3 bg-zinc-800 text-white rounded border border-zinc-700 focus:outline-none focus:border-amber-400" placeholder="Cole seu roteiro aqui...">Cole seu roteiro completo aqui. O texto vai rolar de forma perfeitamente suave a 60fps. Se você parar de falar por um momento, a rolagem vai pausar automaticamente e esperar você continuar.</textarea>
         
         <div class="flex flex-wrap gap-4 items-center justify-between text-sm">
-            <div class="flex gap-4">
+            <div class="flex gap-4 flex-wrap">
                 <label>Fonte: <input type="number" id="font-size" value="44" class="w-16 bg-zinc-800 p-1 rounded text-center"> px</label>
-                <label>Margem: <input type="number" id="margin-size" value="25" class="w-16 bg-zinc-800 p-1 rounded text-center"> %</label>
+                <label>Margem: <input type="number" id="margin-size" value="20" class="w-16 bg-zinc-800 p-1 rounded text-center"> %</label>
+                <label>Velocidade: <input type="number" id="speed-input" value="1.5" step="0.1" class="w-16 bg-zinc-800 p-1 rounded text-center"> (Setas ↑ ↓)</label>
+                <label>Sensib. Microfone: <input type="number" id="sens-input" value="15" class="w-16 bg-zinc-800 p-1 rounded text-center" title="Valores menores deixam o microfone mais sensível a ruídos leves."> (5-50)</label>
             </div>
             
             <div class="flex gap-3">
                 <button id="btn-mirror-x" class="px-3 py-1 bg-zinc-800 rounded hover:bg-zinc-700">Espelhar X</button>
-                <button id="btn-mode" class="px-3 py-1 bg-zinc-800 rounded border border-green-500 text-green-400 font-semibold">Modo: Voz (IA Ativa)</button>
+                <button id="btn-voice-toggle" class="px-3 py-1 bg-zinc-800 rounded border border-green-500 text-green-400 font-semibold">Auto-Pause: ATIVO</button>
             </div>
         </div>
 
@@ -36,17 +38,25 @@
         </button>
     </div>
 
+    <!-- ÁREA DO PROMPTER -->
     <div class="relative flex-1 w-full overflow-hidden flex items-center justify-center">
-        <div id="center-indicator" class="absolute left-0 right-0 h-24 border-t border-b border-dashed border-amber-500/30 bg-amber-500/5 pointer-events-none z-40"></div>
+        <div id="center-indicator" class="absolute left-0 right-0 h-24 border-t border-b border-dashed border-amber-500/20 bg-amber-500/5 pointer-events-none z-40"></div>
 
-        <div id="prompter-viewport" class="w-full h-full overflow-y-scroll scroll-smooth" style="padding-top: 40vh; padding-bottom: 60vh;">
-            <div id="prompter-text" class="mx-auto text-center font-medium leading-relaxed break-words tracking-wide"></div>
+        <div id="prompter-viewport" class="w-full h-full overflow-y-scroll" style="padding-top: 42vh; padding-bottom: 60vh;">
+            <div id="prompter-text" class="mx-auto text-center font-medium leading-relaxed break-words tracking-wide whitespace-pre-wrap"></div>
         </div>
     </div>
 
-    <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/90 p-2 text-xs text-zinc-400 justify-between items-center z-50">
-        <div id="status-mode-text">Aguardando microfone...</div>
-        <div>[Espaço] Play/Pause | [Esc] Sair</div>
+    <!-- BARRA DE STATUS -->
+    <div id="status-bar" class="hidden fixed bottom-0 left-0 right-0 bg-zinc-950/95 p-2 text-xs text-zinc-400 justify-between items-center z-50">
+        <div id="status-mode-text">Carregando...</div>
+        <div class="flex items-center gap-2">
+            <span>Nível do Som:</span>
+            <div class="w-24 bg-zinc-800 h-2 rounded overflow-hidden">
+                <div id="volume-bar" class="bg-green-500 h-full w-0 transition-all duration-75"></div>
+            </div>
+        </div>
+        <div>[Espaço] Forçar Play/Pause | [Esc] Sair | [Setas ↑ ↓] Velocidade</div>
     </div>
 
     <script>
@@ -56,161 +66,183 @@
         const prompterViewport = document.getElementById('prompter-viewport');
         const prompterText = document.getElementById('prompter-text');
         const statusModeText = document.getElementById('status-mode-text');
+        const volumeBar = document.getElementById('volume-bar');
         
         const btnStart = document.getElementById('btn-start');
         const btnMirrorX = document.getElementById('btn-mirror-x');
-        const btnMode = document.getElementById('btn-mode');
+        const btnVoiceToggle = document.getElementById('btn-voice-toggle');
         const fontSizeInput = document.getElementById('font-size');
         const marginSizeInput = document.getElementById('margin-size');
+        const speedInput = document.getElementById('speed-input');
+        const sensInput = document.getElementById('sens-input');
 
+        // Estados
         let isRunning = false;
-        let isPlaying = false;
-        let useVoiceMode = true; 
-        let scrollSpeed = 2; 
-        let animationFrameId = null;
+        let isPlaying = false; 
+        let autoPauseEnabled = true;
+        let scrollSpeed = 1.5;
         let mirrorX = false;
+        let animationFrameId = null;
 
-        let recognition = null;
-        let wordsArray = [];
-        let currentWordIndex = 0;
+        // Controle de áudio nativo (Sem depender de IA externa)
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let javascriptNode = null;
+        let silenceTimestamp = Date.now();
+        let isUserSpeaking = false;
 
-        btnMode.addEventListener('click', () => {
-            useVoiceMode = !useVoiceMode;
-            if (useVoiceMode) {
-                btnMode.innerText = "Modo: Voz (IA Ativa)";
-                btnMode.className = "px-3 py-1 bg-zinc-800 rounded border border-green-500 text-green-400 font-semibold";
+        btnVoiceToggle.addEventListener('click', () => {
+            autoPauseEnabled = !autoPauseEnabled;
+            if (autoPauseEnabled) {
+                btnVoiceToggle.innerText = "Auto-Pause: ATIVO";
+                btnVoiceToggle.className = "px-3 py-1 bg-zinc-800 rounded border border-green-500 text-green-400 font-semibold";
             } else {
-                btnMode.innerText = "Modo: Tempo Fixo";
-                btnMode.className = "px-3 py-1 bg-zinc-800 rounded border border-blue-500 text-blue-400 font-semibold";
+                btnVoiceToggle.innerText = "Auto-Pause: INATIVO";
+                btnVoiceToggle.className = "px-3 py-1 bg-zinc-800 rounded border border-zinc-600 text-zinc-400 font-semibold";
             }
         });
-
-        function cleanString(str) {
-            return str.toLowerCase()
-              .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-              .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g,"")
-              .trim();
-        }
 
         btnStart.addEventListener('click', () => {
             const rawText = scriptInput.value.trim();
             if(!rawText) return alert("Por favor, digite um texto.");
 
-            wordsArray = rawText.split(/\s+/).filter(w => w.length > 0);
-            prompterText.innerHTML = wordsArray.map((word, id) => `<span id="word-${id}" class="inline-block mx-1 transition-all duration-150">${word}</span>`).join(' ');
-
+            prompterText.textContent = rawText;
             prompterText.style.fontSize = `${fontSizeInput.value}px`;
             prompterText.style.paddingLeft = `${marginSizeInput.value}%`;
             prompterText.style.paddingRight = `${marginSizeInput.value}%`;
+            scrollSpeed = parseFloat(speedInput.value);
 
             setupPanel.classList.add('hidden');
             statusBar.classList.remove('hidden');
             statusBar.classList.add('flex');
             
             prompterViewport.scrollTop = 0;
-            currentWordIndex = 0;
             isRunning = true;
             isPlaying = true;
 
-            if (useVoiceMode) {
-                statusModeText.innerText = "🎙️ Modo Voz Ativo.";
-                initVoiceRecognition();
+            if (autoPauseEnabled) {
+                initAudioDetection();
             } else {
-                statusModeText.innerText = "⏱️ Modo Tempo Fixo.";
-                startScrollByTime();
+                statusModeText.innerText = `⏱️ Rolagem Contínua (Vel: ${scrollSpeed})`;
             }
+
+            // Inicia o motor de renderização da rolagem suave
+            tick();
         });
 
-        function startScrollByTime() {
-            if (!isPlaying || useVoiceMode) return;
-            prompterViewport.scrollTop += scrollSpeed / 2;
-            animationFrameId = requestAnimationFrame(startScrollByTime);
+        // Motor de rolagem suave contínua (60fps estável)
+        function tick() {
+            if (!isRunning) return;
+
+            if (isPlaying) {
+                prompterViewport.scrollTop += scrollSpeed / 2;
+            }
+
+            animationFrameId = requestAnimationFrame(tick);
         }
 
-        function initVoiceRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) return alert("Navegador incompatível.");
+        // Detector de Voz Analógico (Mede a amplitude do microfone em tempo real)
+        function initAudioDetection() {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+            .then((stream) => {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
 
-            if(recognition) { recognition.abort(); }
+                analyser.smoothingTimeConstant = 0.4;
+                analyser.fftSize = 1024;
 
-            recognition = new SpeechRecognition();
-            recognition.lang = 'pt-BR';
-            recognition.continuous = true;
-            recognition.interimResults = true;
+                microphone.connect(analyser);
+                analyser.connect(javascriptNode);
+                javascriptNode.connect(audioContext.destination);
 
-            recognition.onresult = (event) => {
-                let transcript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    transcript += event.results[i][0].transcript;
-                }
+                javascriptNode.onaudioprocess = () => {
+                    const array = new Uint8Array(analyser.frequencyBinCount);
+                    analyser.getByteFrequencyData(array);
+                    let values = 0;
 
-                const spokenWordsCleaned = transcript.toLowerCase()
-                    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, " ")
-                    .split(/\s+/)
-                    .filter(w => w.length > 0)
-                    .map(cleanString);
+                    const length = array.length;
+                    for (let i = 0; i < length; i++) {
+                        values += array[i];
+                    }
 
-                for (let sw of spokenWordsCleaned) {
-                    // ESTRATÉGIA ANTI-PULO: Ignorar palavras muito curtas de conexão (de, o, a, que, em...)
-                    if (sw.length <= 3) continue; 
+                    const averageVolume = values / length;
+                    
+                    // Renderiza a barrinha de volume na barra de status
+                    const barWidth = Math.min(100, (averageVolume * 2));
+                    volumeBar.style.width = `${barWidth}%`;
 
-                    // Busca focada: varre apenas as próximas 20 palavras do roteiro
-                    for (let i = currentWordIndex; i < Math.min(currentWordIndex + 20, wordsArray.length); i++) {
-                        const scriptWordClean = cleanString(wordsArray[i]);
-                        
-                        if (scriptWordClean === sw || scriptWordClean.includes(sw)) {
-                            highlightAndScrollToWord(i);
-                            break;
+                    const threshold = parseInt(sensInput.value) || 15;
+
+                    if (averageVolume > threshold) {
+                        // O usuário está falando
+                        silenceTimestamp = Date.now();
+                        if (!isUserSpeaking) {
+                            isUserSpeaking = true;
+                            if (autoPauseEnabled) {
+                                isPlaying = true;
+                                statusModeText.innerText = `🎙️ Lendo... (Vel: ${scrollSpeed})`;
+                                statusModeText.classList.remove('text-red-400');
+                                statusModeText.classList.add('text-green-400');
+                            }
+                        }
+                    } else {
+                        // Silêncio detectado
+                        if (isUserSpeaking && (Date.now() - silenceTimestamp > 1200)) { // 1.2 segundos de tolerância
+                            isUserSpeaking = false;
+                            if (autoPauseEnabled) {
+                                isPlaying = false;
+                                statusModeText.innerText = `⏸️ Auto-Pausado (Aguardando voz...)`;
+                                statusModeText.classList.remove('text-green-400');
+                                statusModeText.classList.add('text-red-400');
+                            }
                         }
                     }
-                }
-            };
-
-            recognition.onend = () => {
-                if (isPlaying && useVoiceMode && isRunning) {
-                    try { recognition.start(); } catch(e) {}
-                }
-            };
-
-            recognition.start();
+                };
+            })
+            .catch((err) => {
+                console.error("Erro ao acessar microfone:", err);
+                statusModeText.innerText = "❌ Falha ao acessar microfone.";
+                autoPauseEnabled = false;
+            });
         }
 
-        function highlightAndScrollToWord(index) {
-            const prevWord = document.getElementById(`word-${currentWordIndex}`);
-            if (prevWord) prevWord.classList.remove('word-highlight');
-
-            currentWordIndex = index;
-            
-            const currentWordEl = document.getElementById(`word-${index}`);
-            if (currentWordEl) {
-                currentWordEl.classList.add('word-highlight');
-                const offsetTarget = currentWordEl.offsetTop - (prompterViewport.clientHeight * 0.35);
-                prompterViewport.scrollTo({ top: offsetTarget, behavior: 'smooth' });
-            }
-        }
-
+        // Atalhos do teclado
         window.addEventListener('keydown', (e) => {
             if (!isRunning) return;
 
             if (e.code === 'Space') {
                 e.preventDefault();
                 isPlaying = !isPlaying;
-                if (isPlaying) {
-                    if (useVoiceMode) initVoiceRecognition();
-                    else startScrollByTime();
-                } else {
-                    if (recognition) recognition.stop();
-                    cancelAnimationFrame(animationFrameId);
-                }
+                statusModeText.innerText = isPlaying ? `⏱️ Play manual (Vel: ${scrollSpeed})` : "⏸️ Pausado manual";
             }
             
             if (e.code === 'Escape') {
-                isPlaying = false;
                 isRunning = false;
-                if (recognition) recognition.stop();
+                isPlaying = false;
                 cancelAnimationFrame(animationFrameId);
+                
+                // Fecha conexões de áudio para limpar memória
+                if (audioContext) audioContext.close();
+                
                 setupPanel.classList.remove('hidden');
                 statusBar.classList.add('hidden');
+            }
+
+            if (e.code === 'ArrowUp') {
+                e.preventDefault();
+                scrollSpeed = Math.min(15, scrollSpeed + 0.1);
+                speedInput.value = scrollSpeed.toFixed(1);
+                if (isPlaying) statusModeText.innerText = `🎙️ Lendo... (Vel: ${scrollSpeed.toFixed(1)})`;
+            }
+
+            if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                scrollSpeed = Math.max(0.2, scrollSpeed - 0.1);
+                speedInput.value = scrollSpeed.toFixed(1);
+                if (isPlaying) statusModeText.innerText = `🎙️ Lendo... (Vel: ${scrollSpeed.toFixed(1)})`;
             }
         });
 
